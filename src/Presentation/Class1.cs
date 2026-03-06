@@ -1,4 +1,4 @@
-﻿namespace Domain
+﻿namespace Presentation
 {
     public class Class1
     {
