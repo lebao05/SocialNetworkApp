@@ -1,3 +1,6 @@
+using Application.Behaviors;
+using MediatR;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -10,6 +13,9 @@ builder.Services.AddControllers();
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(Presentation.Controllers.AuthController).Assembly);
+
+// Configure MediatR and Pipeline Behaviors
+builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
 
 builder.Services.AddOpenApi();
 var app = builder.Build();
