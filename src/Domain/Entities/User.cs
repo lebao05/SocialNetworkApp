@@ -16,11 +16,18 @@ namespace Domain.Entities
 
         private User() { }
 
-        public User(Guid Id, string userName, string email) 
+        public User(Guid id, string userName, string email)
         {
-            this.Id = Id;
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new ArgumentException("Username cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("Email cannot be empty");
+
+            Id = id;
             UserName = userName;
             Email = email;
+
         }
     }
 }

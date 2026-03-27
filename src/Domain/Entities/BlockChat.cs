@@ -1,17 +1,19 @@
-﻿namespace Domain.Entities;
+﻿using Domain.Common;
 
-public class BlockChat
+namespace Domain.Entities;
+
+public class BlockChat : BaseEntity
 {
-    public long UserId { get; private set; }
-    public long BlockedUserId { get; private set; }
+    public Guid UserId { get; private set; }
+    public Guid BlockedUserId { get; private set; }
 
     // Navigation Properties
     public User User { get; private set; } = null!;
     public User BlockedUser { get; private set; } = null!;
 
-    private BlockChat() { }
+    private BlockChat(long id):base(id) { }
 
-    public BlockChat(long userId, long blockedUserId)
+    public BlockChat(Guid userId, Guid blockedUserId, long id) : base(id) 
     {
         if (userId == blockedUserId)
             throw new InvalidOperationException("User cannot block themselves.");

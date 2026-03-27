@@ -1,31 +1,30 @@
-﻿namespace Domain.Entities;
+﻿using Domain.Common;
 
-public class MemberMessage
+namespace Domain.Entities;
+
+public class MemberMessage : BaseEntity
 {
-    public long ConversationId { get; private set; }
+    public long ConversationMemberId { get; private set; }
+    public Guid UserId { get; private set; }
+
     public long MessageId { get; private set; }
-    public long UserId { get; private set; }
 
     public MessageStatus Status { get; private set; }
     public string? Emotion { get; private set; }
     public bool IsInvoked { get; private set; }
     public DateTime? ReceivedAt { get; private set; }
 
-    // Navigation properties
-    public Conversation Conversation { get; private set; } = null!;
+    // Navigation
+    public ConversationMember ConversationMember { get; private set; } = null!;
     public Message Message { get; private set; } = null!;
-    public User User { get; private set; } = null!;
 
-    private MemberMessage() { }
+    private MemberMessage(long id) : base(id) { }
 
-    public MemberMessage(
-        long conversationId,
-        long messageId,
-        long userId)
+    public MemberMessage(long conversationMemberId, long messageId, long id)
+        : base(id)
     {
-        ConversationId = conversationId;
+        ConversationMemberId = conversationMemberId;
         MessageId = messageId;
-        UserId = userId;
         Status = MessageStatus.Sent;
     }
 }
