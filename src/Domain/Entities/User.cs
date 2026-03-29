@@ -1,12 +1,16 @@
 ﻿using Domain.Common;
+using Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace Domain.Entities
 {
     public class User : IdentityUser<Guid>
     {
-        public string? Phone { get; private set; }
+        public string FirstName { get; private set; } = string.Empty;
+        public string LastName { get; private set; } = string.Empty;
+        public DateTime DateOfBirth { get; private set; }
         public string? AvatarUrl { get; private set; }
+        public Gender Gender { get; private set; }
 
         private readonly List<ConversationMember> _conversations = new();
         public IReadOnlyCollection<ConversationMember> Conversations => _conversations;
@@ -16,18 +20,29 @@ namespace Domain.Entities
 
         private User() { }
 
-        public User(Guid id, string userName, string email)
+        public User(
+            string firstName,
+            string lastName,
+            DateTime dateOfBirth,
+            Gender gender,
+            string email)
         {
-            if (string.IsNullOrWhiteSpace(userName))
-                throw new ArgumentException("Username cannot be empty");
+            if (string.IsNullOrWhiteSpace(firstName))
+                throw new ArgumentException("First name required");
+
+            if (string.IsNullOrWhiteSpace(lastName))
+                throw new ArgumentException("Last name required");
 
             if (string.IsNullOrWhiteSpace(email))
-                throw new ArgumentException("Email cannot be empty");
+                throw new ArgumentException("Email required");
 
-            Id = id;
-            UserName = userName;
+            FirstName = firstName;
+            LastName = lastName;
+            DateOfBirth = dateOfBirth;
+            Gender = gender;
+
             Email = email;
-
+            UserName = email;
         }
     }
 }

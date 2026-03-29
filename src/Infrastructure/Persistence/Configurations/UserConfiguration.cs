@@ -10,13 +10,30 @@ namespace Infrastructure.Persistence.Configurations
         {
             builder.ToTable("Users");
 
-            // Identity already defines PK (Id)
+            // ✅ Required fields
+            builder.Property(u => u.FirstName)
+                .IsRequired()
+                .HasMaxLength(100);
 
-            builder.Property(u => u.Phone)
-                .HasMaxLength(20);
+            builder.Property(u => u.LastName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(u => u.DateOfBirth)
+                .IsRequired();
+
+            builder.Property(u => u.Gender)
+                .IsRequired();
 
             builder.Property(u => u.AvatarUrl)
-                .HasMaxLength(500);
+                .HasMaxLength(2000);
+
+            // Optional: normalize email length
+            builder.Property(u => u.Email)
+                .HasMaxLength(256);
+
+            builder.Property(u => u.UserName)
+                .HasMaxLength(256);
 
             // Conversations (backing field)
             builder.HasMany(u => u.Conversations)

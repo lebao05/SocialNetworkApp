@@ -7,6 +7,7 @@ namespace Infrastructure
     {
         public static IServiceCollection AddInfrastructureDependencies(this IServiceCollection services)
         {
+            services.AddScoped<ITokenService, Authentication.TokenService>();
             return services;
         }
     }
