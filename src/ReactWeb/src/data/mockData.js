@@ -1,0 +1,380 @@
+// ─── Current User ────────────────────────────────────────────────────────────
+export const currentUser = {
+  id: 1,
+  name: "Minh Khôi",
+  avatar: "https://i.pravatar.cc/150?img=8",
+  coverPhoto: "https://picsum.photos/seed/cover1/850/315",
+};
+
+// ─── Stories ─────────────────────────────────────────────────────────────────
+export const stories = [
+  {
+    id: 1,
+    user: "Bảo Châu",
+    avatar: "https://i.pravatar.cc/150?img=47",
+    bg: "https://picsum.photos/seed/st01/200/350",
+    label: "Đi Đà Lạt 🌸",
+  },
+  {
+    id: 2,
+    user: "Tuấn Kiệt",
+    avatar: "https://i.pravatar.cc/150?img=11",
+    bg: "https://picsum.photos/seed/st02/200/350",
+    label: "Rank mùa mới 🎮",
+  },
+  {
+    id: 3,
+    user: "Hà Linh",
+    avatar: "https://i.pravatar.cc/150?img=44",
+    bg: "https://picsum.photos/seed/st03/200/350",
+    label: "Cà phê sáng ☕",
+  },
+  {
+    id: 4,
+    user: "Quốc Bảo",
+    avatar: "https://i.pravatar.cc/150?img=15",
+    bg: "https://picsum.photos/seed/st04/200/350",
+    label: "Gym ngày 30 🏋️",
+  },
+  {
+    id: 5,
+    user: "Ngọc Hân",
+    avatar: "https://i.pravatar.cc/150?img=49",
+    bg: "https://picsum.photos/seed/st05/200/350",
+    label: "Tốt nghiệp rồi 🎓",
+  },
+  {
+    id: 6,
+    user: "Duy Anh",
+    avatar: "https://i.pravatar.cc/150?img=12",
+    bg: "https://picsum.photos/seed/st06/200/350",
+    label: "Road trip 🚗",
+  },
+];
+
+// ─── Posts ────────────────────────────────────────────────────────────────────
+export const posts = [
+  {
+    id: 1,
+    user: "CLB Lập Trình HCMUT",
+    avatar: "https://i.pravatar.cc/150?img=60",
+    time: "30 phút",
+    privacy: "public",
+    content:
+      "🚀 Thông báo mở đăng ký Hackathon mùa 3! Chủ đề năm nay: AI for Good.\n\nGiải thưởng lên đến 50 triệu đồng cho top 3 đội xuất sắc nhất. Đăng ký ngay trước 15/04 nhé anh em! Link đăng ký ở phần bình luận 👇",
+    image: "https://picsum.photos/seed/post01/680/400",
+    likes: 3241,
+    likedBy: ["👍", "❤️", "🔥"],
+    comments: 418,
+    shares: 256,
+  },
+  {
+    id: 2,
+    user: "Minh Khôi",
+    avatar: "https://i.pravatar.cc/150?img=8",
+    time: "2 giờ",
+    privacy: "friends",
+    content:
+      "Cuối cùng cũng deploy được cái app lên production 😭🎉 Mất cả tuần debug CORS mà hóa ra thiếu mỗi cái header. Kinh nghiệm xương máu mà 😅\n\n#webdev #reactjs #nodejs",
+    image: "https://picsum.photos/seed/post02/680/380",
+    likes: 142,
+    likedBy: ["❤️", "😂", "👍"],
+    comments: 37,
+    shares: 8,
+  },
+  {
+    id: 3,
+    user: "Hà Linh",
+    avatar: "https://i.pravatar.cc/150?img=44",
+    time: "4 giờ",
+    privacy: "public",
+    content:
+      "Sài Gòn mùa này nắng mà đẹp thật sự 🌞 Ra đường sớm hơn 1 tiếng để tránh kẹt xe mà lại được ngắm bình minh. Bắt đầu ngày mới tích cực hơn nhiều ✨",
+    image: "https://picsum.photos/seed/post03/680/420",
+    likes: 521,
+    likedBy: ["❤️", "😍", "👍"],
+    comments: 64,
+    shares: 15,
+  },
+  {
+    id: 4,
+    user: "Hội Sinh Viên UIT",
+    avatar: "https://i.pravatar.cc/150?img=61",
+    time: "6 giờ",
+    privacy: "public",
+    content:
+      "📢 Lịch thi học kỳ 2 năm học 2025-2026 đã được cập nhật trên cổng thông tin.\n\nAnh em nhớ check lại lịch thi của mình, đặc biệt các môn thi trùng ngày. Chúc mọi người ôn thi hiệu quả! 💪📚",
+    image: null,
+    likes: 1893,
+    likedBy: ["👍", "😰", "❤️"],
+    comments: 712,
+    shares: 445,
+  },
+  {
+    id: 5,
+    user: "Tuấn Kiệt",
+    avatar: "https://i.pravatar.cc/150?img=11",
+    time: "8 giờ",
+    privacy: "friends",
+    content: "Leo lên Thách Đấu sau 3 tháng cày cuốc!! 🏆🔥 Cảm ơn team đã đồng hành. Mùa sau tiếp tục nhé anh em 💪",
+    image: "https://picsum.photos/seed/post05/680/400",
+    likes: 289,
+    likedBy: ["🔥", "👍", "❤️"],
+    comments: 93,
+    shares: 12,
+  },
+  {
+    id: 6,
+    user: "Ngọc Hân",
+    avatar: "https://i.pravatar.cc/150?img=49",
+    time: "12 giờ",
+    privacy: "public",
+    content:
+      "Sau 4 năm đại học cuối cùng cũng cầm được tờ bằng trên tay 😭🎓 Cảm ơn ba mẹ, thầy cô và những người bạn đã luôn ở bên. Hành trình mới bắt đầu thôi nào! 🚀",
+    image: "https://picsum.photos/seed/post06/680/450",
+    likes: 4712,
+    likedBy: ["❤️", "🎉", "😍"],
+    comments: 623,
+    shares: 87,
+  },
+];
+
+// ─── Contacts (right sidebar) ────────────────────────────────────────────────
+export const contacts = [
+  { id: 2, name: "Bảo Châu", avatar: "https://i.pravatar.cc/150?img=47", online: true },
+  { id: 3, name: "Tuấn Kiệt", avatar: "https://i.pravatar.cc/150?img=11", online: true },
+  { id: 4, name: "Hà Linh", avatar: "https://i.pravatar.cc/150?img=44", online: true },
+  { id: 5, name: "Quốc Bảo", avatar: "https://i.pravatar.cc/150?img=15", online: false },
+  { id: 6, name: "Ngọc Hân", avatar: "https://i.pravatar.cc/150?img=49", online: true },
+  { id: 7, name: "Duy Anh", avatar: "https://i.pravatar.cc/150?img=12", online: false },
+  { id: 8, name: "Phương Vy", avatar: "https://i.pravatar.cc/150?img=48", online: true },
+  { id: 9, name: "Thanh Long", avatar: "https://i.pravatar.cc/150?img=17", online: false },
+  { id: 10, name: "Kim Ngân", avatar: "https://i.pravatar.cc/150?img=45", online: true },
+  { id: 11, name: "Hoàng Nam", avatar: "https://i.pravatar.cc/150?img=13", online: false },
+];
+
+// ─── Conversations (Messenger) ───────────────────────────────────────────────
+export const conversations = [
+  {
+    id: 1,
+    name: "Bảo Châu",
+    avatar: "https://i.pravatar.cc/150?img=47",
+    lastMessage: "Tối nay đi ăn không mày? 🍜",
+    time: "2 phút",
+    unread: 3,
+    online: true,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 2, text: "Ê mày, hôm nay có bài tập lớn không?", time: "09:00" },
+      { id: 2, senderId: 1, text: "Có nè, môn CNPM deadline thứ 6", time: "09:02" },
+      { id: 3, senderId: 2, text: "Chết rồi tao quên mất 😱", time: "09:03" },
+      { id: 4, senderId: 1, text: "Haha cẩn thận đó, thầy trừ điểm nặng lắm", time: "09:04" },
+      { id: 5, senderId: 2, text: "Oke làm ngay đây", time: "09:05" },
+      { id: 6, senderId: 2, text: "Tối nay đi ăn không mày? 🍜", time: "19:30" },
+    ],
+  },
+  {
+    id: 2,
+    name: "Tuấn Kiệt",
+    avatar: "https://i.pravatar.cc/150?img=11",
+    lastMessage: "Bạn: Đỉnh vãi, gg mày 🔥",
+    time: "15 phút",
+    unread: 0,
+    online: true,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 3, text: "Tao vừa leo lên thách đấu rồi 😤🏆", time: "18:00" },
+      { id: 2, senderId: 1, text: "Đỉnh vãi, gg mày 🔥", time: "18:05" },
+      { id: 3, senderId: 3, text: "Tháng sau cày cùng nhau không?", time: "18:06" },
+      { id: 4, senderId: 1, text: "Oke vào đội tao đi", time: "18:07" },
+    ],
+  },
+  {
+    id: 3,
+    name: "Nhóm Đồ Án CNPM 🛠️",
+    avatar: "https://i.pravatar.cc/150?img=50",
+    lastMessage: "Khôi: Push code lên git chưa mọi người?",
+    time: "1 giờ",
+    unread: 12,
+    online: false,
+    isGroup: true,
+    members: ["Minh Khôi", "Hà Linh", "Quốc Bảo", "Duy Anh"],
+    messages: [
+      {
+        id: 1,
+        senderId: 4,
+        text: "Mọi người ơi, task của phần login ai làm rồi chưa?",
+        time: "14:00",
+        senderName: "Hà Linh",
+      },
+      { id: 2, senderId: 5, text: "Tao làm xong UI rồi, đang chờ API", time: "14:05", senderName: "Quốc Bảo" },
+      { id: 3, senderId: 1, text: "API tao đang viết, chiều có", time: "14:10", senderName: "Minh Khôi" },
+      {
+        id: 4,
+        senderId: 7,
+        text: "Anh em nhớ viết unit test nhé, thầy check đó",
+        time: "14:30",
+        senderName: "Duy Anh",
+      },
+      { id: 5, senderId: 4, text: "😱 Tao chưa làm test", time: "14:31", senderName: "Hà Linh" },
+      { id: 6, senderId: 5, text: "😂😂😂", time: "14:31", senderName: "Quốc Bảo" },
+      { id: 7, senderId: 1, text: "Push code lên git chưa mọi người?", time: "15:00", senderName: "Minh Khôi" },
+    ],
+  },
+  {
+    id: 4,
+    name: "Hà Linh",
+    avatar: "https://i.pravatar.cc/150?img=44",
+    lastMessage: "Ôn thi chung không mày?",
+    time: "2 giờ",
+    unread: 1,
+    online: true,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 4, text: "Mày học tới đâu rồi môn Giải Tích?", time: "16:00" },
+      { id: 2, senderId: 1, text: "Tới chương 4 rồi, khó vãi", time: "16:05" },
+      { id: 3, senderId: 4, text: "Ôn thi chung không mày?", time: "16:30" },
+    ],
+  },
+  {
+    id: 5,
+    name: "Quốc Bảo",
+    avatar: "https://i.pravatar.cc/150?img=15",
+    lastMessage: "Bạn: Nhớ đem sạc dự phòng nha",
+    time: "3 giờ",
+    unread: 0,
+    online: false,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 5, text: "Mai đi hackathon mấy giờ?", time: "12:00" },
+      { id: 2, senderId: 1, text: "7h sáng nha, đừng trễ", time: "12:01" },
+      { id: 3, senderId: 5, text: "Oke, tao đặt báo thức 6h rồi", time: "12:02" },
+      { id: 4, senderId: 1, text: "Nhớ đem sạc dự phòng nha", time: "12:03" },
+    ],
+  },
+  {
+    id: 6,
+    name: "Hội Bạn Cấp 3 🎒",
+    avatar: "https://i.pravatar.cc/150?img=51",
+    lastMessage: "Linh: Họp lớp tháng 4 mọi người ơi!!",
+    time: "4 giờ",
+    unread: 5,
+    online: false,
+    isGroup: true,
+    members: ["Minh Khôi", "Ngọc Hân", "Duy Anh", "Kim Ngân", "Hoàng Nam"],
+    messages: [
+      { id: 1, senderId: 6, text: "Lâu rồi không gặp nhau nhỉ 😢", time: "10:00", senderName: "Ngọc Hân" },
+      { id: 2, senderId: 7, text: "Đúng rồi, nhớ hồi cấp 3 quá", time: "10:05", senderName: "Duy Anh" },
+      {
+        id: 3,
+        senderId: 10,
+        text: "Chụp hình kỷ yếu mà giờ nhìn lại cứ cười 😂",
+        time: "10:10",
+        senderName: "Kim Ngân",
+      },
+      { id: 4, senderId: 11, text: "+1 tao cũng nhớ", time: "10:12", senderName: "Hoàng Nam" },
+      { id: 5, senderId: 99, text: "Họp lớp tháng 4 mọi người ơi!!", time: "11:00", senderName: "Linh" },
+    ],
+  },
+  {
+    id: 7,
+    name: "Ngọc Hân",
+    avatar: "https://i.pravatar.cc/150?img=49",
+    lastMessage: "Bạn: Chúc mừng tốt nghiệp nha!! 🎉",
+    time: "5 giờ",
+    unread: 0,
+    online: true,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 6, text: "Tao nhận được bằng rồi 😭😭", time: "08:00" },
+      { id: 2, senderId: 1, text: "Chúc mừng tốt nghiệp nha!! 🎉", time: "08:05" },
+      { id: 3, senderId: 6, text: "Cảm ơn mày nhiều lắm ❤️", time: "08:06" },
+      { id: 4, senderId: 1, text: "Tiếp tục cố gắng nhé!", time: "08:07" },
+    ],
+  },
+  {
+    id: 8,
+    name: "Phương Vy",
+    avatar: "https://i.pravatar.cc/150?img=48",
+    lastMessage: "Bạn: Oke để tao xem lại",
+    time: "6 giờ",
+    unread: 0,
+    online: true,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 8, text: "Mày review CV của tao với nhé?", time: "07:00" },
+      { id: 2, senderId: 1, text: "Oke để tao xem lại", time: "07:30" },
+    ],
+  },
+  {
+    id: 9,
+    name: "Duy Anh",
+    avatar: "https://i.pravatar.cc/150?img=12",
+    lastMessage: "Road trip Tết này đi Phú Quốc không anh em?",
+    time: "1 ngày",
+    unread: 0,
+    online: false,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 7, text: "Road trip Tết này đi Phú Quốc không anh em?", time: "Hôm qua" },
+      { id: 2, senderId: 1, text: "Nghe hay đó, tính chi phí xem sao", time: "Hôm qua" },
+    ],
+  },
+  {
+    id: 10,
+    name: "Thanh Long",
+    avatar: "https://i.pravatar.cc/150?img=17",
+    lastMessage: "Bạn: Hehe oke bro",
+    time: "2 ngày",
+    unread: 0,
+    online: false,
+    isGroup: false,
+    messages: [
+      { id: 1, senderId: 9, text: "Mày có tài liệu môn Mạng Máy Tính không?", time: "2 ngày trước" },
+      { id: 2, senderId: 1, text: "Hehe oke bro", time: "2 ngày trước" },
+    ],
+  },
+];
+
+// ─── Ads / Sponsored ─────────────────────────────────────────────────────────
+export const ads = [
+  {
+    id: 1,
+    brand: "Coursera",
+    description: "Học lập trình miễn phí 7 ngày đầu. Hơn 10,000 khoá học chờ bạn!",
+    image: "https://picsum.photos/seed/ad01/100/100",
+    url: "coursera.org",
+  },
+  {
+    id: 2,
+    brand: "TopCV",
+    description: "Tạo CV chuyên nghiệp, ứng tuyển ngàn việc làm IT hấp dẫn.",
+    image: "https://picsum.photos/seed/ad02/100/100",
+    url: "topcv.vn",
+  },
+];
+
+// ─── Birthdays ────────────────────────────────────────────────────────────────
+export const birthdays = [{ id: 5, name: "Quốc Bảo", avatar: "https://i.pravatar.cc/150?img=15" }];
+
+// ─── Groups shortcuts ─────────────────────────────────────────────────────────
+export const groupShortcuts = [
+  {
+    id: 1,
+    name: "CLB Lập Trình HCMUT",
+    avatar: "https://i.pravatar.cc/150?img=60",
+    newPosts: 4,
+  },
+  {
+    id: 2,
+    name: "Hội Sinh Viên UIT",
+    avatar: "https://i.pravatar.cc/150?img=61",
+    newPosts: 12,
+  },
+  {
+    id: 3,
+    name: "Mua Bán Đồ Cũ SV",
+    avatar: "https://i.pravatar.cc/150?img=62",
+    newPosts: 7,
+  },
+];
