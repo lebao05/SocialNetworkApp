@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Application.Auth.Commands.Login
 {
 
-    public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
+    internal class LoginCommandHandler : ICommandHandler<LoginCommand, string>
     {
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokenService;

@@ -3,13 +3,9 @@ using Application.Abstractions.Messaging;
 using Domain.Entities;
 using Domain.Shared;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Application.Auth.Commands.Register
 {
-    public sealed class RegisterCommandHandler
+    internal class RegisterCommandHandler
         : ICommandHandler<RegisterCommand, string>
     {
         private readonly ITokenService _tokenService;
@@ -22,14 +18,13 @@ namespace Application.Auth.Commands.Register
 
         public async Task<Result<string>> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
-            var user = new User
-            (
-                request.username,
-                request.email,
-                request.email,
-                request.address
-            );
-
+            var user = new User(
+               request.FirstName,
+               request.LastName,
+               request.DateOfBirth,
+               request.Gender,
+               request.Email
+           );
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
             if (existingUser != null)
             {
