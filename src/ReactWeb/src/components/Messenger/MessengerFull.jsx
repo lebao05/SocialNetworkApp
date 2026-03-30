@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { conversations } from "../../data/mockData";
 import Navbar from "../Navbar/Navbar";
+import ChatInfoGroup from "./ChatInfoGroup";
+import ChatInfoDirect from "./ChatInfoDirect";
 
 // ══════════════════════════════════════════════════════════════════
 // Panel 1 — Conversation List
@@ -319,204 +321,11 @@ function ChatWindow({ conv }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// Panel 3 — Chat Info
+// ChatInfo — router đến đúng component
 // ══════════════════════════════════════════════════════════════════
-function SectionHeader({ title, open, onToggle }) {
-  return (
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between px-2 py-2.5 rounded-xl hover:bg-[#F0F2F5] transition-colors"
-    >
-      <span className="font-semibold text-[15px] text-fb-text">{title}</span>
-      <svg
-        className={`w-5 h-5 text-fb-subtext transition-transform ${open ? "" : "rotate-180"}`}
-        fill="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
-      </svg>
-    </button>
-  );
-}
-
 function ChatInfo({ conv }) {
-  const [sections, setSections] = useState({
-    info: true,
-    custom: true,
-    media: false,
-    privacy: false,
-  });
-
-  const toggle = (key) => setSections((s) => ({ ...s, [key]: !s[key] }));
-
-  if (!conv) return <div className="w-[340px] bg-white flex-shrink-0" />;
-
-  return (
-    <div className="w-[340px] bg-white flex flex-col overflow-y-auto flex-shrink-0">
-      {/* Avatar + name */}
-      <div className="flex flex-col items-center pt-6 pb-4 px-4">
-        <div className="relative mb-3">
-          <img src={conv.avatar} className="w-[72px] h-[72px] rounded-full object-cover" alt={conv.name} />
-          {conv.online && !conv.isGroup && (
-            <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-          )}
-        </div>
-        <p className="text-lg font-bold text-fb-text">{conv.name}</p>
-        <p className={`text-sm mt-0.5 ${conv.online && !conv.isGroup ? "text-green-500" : "text-fb-subtext"}`}>
-          {conv.isGroup
-            ? `${conv.members?.length || 4} thành viên`
-            : conv.online
-              ? "Đang hoạt động"
-              : "Không hoạt động"}
-        </p>
-
-        {/* E2E badge */}
-        <div className="mt-2 flex items-center gap-1.5 bg-[#F0F2F5] px-3 py-1 rounded-full">
-          <svg className="w-3.5 h-3.5 text-fb-subtext" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z" />
-          </svg>
-          <span className="text-xs text-fb-subtext font-medium">Được mã hóa đầu cuối</span>
-        </div>
-
-        {/* Quick actions */}
-        <div className="flex gap-6 mt-4">
-          {[
-            {
-              icon: (
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-              ),
-              label: "Trang cá\nnhân",
-            },
-            {
-              icon: (
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-              ),
-              label: "Tắt thông\nbáo",
-            },
-            {
-              icon: (
-                <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              ),
-              label: "Tìm kiếm",
-            },
-          ].map(({ icon, label }, i) => (
-            <button key={i} className="flex flex-col items-center gap-1.5">
-              <div className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center transition-colors">
-                <svg className="w-[18px] h-[18px] text-fb-text" fill="currentColor" viewBox="0 0 24 24">
-                  {icon}
-                </svg>
-              </div>
-              <span className="text-[11px] text-fb-subtext text-center leading-tight whitespace-pre-line">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Accordion sections */}
-      <div className="px-3 pb-6 flex flex-col gap-0.5">
-        {/* Thông tin */}
-        <div>
-          <SectionHeader title="Thông tin về đoạn chat" open={sections.info} onToggle={() => toggle("info")} />
-          {sections.info && (
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F2F5] text-left transition-colors">
-              <div className="w-8 h-8 bg-[#E4E6EB] rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                </svg>
-              </div>
-              <span className="text-[14px] text-fb-text">Xem tin nhắn đã ghim</span>
-            </button>
-          )}
-        </div>
-
-        {/* Tùy chỉnh */}
-        <div>
-          <SectionHeader title="Tùy chỉnh đoạn chat" open={sections.custom} onToggle={() => toggle("custom")} />
-          {sections.custom && (
-            <div className="flex flex-col gap-0.5">
-              {[
-                {
-                  bg: "bg-fb-blue",
-                  icon: (
-                    <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-                  ),
-                  label: "Đổi chủ đề",
-                },
-                {
-                  bg: "bg-blue-400",
-                  icon: (
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                  ),
-                  label: "Thay đổi biểu tượng cảm xúc",
-                },
-                {
-                  bg: "bg-blue-600",
-                  icon: (
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                  ),
-                  label: "Chỉnh sửa biệt danh",
-                },
-              ].map(({ bg, icon, label }, i) => (
-                <button
-                  key={i}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F2F5] text-left transition-colors"
-                >
-                  <div className={`w-8 h-8 ${bg} rounded-full flex items-center justify-center flex-shrink-0`}>
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      {icon}
-                    </svg>
-                  </div>
-                  <span className="text-[14px] text-fb-text">{label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Media */}
-        <div>
-          <SectionHeader title="File phương tiện & file" open={sections.media} onToggle={() => toggle("media")} />
-          {sections.media && (
-            <div className="grid grid-cols-3 gap-1 px-1 pb-2">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                >
-                  <img
-                    src={`https://picsum.photos/seed/media${i}${conv.id}/100/100`}
-                    className="w-full h-full object-cover"
-                    alt=""
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Privacy */}
-        <div>
-          <SectionHeader title="Quyền riêng tư & hỗ trợ" open={sections.privacy} onToggle={() => toggle("privacy")} />
-          {sections.privacy && (
-            <div className="flex flex-col gap-0.5">
-              {[
-                { label: "Chặn", red: false },
-                { label: "Báo cáo", red: false },
-                { label: "Xóa đoạn chat", red: true },
-              ].map(({ label, red }) => (
-                <button
-                  key={label}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F2F5] text-left transition-colors"
-                >
-                  <span className={`text-[14px] ${red ? "text-red-500" : "text-fb-text"}`}>{label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  if (!conv) return <div className="w-[340px] bg-white flex-shrink-0 rounded-xl" />;
+  return conv.isGroup ? <ChatInfoGroup conv={conv} /> : <ChatInfoDirect conv={conv} />;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -536,10 +345,8 @@ export default function MessengerFull() {
 
   return (
     <div className="flex flex-col h-screen bg-[#F0F2F5]">
-      {/* Navbar fixed — tự nổi lên trên */}
       <Navbar />
 
-      {/* 3-panel layout — pt-14 nhường chỗ navbar, p-2 gap-2 tạo khoảng cách */}
       <div className="flex flex-1 overflow-hidden pt-14 p-2 gap-2">
         {/* Panel 1 — ConvList */}
         <div
