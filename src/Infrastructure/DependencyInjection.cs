@@ -1,4 +1,6 @@
 ﻿using Application.Abstractions;
+using Application.Abstractions.Repositories;
+using Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure
@@ -8,6 +10,10 @@ namespace Infrastructure
         public static IServiceCollection AddInfrastructureDependencies(this IServiceCollection services)
         {
             services.AddScoped<ITokenService, Authentication.TokenService>();
+            services.AddScoped<IUserRepository,UserRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
+            services.AddScoped<IFriendshipRepository, FriendshipRepository>();
             return services;
         }
     }

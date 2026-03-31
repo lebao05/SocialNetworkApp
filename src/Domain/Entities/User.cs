@@ -18,6 +18,16 @@ namespace Domain.Entities
         private readonly List<BlockChat> _blockedUsers = new();
         public IReadOnlyCollection<BlockChat> BlockedUsers => _blockedUsers;
 
+
+        private readonly List<Friendship> _friends = new();
+        public IReadOnlyCollection<Friendship> Friends => _friends;
+
+        private readonly List<FriendRequest> _sentRequests = new();
+        public IReadOnlyCollection<FriendRequest> SentRequests => _sentRequests;
+
+        private readonly List<FriendRequest> _receivedRequests = new();
+        public IReadOnlyCollection<FriendRequest> ReceivedRequests => _receivedRequests;
+
         private User() { }
 
         public User(

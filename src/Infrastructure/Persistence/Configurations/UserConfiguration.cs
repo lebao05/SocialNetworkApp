@@ -55,6 +55,58 @@ namespace Infrastructure.Persistence.Configurations
             builder.Navigation(u => u.BlockedUsers)
                 .HasField("_blockedUsers")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // =============================
+            // Friendships
+            // =============================
+
+            builder.HasMany(u => u.Friends)
+                .WithOne(f => f.User1)
+                .HasForeignKey(f => f.User1Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // IMPORTANT: second side must NOT reuse same navigation
+            builder.HasMany<Friendship>()
+                .WithOne(f => f.User2)
+                .HasForeignKey(f => f.User2Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // =============================
+            // Friend Requests
+            // =============================
+
+            builder.HasMany(u => u.SentRequests)
+                .WithOne(fr => fr.Sender)
+                .HasForeignKey(fr => fr.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(u => u.ReceivedRequests)
+                .WithOne(fr => fr.Receiver)
+                .HasForeignKey(fr => fr.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // =============================
+            // Backing fields
+            // =============================
+
+            builder.Navigation(u => u.Friends)
+                .HasField("_friends")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Navigation(u => u.SentRequests)
+                .HasField("_sentRequests")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Navigation(u => u.ReceivedRequests)
+                .HasField("_receivedRequests")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // =============================
+            // Indexes (optional but good)
+            // =============================
+
+            builder.HasIndex(u => u.Email);
+            builder.HasIndex(u => u.UserName);
         }
     }
 }

@@ -21,7 +21,8 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<MemberMessage> MemberMessages { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<MessageAttachment> MessageAttachments { get; set; }
-
+        public DbSet<FriendRequest> FriendRequests { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }        
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
