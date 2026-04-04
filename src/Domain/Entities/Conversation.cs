@@ -1,4 +1,6 @@
 ﻿using Domain.Common;
+using Domain.Enums;
+using Domain.Shared;
 
 namespace Domain.Entities;
 
@@ -23,6 +25,19 @@ public class Conversation : AggregateRoot
         IsOneToOne = isOneToOne;
         Name = name;
     }
+    public Result AddMember(Guid userId,ConversationRole role)
+    {
+        if (_members.Any(m => m.UserId == userId))
+        {
+            return Result.Failure(new Error(
+                "Conversation.DuplicateMember",
+                "User is already a member of this conversation."));
+        }
 
+        var member = new ConversationMember(0, this.Id, userId, role);
+        _members.Add(member);
+
+        return Result.Success();
+    }
 
 }

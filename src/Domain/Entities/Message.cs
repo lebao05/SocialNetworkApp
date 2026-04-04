@@ -28,18 +28,17 @@ public class Message : AggregateRoot
     public IReadOnlyCollection<MemberMessage> MemberMessages => _memberMessages;
     private Message(long Id):base(Id) { }
 
-    public Message(
-        long id,
-        long conversationId,
-        Guid creatorId,
-        string content,
-        long? replyToMessageId = null)
-        : base(id)
+    public Message(long id, long conversationId, Guid senderId, string content)
+            : base(id)
     {
         ConversationId = conversationId;
-        CreatorId = creatorId;
+        CreatorId = senderId;
         Content = content;
-        ReplyToMessageId = replyToMessageId;
-        MessageType = MessageType.Normal;
+        CreatedAt = DateTime.UtcNow;
+    }
+
+    public void AddRecipient(MemberMessage memberMessage)
+    {
+        _memberMessages.Add(memberMessage);
     }
 }

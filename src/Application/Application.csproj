@@ -15,8 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Message\" />
-    <Folder Include="Conversation\" />
+    <Folder Include="DTOs\Messages\" />
+    <Folder Include="Friend\Commands\" />
+    <Folder Include="Friend\Queries\" />
   </ItemGroup>
 
 </Project>

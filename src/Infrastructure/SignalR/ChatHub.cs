@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Application.Messages.Commands.SendMessage;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
@@ -81,20 +82,21 @@ namespace Infrastructure.SignalR
         // CHAT
         // =============================
 
-        public async Task SendMessage(string conversationId, string content)
+        public async Task SendMessage(long conversationId, string content)
         {
             var userId = GetUserId();
 
-            // Call Application layer
-            var result = await _mediator.Send(new SendMessageCommand
-            {
-                ConversationId = long.Parse(conversationId),
-                Content = content,
-                UserId = Guid.Parse(userId)
-            });
+            var command = new SendMessageCommand
+            (
+                conversationId,
+                Guid.Parse(userId),
+                content
+            );
+
+            var result = await _mediator.Send(command);
 
             // Broadcast to group
-            await Clients.Group(conversationId)
+            await Clients.Group(conversationId.ToString())
                 .SendAsync("ReceiveMessage", result);
         }
 
