@@ -1,11 +1,19 @@
 ﻿using Domain.Entities;
+using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Persistence.Configurations
 {
     public class MessageConfiguration : IEntityTypeConfiguration<Message>
     {
+        private readonly string _encryptionKey;
+
+        public MessageConfiguration(string encryptionKey)
+        {
+            _encryptionKey = encryptionKey;
+        }
         public void Configure(EntityTypeBuilder<Message> builder)
         {
             builder.ToTable("Messages");
@@ -15,6 +23,10 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(m => m.Content)
                 .HasMaxLength(2000);
 
+            var encryptionConverter = new ValueConverter<string, string>(
+                  v => EncryptionProvider.Encrypt(v, _encryptionKey),
+                  v => EncryptionProvider.Decrypt(v, _encryptionKey)
+            );
             // Creator
             builder.HasOne(m => m.Creator)
                 .WithMany()

@@ -10,11 +10,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.ToTable("ConversationMembers");
 
             builder.HasKey(cm => cm.Id); // ✅ fixed
-
-            builder.Property(cm => cm.Role)
-                .IsRequired()
-                .HasMaxLength(50);
-
+            builder.Property(x => x.Role).HasConversion<string>();
             builder.HasOne(cm => cm.User)
                 .WithMany(u => u.Conversations)
                 .HasForeignKey(cm => cm.UserId)

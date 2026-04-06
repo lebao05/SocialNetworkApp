@@ -15,6 +15,9 @@ namespace Infrastructure
             services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
             services.AddScoped<IFriendshipRepository, FriendshipRepository>();
             services.AddScoped<IConversationRepository,ConversationRepository>();
+            services.AddScoped<IMessageRepository, MessageRepository>();
+            services.AddSignalRCore();
+
             return services;
         }
     }

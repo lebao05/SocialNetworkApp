@@ -5,14 +5,19 @@ using Infrastructure.Persistence.Configurations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using System.Reflection.Emit;
 
 namespace Infrastructure.Persistence.Contexts
 {
     public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        private readonly IConfiguration _configuration;
+        public AppDbContext(DbContextOptions<AppDbContext> options,
+            IConfiguration configuration) : base(options)
         {
+            _configuration = configuration;
         }
         public DbSet<OutboxMessage> OutboxMessages { get; set; }
         public DbSet<BlockChat> BlockChats { get; set; }
@@ -26,11 +31,12 @@ namespace Infrastructure.Persistence.Contexts
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            var encryptionKey = _configuration["Security:MessageEncryptionKey"];
             builder.ApplyConfiguration(new BlockChatConfiguration());
             builder.ApplyConfiguration(new ConversationConfiguration());
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
             builder.ApplyConfiguration(new MemberMessageConfiguration());
-            builder.ApplyConfiguration(new MessageConfiguration());
+            builder.ApplyConfiguration(new MessageConfiguration(encryptionKey));
             builder.ApplyConfiguration(new MessageAttachmentConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
 

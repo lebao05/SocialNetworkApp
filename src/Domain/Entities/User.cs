@@ -8,7 +8,7 @@ namespace Domain.Entities
     {
         public string FirstName { get; private set; } = string.Empty;
         public string LastName { get; private set; } = string.Empty;
-        public DateTime DateOfBirth { get; private set; }
+        public DateOnly DateOfBirth { get; private set; }
         public string? AvatarUrl { get; private set; }
         public Gender Gender { get; private set; }
 
@@ -33,7 +33,7 @@ namespace Domain.Entities
         public User(
             string firstName,
             string lastName,
-            DateTime dateOfBirth,
+            DateOnly dateOfBirth,
             Gender gender,
             string email)
         {

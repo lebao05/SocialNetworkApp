@@ -5,7 +5,7 @@ namespace Presentation.Contracts.Auth
     public sealed record RegisterRequest(
         string FirstName,
         string LastName,
-        DateTime DateOfBirth,
+        DateOnly DateOfBirth,
         Gender Gender,
         string Email,
         string Password

@@ -12,7 +12,6 @@ public class MemberMessage : BaseEntity
     public MessageStatus Status { get; private set; }
     public string? Emotion { get; private set; }
     public bool IsInvoked { get; private set; }
-    public DateTime? ReceivedAt { get; private set; }
 
     // Navigation
     public ConversationMember ConversationMember { get; private set; } = null!;

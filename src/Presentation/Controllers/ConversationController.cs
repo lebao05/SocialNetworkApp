@@ -4,6 +4,7 @@ using Application.Conversations.Commands.ToggleNotifications;
 using Domain.Shared;
 using Infrastructure.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Conversations;
@@ -12,6 +13,7 @@ using System.Security.Claims;
 namespace Presentation.Controllers;
 
 [Route("api/conversations")]
+[Authorize]
 public class ConversationController : ApiController
 {
     public ConversationController(ISender sender) : base(sender)

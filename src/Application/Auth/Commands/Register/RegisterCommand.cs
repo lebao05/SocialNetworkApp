@@ -6,7 +6,7 @@ namespace Application.Auth.Commands.Register
     public sealed record RegisterCommand(
         string FirstName,
         string LastName,
-        DateTime DateOfBirth,
+        DateOnly DateOfBirth,
         Gender Gender,
         string Email,
         string Password
