@@ -1,6 +1,9 @@
 ﻿using Application.Conversations.Commands;
 using Application.Conversations.Commands.CreateConversation;
 using Application.Conversations.Commands.ToggleNotifications;
+using Application.Conversations.Queries.GetConversations;
+using Application.DTOs.Conversations;
+using Application.Shared;
 using Domain.Shared;
 using Infrastructure.Extensions;
 using MediatR;
@@ -8,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Conversations;
-using System.Security.Claims;
 
 namespace Presentation.Controllers;
 
@@ -70,5 +72,22 @@ public class ConversationController : ApiController
 
         // Returns 200 OK with the new status (true/false)
         return Ok(result.Value);
+    }
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 100); // Limit page size to prevent abuse
+        pageNumber = Math.Max(pageNumber, 1); // Ensure page number is at least 1
+
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new GetConversationsQuery(userId, pageSize, pageNumber);
+
+        Result<PagedList<ConversationResponse>> result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
     }
 }

@@ -7,5 +7,6 @@ namespace Application.Abstractions.Repositories
         Task<bool> ExistsAsync(Guid user1Id, Guid user2Id);
 
         Task AddAsync(Friendship friendship);
+        Task<List<User>> GetFriendsAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

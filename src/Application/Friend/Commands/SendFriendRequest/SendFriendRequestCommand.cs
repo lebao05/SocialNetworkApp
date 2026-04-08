@@ -1,6 +1,6 @@
 ﻿using Application.Abstractions.Messaging;
 
-namespace Application.Friends.Commands.SendFriendRequest;
+namespace Application.Friend.Commands.SendFriendRequest;
 
 public sealed record SendFriendRequestCommand(
     Guid SenderId,

@@ -34,5 +34,13 @@ namespace Infrastructure.Persistence.Repositories
         {
             await _context.Friendships.AddAsync(friendship);
         }
+        public async Task<List<User>> GetFriendsAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return await _context.Friendships
+                .Where(f => f.User1Id == userId )
+                .Select(f => f.User2)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
     }
 }

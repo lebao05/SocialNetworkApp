@@ -1,6 +1,6 @@
 ﻿using Application.Abstractions.Messaging;
 
-namespace Application.Friends.Commands.AcceptFriendRequest;
+namespace Application.Friend.Commands.AcceptFriendRequest;
 
 public sealed record AcceptFriendRequestCommand(
     long RequestId,

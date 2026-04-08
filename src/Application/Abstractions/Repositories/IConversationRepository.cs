@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using Application.Shared;
+using Domain.Entities;
 
 namespace Application.Abstractions.Repositories
 {
@@ -12,8 +13,10 @@ namespace Application.Abstractions.Repositories
         long conversationId,
         Guid userId,
         CancellationToken cancellationToken = default);
-        Task<List<Conversation>> GetConversationsByUserIdAsync(
+        Task<PagedList<Conversation>> GetPagedConversationsAsync(
             Guid userId,
-            CancellationToken cancellationToken = default);
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken);
     }
 }

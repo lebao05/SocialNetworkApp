@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions.Repositories;
+using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -39,14 +40,31 @@ namespace Infrastructure.Persistence.Repositories
                     m.UserId == userId,
                     cancellationToken);
         }
-        public async Task<List<Conversation>> GetConversationsByUserIdAsync(
-            Guid userId,
-            CancellationToken cancellationToken = default)
+        public async Task<PagedList<Conversation>> GetPagedConversationsAsync(
+                Guid userId,
+                int pageNumber,
+                int pageSize,
+                CancellationToken cancellationToken = default)
         {
-            return await _context.Conversations
-                .Where(c => c.Members.Any(m => m.UserId == userId) && !c.IsDeleted)
-                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(1)) // Get last message info
+            // 1. Create the base query with Eager Loading (Includes)
+            // We MUST include Members, the User identity for those members, and Messages
+            var query = _context.Conversations
+                .AsNoTracking() // Recommended for Read-Only Queries
+                .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                .Include(c => c.Messages)
+                .Where(c => !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .OrderByDescending(c => c.Messages.Max(m => m.CreatedAt));
+
+            // 2. Execute pagination logic
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
+
+            return new PagedList<Conversation>(items, pageNumber, pageSize, totalCount);
         }
     }
 }

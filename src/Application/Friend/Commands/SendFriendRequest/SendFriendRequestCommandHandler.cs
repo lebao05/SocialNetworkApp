@@ -4,7 +4,7 @@ using Application.Abstractions.Repositories;
 using Domain.Entities;
 using Domain.Shared;
 
-namespace Application.Friends.Commands.SendFriendRequest;
+namespace Application.Friend.Commands.SendFriendRequest;
 
 internal sealed class SendFriendRequestCommandHandler
     : ICommandHandler<SendFriendRequestCommand, bool>

@@ -5,7 +5,7 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Shared;
 
-namespace Application.Friends.Commands.AcceptFriendRequest;
+namespace Application.Friend.Commands.AcceptFriendRequest;
 
 internal sealed class AcceptFriendRequestCommandHandler
     : ICommandHandler<AcceptFriendRequestCommand, bool>

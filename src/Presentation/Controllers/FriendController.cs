@@ -1,13 +1,16 @@
-﻿using Application.Friends.Commands.AcceptFriendRequest;
-using Application.Friends.Commands.SendFriendRequest;
+﻿using Application.Friend.Commands.AcceptFriendRequest;
+using Application.Friend.Commands.SendFriendRequest;
+using Application.Friend.Queries.GetFriends;
 using Infrastructure.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 
 namespace Presentation.Controllers
 {
     [Route("api/friend")]
+    [Authorize]
     public class FriendController : ApiController
     {
         public FriendController(ISender sender) : base(sender)
@@ -45,6 +48,17 @@ namespace Presentation.Controllers
                 return HandleFailure(result);
 
             return Ok();
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetFriends(CancellationToken ct)
+        {
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var query = new GetFriendsQuery(userId);
+
+            var result = await _sender.Send(query, ct);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
     }
 }

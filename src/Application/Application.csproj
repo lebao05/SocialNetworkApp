@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="PagedList" Version="1.17.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,8 +17,8 @@
 
   <ItemGroup>
     <Folder Include="DTOs\Messages\" />
-    <Folder Include="Friend\Commands\" />
-    <Folder Include="Friend\Queries\" />
+    <Folder Include="Messages\Queries\" />
+    <Folder Include="Users\Commands\" />
   </ItemGroup>
 
 </Project>
