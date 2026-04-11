@@ -9,7 +9,9 @@ namespace Infrastructure.Persistence.Configurations
     public class MessageConfiguration : IEntityTypeConfiguration<Message>
     {
         private readonly string _encryptionKey;
-
+        public MessageConfiguration() {
+            _encryptionKey = "default_encryption_key"; // Replace with your default key
+        }
         public MessageConfiguration(string encryptionKey)
         {
             _encryptionKey = encryptionKey;

@@ -1,19 +1,21 @@
+using Application;
 using Application.Behaviors;
 using Domain.Entities;
 using Infrastructure;
 using Infrastructure.Persistence.Contexts;
+using Infrastructure.SignalR;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using System.Text;
-using System.Collections.Generic;
 using Microsoft.OpenApi;
-using Application;
 using Presentation;
+using Serilog;
+using System.Collections.Generic;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSignalR(); 
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -190,6 +192,9 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+
+app.MapHub<ChatHub>("hubs/chat");
+
 app.UseAuthorization();
 app.MapStaticAssets(); // if you have static assets
 app.MapControllers();   // map API controllers

@@ -1,5 +1,4 @@
 "use client";
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { signinApi, signupApi } from "../apis/authApi";
 import { getUserProfileApi } from "../apis/userApi";
