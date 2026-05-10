@@ -1,5 +1,4 @@
-﻿using Domain.Entities;
-using Infrastructure.Security;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -8,13 +7,7 @@ namespace Infrastructure.Persistence.Configurations
 {
     public class MessageConfiguration : IEntityTypeConfiguration<Message>
     {
-        private readonly string _encryptionKey;
         public MessageConfiguration() {
-            _encryptionKey = "default_encryption_key"; // Replace with your default key
-        }
-        public MessageConfiguration(string encryptionKey)
-        {
-            _encryptionKey = encryptionKey;
         }
         public void Configure(EntityTypeBuilder<Message> builder)
         {
@@ -23,12 +16,18 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(m => m.Id);
 
             builder.Property(m => m.Content)
-                .HasMaxLength(2000);
+                .HasMaxLength(2000)
+                .IsRequired(false);
 
-            var encryptionConverter = new ValueConverter<string, string>(
-                  v => EncryptionProvider.Encrypt(v, _encryptionKey),
-                  v => EncryptionProvider.Decrypt(v, _encryptionKey)
-            );
+            builder.Property(m => m.SearchContent)
+                .IsRequired(false);
+
+            // GIN index for Full-Text Search on the hashed content shadow column
+            builder.HasIndex(m => m.SearchContent)
+                .HasMethod("gin")
+                .HasOperators("gist_trgm_ops"); // Using trgm for partial matches if needed, or simple gin for words
+
+     
             // Creator
             builder.HasOne(m => m.Creator)
                 .WithMany()
@@ -59,6 +58,12 @@ namespace Infrastructure.Persistence.Configurations
             builder.Navigation(m => m.MemberMessages)
                 .HasField("_memberMessages")   // 👈 REQUIRED
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // Forwarded From
+            builder.HasOne(m => m.ForwardFromMessage)
+                .WithMany()
+                .HasForeignKey(m => m.ForwardFromMessageId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

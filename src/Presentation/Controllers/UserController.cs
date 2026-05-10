@@ -1,5 +1,6 @@
-﻿using Application.Friend.Queries.GetFriends;
+using Application.Friend.Queries.GetFriends;
 using Application.Users.Queries.GetUserProfile;
+using Application.Users.Queries.GetPersonalInfo;
 using Domain.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,16 @@ namespace Presentation.Controllers
             }
 
             var query = new GetUserProfileQuery(userId);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{id:guid}/personal-info")]
+        public async Task<IActionResult> GetPersonalInfo(Guid id, CancellationToken cancellationToken)
+        {
+            var query = new GetPersonalInfoQuery(id);
 
             var result = await _sender.Send(query, cancellationToken);
 

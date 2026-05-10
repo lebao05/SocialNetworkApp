@@ -1,6 +1,7 @@
-﻿using Application.Abstractions;
+using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.Security;
 using Domain.Entities;
 using Domain.Shared;
 
@@ -11,15 +12,18 @@ namespace Application.Messages.Commands.SendMessage
     {
         private readonly IConversationRepository _conversationRepository;
         private readonly IMessageRepository _messageRepository;
+        private readonly IBlindIndexService _blindIndexService;
         private readonly IUnitOfWork _unitOfWork;
 
         public SendMessageCommandHandler(
             IMessageRepository messageRepository,
             IConversationRepository conversationRepository,
+            IBlindIndexService blindIndexService,
             IUnitOfWork unitOfWork)
         {
             _messageRepository = messageRepository;
             _conversationRepository = conversationRepository;
+            _blindIndexService = blindIndexService;
             _unitOfWork = unitOfWork;
         }
 
@@ -52,20 +56,9 @@ namespace Application.Messages.Commands.SendMessage
                 content: request.Content
             );
 
-            //// 4. Create MemberMessage records for all members (to track status/delivery)
-            //foreach (var member in conversation.Members)
-            //{
-            //    // Note: Qualify MemberMessage in case of a namespace/type name conflict
-            //    var memberMessage = new global::Domain.Entities.Message.MemberMessage(
-            //        conversationMemberId: member.Id,
-            //        messageId: 0, // EF Core handles this link via navigation or Message object
-            //        id: 0
-            //    );
-
-            //    // Logic: Link the memberMessage to the message
-            //    // This assumes Message has a private collection of MemberMessages
-            //    message.AddRecipient(memberMessage);
-            //}
+            // 4. Index the content for search
+            var searchContent = _blindIndexService.GenerateSearchContent(request.Content);
+            message.UpdateSearchContent(searchContent);
 
             // 5. Persist
             // If your repository/UnitOfWork tracks the Message aggregate:

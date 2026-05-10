@@ -5,6 +5,7 @@ namespace Application.DTOs.Conversations;
 public sealed record ConversationResponse(
     long Id,
     string? Name,
+    string? ImageUrl,
     bool IsOneToOne,
     string? LastMessageContent,
     DateTime? LastMessageSentAt,
@@ -17,16 +18,19 @@ public sealed record ConversationResponse(
         var lastMessage = conversation.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
 
         // Logic for 1:1 Name: If it's a private chat, use the other person's name
+        string imageUrl = conversation.ImageUrl ?? string.Empty ;
         string displayName = conversation.Name ?? string.Empty;
         if (conversation.IsOneToOne)
         {
             var other = conversation.Members.FirstOrDefault(m => m.UserId != currentUserId);
             displayName = other != null ? $"{other.User.FirstName} {other.User.LastName}" : "Unknown User";
+            imageUrl = other?.User.AvatarUrl ?? string.Empty;
         }
 
         return new ConversationResponse(
             Id: conversation.Id,
             Name: displayName,
+            ImageUrl: conversation.ImageUrl,
             IsOneToOne: conversation.IsOneToOne,
             LastMessageContent: lastMessage?.Content,
             LastMessageSentAt: lastMessage?.CreatedAt,

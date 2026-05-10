@@ -1,4 +1,4 @@
-﻿using Domain.Common;
+using Domain.Common;
 using Domain.Entities;
 using Infrastructure.Outbox;
 using Infrastructure.Persistence.Configurations;
@@ -31,12 +31,11 @@ namespace Infrastructure.Persistence.Contexts
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            var encryptionKey = _configuration["Security:MessageEncryptionKey"];
             builder.ApplyConfiguration(new BlockChatConfiguration());
             builder.ApplyConfiguration(new ConversationConfiguration());
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
             builder.ApplyConfiguration(new MemberMessageConfiguration());
-            builder.ApplyConfiguration(new MessageConfiguration(encryptionKey));
+            builder.ApplyConfiguration(new MessageConfiguration());
             builder.ApplyConfiguration(new MessageAttachmentConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
 

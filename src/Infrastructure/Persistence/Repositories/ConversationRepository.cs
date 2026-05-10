@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
@@ -26,7 +26,9 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<global::Domain.Entities.Conversation?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
         {
             return await _context.Conversations
-                .Include(c => c.Members) //
+                .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                .Include(c => c.Messages)
                 .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
         }
         public async Task<ConversationMember?> GetMemberAsync(
@@ -40,7 +42,7 @@ namespace Infrastructure.Persistence.Repositories
                     m.UserId == userId,
                     cancellationToken);
         }
-        public async Task<PagedList<Conversation>> GetPagedConversationsAsync(
+        public async Task<List<Conversation>> GetPagedConversationsAsync(
                 Guid userId,
                 int pageNumber,
                 int pageSize,
@@ -64,7 +66,68 @@ namespace Infrastructure.Persistence.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            return new PagedList<Conversation>(items, pageNumber, pageSize, totalCount);
+            return new List<Conversation>(items);
+        }
+
+        public async Task<Conversation?> GetOneToOneConversationAsync(
+            Guid userId1,
+            Guid userId2,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Conversations
+                .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                .Include(c => c.Messages)
+                .Where(c => c.IsOneToOne && !c.IsDeleted)
+                .Where(c => c.Members.Any(m => m.UserId == userId1) && c.Members.Any(m => m.UserId == userId2))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<List<Conversation>> SearchGroupConversationsAsync(
+            Guid userId,
+            string term,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            var lowerTerm = term.ToLower();
+
+            return await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                .Include(c => c.Messages)
+                .Where(c => !c.IsOneToOne && !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .Where(c => c.Name != null && c.Name.ToLower().Contains(lowerTerm))
+                .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Conversation>> SearchOneToOneConversationsAsync(
+            Guid userId,
+            string term,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            var lowerTerm = term.ToLower();
+
+            return await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                .Include(c => c.Messages)
+                .Where(c => c.IsOneToOne && !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .Where(c => c.Members.Any(m =>
+                    m.UserId != userId &&
+                    (m.User.FirstName.ToLower().Contains(lowerTerm) ||
+                     m.User.LastName.ToLower().Contains(lowerTerm))))
+                .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
         }
     }
 }

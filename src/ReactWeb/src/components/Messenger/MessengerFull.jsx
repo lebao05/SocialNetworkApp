@@ -1,21 +1,40 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { conversations } from "../../data/mockData";
 import Navbar from "../Navbar/Navbar";
 import ChatInfoGroup from "./ChatInfoGroup";
 import ChatInfoDirect from "./ChatInfoDirect";
+import { useConversations } from "../../contexts/conversationContext";
+import { useAuth } from "../../contexts/authContext";
+import { getMessagesApi, sendMessageApi } from "../../apis/messageApi";
+import { createConversationApi } from "../../apis/conversationApi";
+
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 // ══════════════════════════════════════════════════════════════════
 // Panel 1 — Conversation List
 // ══════════════════════════════════════════════════════════════════
 function ConvList({ selected, onSelect }) {
+  const { conversations, searchResults, isSearching, performSearch, fetchConversations } = useConversations();
   const [tab, setTab] = useState("all");
+  const [searchVal, setSearchVal] = useState("");
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchVal(val);
+    performSearch(val);
+  };
 
   const filtered = conversations.filter((c) => {
-    if (tab === "unread") return c.unread > 0;
-    if (tab === "group") return c.isGroup;
+    if (tab === "unread") return c.unreadCount > 0;
+    if (tab === "group") return !c.isOneToOne;
     return true;
   });
+
+  const displayList = searchVal.trim() ? searchResults : filtered;
 
   return (
     <div className="w-[360px] flex flex-col h-full bg-white flex-shrink-0">
@@ -49,31 +68,38 @@ function ConvList({ selected, onSelect }) {
           <input
             className="bg-transparent outline-none text-sm flex-1 placeholder-fb-subtext"
             placeholder="Tìm kiếm trên Messenger"
+            value={searchVal}
+            onChange={handleSearchChange}
           />
+          {isSearching && (
+            <div className="w-3 h-3 border-2 border-fb-blue border-t-transparent rounded-full animate-spin" />
+          )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2">
-          {[
-            { key: "all", label: "Tất cả" },
-            { key: "unread", label: "Chưa đọc" },
-            { key: "group", label: "Nhóm" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                ${tab === t.key ? "bg-blue-100 text-fb-blue" : "bg-[#F0F2F5] text-fb-text hover:bg-[#E4E6EB]"}`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {/* Tabs - Only show when not searching */}
+        {!searchVal.trim() && (
+          <div className="flex gap-2">
+            {[
+              { key: "all", label: "Tất cả" },
+              { key: "unread", label: "Chưa đọc" },
+              { key: "group", label: "Nhóm" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+                  ${tab === t.key ? "bg-blue-100 text-fb-blue" : "bg-[#F0F2F5] text-fb-text hover:bg-[#E4E6EB]"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* List */}
       <div className="flex-1 overflow-y-auto py-1">
-        {filtered.map((conv) => (
+        {displayList.map((conv) => (
           <div
             key={conv.id}
             onClick={() => onSelect(conv)}
@@ -81,11 +107,12 @@ function ConvList({ selected, onSelect }) {
               ${selected?.id === conv.id ? "bg-blue-50" : "hover:bg-[#F0F2F5]"}`}
           >
             <div className="relative flex-shrink-0">
-              <img src={conv.avatar} className="w-14 h-14 rounded-full object-cover" alt={conv.name} />
-              {conv.online && !conv.isGroup && (
+              <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-14 h-14 rounded-full object-cover" alt={conv.name} />
+              {/* Online indicator - Mocked for now as backend doesn't provide it yet */}
+              {conv.isOnline && (
                 <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
               )}
-              {conv.isGroup && (
+              {!conv.isOneToOne && (
                 <span className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-fb-blue rounded-full border-2 border-white flex items-center justify-center">
                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
@@ -96,23 +123,23 @@ function ConvList({ selected, onSelect }) {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className={`text-[15px] truncate ${conv.unread ? "font-bold" : "font-medium"} text-fb-text`}>
+                <p className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"} text-fb-text`}>
                   {conv.name}
                 </p>
                 <span
-                  className={`text-xs flex-shrink-0 ml-2 ${conv.unread ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
+                  className={`text-xs flex-shrink-0 ml-2 ${conv.unreadCount > 0 ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
                 >
-                  {conv.time}
+                  {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                 </span>
               </div>
-              <p className={`text-sm truncate ${conv.unread ? "font-semibold text-fb-text" : "text-fb-subtext"}`}>
-                {conv.lastMessage}
+              <p className={`text-sm truncate ${conv.unreadCount > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}>
+                {conv.lastMessageContent || (conv.isNotInAConversation ? "Hãy bắt đầu cuộc trò chuyện" : "")}
               </p>
             </div>
 
-            {conv.unread > 0 && (
+            {conv.unreadCount > 0 && (
               <span className="ml-1 flex-shrink-0 w-5 h-5 bg-fb-blue rounded-full flex items-center justify-center text-white text-xs font-bold">
-                {conv.unread}
+                {conv.unreadCount}
               </span>
             )}
           </div>
@@ -126,18 +153,71 @@ function ConvList({ selected, onSelect }) {
 // Panel 2 — Chat Window
 // ══════════════════════════════════════════════════════════════════
 function ChatWindow({ conv }) {
-  const [messages, setMessages] = useState(conv?.messages || []);
+  const { user } = useAuth();
+  const { fetchConversations, setSelectedConversation } = useConversations();
+  const [messages, setMessages] = useState([]);
   const [msg, setMsg] = useState("");
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const bottomRef = useRef(null);
+
+  useEffect(() => {
+    if (conv && !conv.isNotInAConversation) {
+      loadMessages();
+    } else {
+      setMessages([]);
+    }
+  }, [conv?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = () => {
-    if (!msg.trim()) return;
-    setMessages((prev) => [...prev, { id: Date.now(), senderId: 1, text: msg, time: "Vừa xong" }]);
+  const loadMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const data = await getMessagesApi(conv.id);
+      setMessages(data || []);
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const send = async () => {
+    if (!msg.trim() || !conv) return;
+
+    const currentMsg = msg;
     setMsg("");
+
+    try {
+      let activeConvId = conv.id;
+
+      // 1. Lazy Creation Logic: If we haven't chatted before, create it now
+      if (conv.isNotInAConversation) {
+        const newConv = await createConversationApi({
+          participantIds: [conv.otherUserId],
+          name: null
+        });
+        activeConvId = newConv.id;
+
+        // Refresh context state
+        setSelectedConversation({ ...newConv, isNotInAConversation: false });
+        fetchConversations();
+      }
+
+      // 2. Send the message
+      const newMessage = await sendMessageApi({
+        conversationId: activeConvId,
+        content: currentMsg
+      });
+
+      setMessages((prev) => [...prev, newMessage]);
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      // Optional: restore msg value on error
+      setMsg(currentMsg);
+    }
   };
 
   if (!conv) {
@@ -166,19 +246,17 @@ function ChatWindow({ conv }) {
       >
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src={conv.avatar} className="w-10 h-10 rounded-full object-cover" alt={conv.name} />
-            {conv.online && !conv.isGroup && (
+            <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-10 h-10 rounded-full object-cover" alt={conv.name} />
+            {conv.isOnline && (
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
             )}
           </div>
           <div>
             <p className="font-semibold text-[15px] text-fb-text leading-tight">{conv.name}</p>
-            <p className={`text-xs ${conv.online && !conv.isGroup ? "text-green-500" : "text-fb-subtext"}`}>
-              {conv.isGroup
-                ? `${conv.members?.length || 4} thành viên`
-                : conv.online
-                  ? "Đang hoạt động"
-                  : "Không hoạt động"}
+            <p className={`text-xs ${conv.isOnline ? "text-green-500" : "text-fb-subtext"}`}>
+              {conv.isOneToOne
+                ? conv.isOnline ? "Đang hoạt động" : "Không hoạt động"
+                : `${conv.members?.length || 0} thành viên`}
             </p>
           </div>
         </div>
@@ -206,20 +284,22 @@ function ChatWindow({ conv }) {
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-0.5">
         {/* Profile header */}
         <div className="flex flex-col items-center py-8 mb-4 gap-2">
-          <img src={conv.avatar} className="w-20 h-20 rounded-full object-cover" alt={conv.name} />
+          <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-20 h-20 rounded-full object-cover" alt={conv.name} />
           <p className="font-bold text-lg text-fb-text">{conv.name}</p>
-          <p className="text-sm text-fb-subtext">{conv.isGroup ? "Nhóm · Facebook" : "Bạn bè trên Facebook"}</p>
+          <p className="text-sm text-fb-subtext">{!conv.isOneToOne ? "Nhóm" : "Bạn bè trên Community"}</p>
           <button className="mt-1 px-4 py-1.5 bg-[#F0F2F5] hover:bg-[#E4E6EB] rounded-full text-sm font-semibold text-fb-text transition-colors">
-            {conv.isGroup ? "Xem nhóm" : "Xem trang cá nhân"}
+            {!conv.isOneToOne ? "Xem nhóm" : "Xem trang cá nhân"}
           </button>
         </div>
 
+        {loadingMessages && <div className="text-center py-4 text-fb-subtext">Đang tải tin nhắn...</div>}
+
         {messages.map((m, idx) => {
-          const isMe = m.senderId === 1;
+          const isMe = m.creatorId === user?.id;
           const prevMsg = messages[idx - 1];
           const nextMsg = messages[idx + 1];
-          const isFirst = !prevMsg || prevMsg.senderId !== m.senderId;
-          const isLast = !nextMsg || nextMsg.senderId !== m.senderId;
+          const isFirst = !prevMsg || prevMsg.creatorId !== m.creatorId;
+          const isLast = !nextMsg || nextMsg.creatorId !== m.creatorId;
           const showAvatar = !isMe && isLast;
 
           return (
@@ -232,7 +312,7 @@ function ChatWindow({ conv }) {
               {!isMe && (
                 <div className="w-7 flex-shrink-0 self-end mb-0.5">
                   {showAvatar ? (
-                    <img src={conv.avatar} className="w-7 h-7 rounded-full object-cover" alt="" />
+                    <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-7 h-7 rounded-full object-cover" alt="" />
                   ) : (
                     <div className="w-7" />
                   )}
@@ -241,21 +321,20 @@ function ChatWindow({ conv }) {
 
               <div
                 className={`max-w-[65%] px-3 py-2 text-sm leading-relaxed
-                  ${
-                    isMe
-                      ? `bg-fb-blue text-white
+                  ${isMe
+                    ? `bg-fb-blue text-white
                        ${isFirst && isLast ? "rounded-2xl" : ""}
                        ${isFirst && !isLast ? "rounded-t-2xl rounded-bl-2xl rounded-br-[6px]" : ""}
                        ${!isFirst && isLast ? "rounded-b-2xl rounded-tl-2xl rounded-tr-[6px]" : ""}
                        ${!isFirst && !isLast ? "rounded-l-2xl rounded-r-[6px]" : ""}`
-                      : `bg-[#F0F2F5] text-fb-text
+                    : `bg-[#F0F2F5] text-fb-text
                        ${isFirst && isLast ? "rounded-2xl" : ""}
                        ${isFirst && !isLast ? "rounded-t-2xl rounded-br-2xl rounded-bl-[6px]" : ""}
                        ${!isFirst && isLast ? "rounded-b-2xl rounded-tr-2xl rounded-tl-[6px]" : ""}
                        ${!isFirst && !isLast ? "rounded-r-2xl rounded-l-[6px]" : ""}`
                   }`}
               >
-                {m.text}
+                {m.content}
               </div>
             </div>
           );
@@ -334,13 +413,21 @@ function ChatInfo({ conv }) {
 export default function MessengerFull() {
   const { convId } = useParams();
   const navigate = useNavigate();
+  const { selectedConversation, selectConversation } = useConversations();
 
-  const selectedConv = convId
-    ? (conversations.find((c) => c.id === parseInt(convId)) ?? conversations[0])
-    : conversations[0];
+  // Sync URL with context
+  useEffect(() => {
+    if (convId && selectedConversation?.id?.toString() !== convId) {
+      // Check if it's a GUID (TargetUserId) or Long (ConversationId)
+      const isGuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(convId);
+      selectConversation(convId, isGuid);
+    }
+  }, [convId]);
 
   const handleSelect = (conv) => {
-    navigate(`/messenger/${conv.id}`, { replace: true });
+    // If it's a new friend (isNotInAConversation), we navigate using the otherUserId
+    const idToUse = conv.isNotInAConversation ? conv.otherUserId : conv.id;
+    navigate(`/messenger/${idToUse}`, { replace: true });
   };
 
   return (
@@ -353,7 +440,7 @@ export default function MessengerFull() {
           className="flex-shrink-0 rounded-xl overflow-hidden bg-white"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}
         >
-          <ConvList selected={selectedConv} onSelect={handleSelect} />
+          <ConvList selected={selectedConversation} onSelect={handleSelect} />
         </div>
 
         {/* Panel 2 — ChatWindow */}
@@ -361,7 +448,7 @@ export default function MessengerFull() {
           className="flex-1 min-w-0 rounded-xl overflow-hidden bg-white"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}
         >
-          <ChatWindow key={selectedConv?.id} conv={selectedConv} />
+          <ChatWindow key={selectedConversation?.id || selectedConversation?.otherUserId} conv={selectedConversation} />
         </div>
 
         {/* Panel 3 — ChatInfo */}
@@ -369,7 +456,7 @@ export default function MessengerFull() {
           className="flex-shrink-0 rounded-xl overflow-hidden bg-white"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}
         >
-          <ChatInfo conv={selectedConv} />
+          <ChatInfo conv={selectedConversation} />
         </div>
       </div>
     </div>

@@ -36,7 +36,7 @@ export default function SignupPage() {
   const width = useWindowSize();
   const isMobile = width < 900;
   const navigate = useNavigate();
-  const { signup, user } = useAuth();
+  const { signup, user, loading } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -55,10 +55,10 @@ export default function SignupPage() {
   });
   useEffect(() => {
     // If auth initialization is finished and we have a user, go home
-    if (user) {
+    if (!loading && user) {
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (error) setError("");

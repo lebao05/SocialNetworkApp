@@ -38,8 +38,8 @@ internal sealed class SendFriendRequestCommandHandler
         }
 
         // ❌ Users must exist
-        var sender = await _userRepository.GetByIdAsync(request.SenderId);
-        var receiver = await _userRepository.GetByIdAsync(request.ReceiverId);
+        var sender = await _userRepository.GetByIdAsync(request.SenderId, cancellationToken);
+        var receiver = await _userRepository.GetByIdAsync(request.ReceiverId, cancellationToken);
 
         if (sender == null || receiver == null)
         {

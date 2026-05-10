@@ -12,7 +12,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Presentation;
 using Serilog;
-using System.Collections.Generic;
 using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR(); 

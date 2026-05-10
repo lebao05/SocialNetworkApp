@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 
 namespace Application.Abstractions.Repositories
 {
@@ -8,5 +8,11 @@ namespace Application.Abstractions.Repositories
 
         Task AddAsync(Friendship friendship);
         Task<List<User>> GetFriendsAsync(Guid userId, CancellationToken cancellationToken);
+        Task<List<User>> SearchFriendsToChatAsync(
+            Guid userId,
+            string term,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken);
     }
 }

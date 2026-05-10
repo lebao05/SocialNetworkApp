@@ -25,7 +25,7 @@ const EyeIcon = ({ visible }) => (
 
 export default function SigninPage() {
   const width = useWindowSize();
-  const { signin, user } = useAuth();
+  const { signin, user, loading } = useAuth();
   const navigate = useNavigate();
   const isMobile = width < 1024;
 

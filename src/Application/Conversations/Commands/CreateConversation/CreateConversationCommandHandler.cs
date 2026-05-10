@@ -1,17 +1,15 @@
-﻿using Application.Abstractions;
+using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.DTOs.Conversations;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Shared;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Application.Conversations.Commands.CreateConversation
 {
     internal sealed class CreateConversationCommandHandler
-        : ICommandHandler<CreateConversationCommand, long>
+        : ICommandHandler<CreateConversationCommand, ConversationResponse>
     {
         private readonly IConversationRepository _conversationRepository;
         private readonly IUserRepository _userRepository;
@@ -27,21 +25,21 @@ namespace Application.Conversations.Commands.CreateConversation
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<Result<long>> Handle(
+        public async Task<Result<ConversationResponse>> Handle(
             CreateConversationCommand request,
             CancellationToken cancellationToken)
         {
             // 1. Validate that the creator exists
-            if (!await _userRepository.ExistsAsync(request.CreatorId))
+            if (!await _userRepository.ExistsAsync(request.CreatorId, cancellationToken))
             {
-                return Result.Failure<long>(
+                return Result.Failure<ConversationResponse>(
                     new Error("User.NotFound", "Creator not found"));
             }
 
             // 2. Ensure there are participants (excluding the creator)
             if (request.ParticipantIds == null || !request.ParticipantIds.Any())
             {
-                return Result.Failure<long>(
+                return Result.Failure<ConversationResponse>(
                     new Error("Conversation.Invalid", "A conversation must have participants"));
             }
             bool isOneOnOne = request.ParticipantIds.Count == 1;
@@ -59,9 +57,9 @@ namespace Application.Conversations.Commands.CreateConversation
             // 5. Add other participants and validate existence
             foreach (var participantId in request.ParticipantIds)
             {
-                if (!await _userRepository.ExistsAsync(participantId))
+                if (!await _userRepository.ExistsAsync(participantId, cancellationToken))
                 {
-                    return Result.Failure<long>(
+                    return Result.Failure<ConversationResponse>(
                         new Error("User.NotFound", $"Participant {participantId} not found"));
                 }
 
@@ -72,8 +70,12 @@ namespace Application.Conversations.Commands.CreateConversation
             await _conversationRepository.AddAsync(conversation, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Return the ID of the newly created conversation
-            return Result.Success(conversation.Id);
+            // 7. Re-fetch with includes to ensure User data is loaded for the DTO
+            var createdConversation = await _conversationRepository.GetByIdAsync(conversation.Id, cancellationToken);
+
+            var response = ConversationResponse.FromDomain(createdConversation!, request.CreatorId);
+
+            return Result<ConversationResponse>.Success(response);
         }
     }
 }

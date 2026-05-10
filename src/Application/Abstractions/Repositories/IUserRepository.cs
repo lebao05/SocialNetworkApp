@@ -4,7 +4,7 @@ namespace Application.Abstractions.Repositories
 {
     public interface IUserRepository
     {
-        Task<User?> GetByIdAsync(Guid id);
-        Task<bool> ExistsAsync(Guid id);
+        Task<User?> GetByIdAsync(Guid id,CancellationToken cancellationToken);
+        Task<bool> ExistsAsync(Guid id,CancellationToken cancellationToken);
     }
 }

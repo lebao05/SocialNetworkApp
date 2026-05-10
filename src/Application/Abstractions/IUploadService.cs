@@ -1,6 +1,7 @@
 ﻿namespace Application.Abstractions
 {
-    internal class IUploadService
+    public interface IUploadService
     {
+        Task<string> UploadImageAsync(Stream fileStream, string fileName);
     }
 }

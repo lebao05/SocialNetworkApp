@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="PagedList" Version="1.17.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,8 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\Messages\" />
-    <Folder Include="Messages\Queries\" />
+    <Folder Include="Conversations\Commands\AddMemberIntoConversation\" />
+    <Folder Include="Messages\Commands\InvokeMessage\" />
+    <Folder Include="Messages\Commands\FowardMessage\" />
+    <Folder Include="Messages\Commands\ReactToMessage\" />
     <Folder Include="Users\Commands\" />
   </ItemGroup>
 

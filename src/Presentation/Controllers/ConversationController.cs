@@ -1,6 +1,9 @@
-﻿using Application.Conversations.Commands;
 using Application.Conversations.Commands.CreateConversation;
+using Application.Conversations.Commands.RemoveMemberFromConversation;
 using Application.Conversations.Commands.ToggleNotifications;
+using Application.Conversations.Queries.GetConversationDetail;
+using Application.Conversations.Queries.SearchConversationsAndFriends;
+using Application.Conversations.Queries.GetConversationDetailByUserId;
 using Application.Conversations.Queries.GetConversations;
 using Application.DTOs.Conversations;
 using Application.Shared;
@@ -11,10 +14,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Conversations;
+using System.Security.Claims;
 
 namespace Presentation.Controllers;
 
-[Route("api/conversations")]
+[Route("api/conversation")]
 [Authorize]
 public class ConversationController : ApiController
 {
@@ -27,9 +31,7 @@ public class ConversationController : ApiController
         [FromBody] CreateConversationRequest request,
         CancellationToken cancellationToken)
     {
-        // Assuming your setup uses NameIdentifier for the User's Guid
         var userIdClaim = ClaimsPrincipalExtensions.GetUserId(User);
-
 
         var command = new CreateConversationCommand(
             userIdClaim,
@@ -37,57 +39,121 @@ public class ConversationController : ApiController
             request.Name
         );
 
-        Result<long> result = await _sender.Send(command, cancellationToken);
+        Result<ConversationResponse> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
             return HandleFailure(result);
         }
 
-        // Return 201 Created or 200 OK with the new Conversation ID
         return Ok(result.Value);
     }
+
     [HttpPatch("{conversationId:long}/notifications")]
     public async Task<IActionResult> ToggleNotifications(
         long conversationId,
         CancellationToken cancellationToken)
     {
-        // 1. Get the authenticated User's Guid from the token
         var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
-        // 2. Create the command
         var command = new ToggleNotificationsCommand(
             conversationId,
             userId
         );
 
-        // 3. Send via MediatR
         Result<bool> result = await _sender.Send(command, cancellationToken);
 
-        // 4. Handle response
         if (result.IsFailure)
         {
             return HandleFailure(result);
         }
 
-        // Returns 200 OK with the new status (true/false)
         return Ok(result.Value);
     }
+
     [HttpGet]
     public async Task<IActionResult> Get(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        pageSize = Math.Clamp(pageSize, 1, 100); // Limit page size to prevent abuse
-        pageNumber = Math.Max(pageNumber, 1); // Ensure page number is at least 1
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        pageNumber = Math.Max(pageNumber, 1);
 
         var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
         var query = new GetConversationsQuery(userId, pageSize, pageNumber);
 
-        Result<PagedList<ConversationResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<List<ConversationResponse>> result = await _sender.Send(query, cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetConversationDetail(long id, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var query = new GetConversationDetailQuery(id, userId);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpGet("user/{targetUserId:guid}")]
+    public async Task<IActionResult> GetConversationDetailByUserId(Guid targetUserId, CancellationToken cancellationToken)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new GetConversationDetailByUserIdQuery(userId, targetUserId);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string searchTerm,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new SearchConversationsAndFriendsQuery(
+            userId,
+            searchTerm,
+            pageNumber,
+            pageSize);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpDelete("{conversationId:long}/members/{userIdToRemove:guid}")]
+    public async Task<IActionResult> RemoveMember(
+        long conversationId,
+        Guid userIdToRemove,
+        CancellationToken cancellationToken)
+    {
+        var adminId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new RemoveMemberFromConversationCommand(
+            conversationId,
+            adminId,
+            userIdToRemove
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
     }
 }
