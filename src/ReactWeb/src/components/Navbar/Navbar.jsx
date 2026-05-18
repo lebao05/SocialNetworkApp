@@ -258,14 +258,14 @@ export default function Navbar() {
           <Bell size={18} />
         </ActionBtn>
 
-        <div className="flex items-center gap-0.5 cursor-pointer group">
+        <Link to="/profile" className="flex items-center gap-0.5 cursor-pointer group">
           <img
             src={currentUser.avatar}
             alt="avatar"
             className="w-10 h-10 rounded-full object-cover hover:ring-2 hover:ring-fb-blue transition-all"
           />
           <ChevronDown size={14} className="text-fb-subtext group-hover:text-fb-text transition-colors" />
-        </div>
+        </Link>
       </div>
     </nav>
   );

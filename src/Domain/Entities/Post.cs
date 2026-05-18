@@ -1,0 +1,81 @@
+using Domain.Common;
+using Domain.Enums;
+
+namespace Domain.Entities
+{
+    public class Post : AggregateRoot
+    {
+        public Guid AuthorId { get; private set; }
+        public PostAuthorType AuthorType { get; private set; }
+        public string Content { get; private set; } = string.Empty;
+        public PostVisibility Visibility { get; private set; }
+        public long? SharePostId { get; private set; }
+        public string? LocationTag { get; private set; }
+        public string? FeelingActivity { get; private set; }
+        
+        // Soft delete
+        public DateTime? DeletedAt { get; private set; }
+
+        // Navigation
+        public User Author { get; private set; } = null!;
+        public Post? SharePost { get; private set; }
+
+        private readonly List<PostMedia> _media = new();
+        private readonly List<PostComment> _comments = new();
+        private readonly List<SavedPost> _savedPosts = new();
+        private readonly List<UserFeed> _userFeeds = new();
+        private readonly List<Reaction> _reactions = new();
+
+        // Navigation Collections
+        public virtual IReadOnlyCollection<PostMedia> Media => _media;
+        public virtual IReadOnlyCollection<PostComment> Comments => _comments;
+        public virtual IReadOnlyCollection<SavedPost> SavedPosts => _savedPosts;
+        public virtual IReadOnlyCollection<UserFeed> UserFeeds => _userFeeds;
+        public virtual IReadOnlyCollection<Reaction> Reactions => _reactions;
+
+        private Post(long id) : base(id) { }
+
+        public Post(
+            long id,
+            Guid authorId,
+            PostAuthorType authorType,
+            string content,
+            PostVisibility visibility,
+            long? sharePostId = null,
+            string? locationTag = null,
+            string? feelingActivity = null) : base(id)
+        {
+            AuthorId = authorId;
+            AuthorType = authorType;
+            Content = content;
+            Visibility = visibility;
+            SharePostId = sharePostId;
+            LocationTag = locationTag;
+            FeelingActivity = feelingActivity;
+            CreatedAt = DateTime.UtcNow;
+        }
+
+        public void Update(
+            string content,
+            PostVisibility visibility,
+            string? locationTag,
+            string? feelingActivity)
+        {
+            Content = content;
+            Visibility = visibility;
+            LocationTag = locationTag;
+            FeelingActivity = feelingActivity;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void SoftDelete()
+        {
+            DeletedAt = DateTime.UtcNow;
+        }
+
+        public void Restore()
+        {
+            DeletedAt = null;
+        }
+    }
+}

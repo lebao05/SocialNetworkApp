@@ -17,23 +17,6 @@ namespace Infrastructure.Persistence.Repositories
         {
             _context.Set<Message>().Add(message);
         }
-        public async Task<List<Message>> GetPagedMessagesAsync(
-            long conversationId,
-            int pageNumber,
-            int pageSize,
-            CancellationToken cancellationToken)
-        {
-            return await _context.Messages
-                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
-                .AsNoTracking()
-                .Include(m => m.Creator)
-                .Include(m => m.Attachment)
-                .Include(m => m.MemberMessages)
-                .OrderByDescending(m => m.CreatedAt) // newest first
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-        }
         public async Task<Message?> GetByIdAsync(long id, CancellationToken cancellationToken)
         {
             return await _context.Messages

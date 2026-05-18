@@ -1,7 +1,6 @@
 using Application.Messages.Commands.InvokeMessage;
 using Application.Messages.Commands.SendMessage;
 using Application.Messages.Commands.UpdateMessage;
-using Application.Messages.Queries.GetMessages;
 using Application.Messages.Queries.GetMessagesAround;
 using Application.Messages.Queries.SearchMessages;
 using Infrastructure.SignalR;
@@ -116,28 +115,6 @@ namespace Presentation.Controllers
             // Notify the conversation group via SignalR
             await _hubContext.Clients.Group(request.ConversationId.ToString())
                 .SendAsync("ReceiveMessage", result.Value, cancellationToken);
-
-            return Ok(result.Value);
-        }
-        [HttpGet]
-        public async Task<IActionResult> GetMessages(
-        long conversationId,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
-        {
-            var userId = Guid.Parse(User.FindFirst("sub")!.Value);
-            pageNumber = Math.Max(pageNumber, 1);
-            pageSize = Math.Clamp(pageSize, 1, 50);
-            var query = new GetMessagesQuery(
-                conversationId,
-                userId,
-                pageNumber,
-                pageSize);
-
-            var result = await _sender.Send(query);
-
-            if (result.IsFailure)
-                return BadRequest(result.Error);
 
             return Ok(result.Value);
         }

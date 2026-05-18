@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { currentUser } from "../../data/mockData";
 
 const MenuItem = ({ icon, label, active = false }) => (
@@ -14,10 +15,10 @@ export default function LeftSidebar() {
   return (
     <aside className="fixed top-14 left-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-2 bg-white">
       {/* User profile */}
-      <div className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-fb-hover mb-1">
+      <Link to="/profile" className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-fb-hover mb-1 text-inherit no-underline block">
         <img src={currentUser.avatar} alt="avatar" className="w-9 h-9 rounded-full" />
         <span className="text-[15px] font-semibold">{currentUser.name}</span>
-      </div>
+      </Link>
 
       <MenuItem icon="👥" label="Bạn bè" />
       <MenuItem icon="🕐" label="Kỷ niệm" />

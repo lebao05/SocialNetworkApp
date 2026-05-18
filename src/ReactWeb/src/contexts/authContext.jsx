@@ -71,8 +71,26 @@ export function AuthProvider({ children }) {
         } catch (err) {
             console.error("Login logic failed:", err);
 
-            // Extract the error message properly
-            const errorMessage = err.response?.data?.Detail || err.message || "Login failed";
+            let errorMessage = "Login failed";
+            if (err.response?.data) {
+                const data = err.response.data;
+                if (typeof data === "string") {
+                    errorMessage = data;
+                } else if (data.detail) {
+                    errorMessage = data.detail;
+                } else if (data.Detail) {
+                    errorMessage = data.Detail;
+                } else if (data.errors) {
+                    errorMessage = Object.values(data.errors).flat().join(". ");
+                } else if (data.message) {
+                    errorMessage = data.message;
+                } else {
+                    errorMessage = JSON.stringify(data);
+                }
+            } else {
+                errorMessage = err.message || "An unknown error occurred";
+            }
+
             return { success: false, error: errorMessage };
         } finally {
             setLoading(false);
@@ -101,7 +119,28 @@ export function AuthProvider({ children }) {
             return { success: true };
         } catch (err) {
             console.error("Signup logic failed:", err);
-            const errorMessage = err.response?.data?.Detail || err.message || "Registration failed";
+            
+            let errorMessage = "Registration failed";
+            if (err.response?.data) {
+                const data = err.response.data;
+                if (typeof data === "string") {
+                    errorMessage = data;
+                } else if (data.detail) {
+                    errorMessage = data.detail;
+                } else if (data.Detail) {
+                    errorMessage = data.Detail;
+                } else if (data.errors) {
+                    // If it's a validation problem with an 'errors' object
+                    errorMessage = Object.values(data.errors).flat().join(". ");
+                } else if (data.message) {
+                    errorMessage = data.message;
+                } else {
+                    errorMessage = JSON.stringify(data);
+                }
+            } else {
+                errorMessage = err.message || "An unknown error occurred";
+            }
+
             return { success: false, error: errorMessage };
         } finally {
             setLoading(false);

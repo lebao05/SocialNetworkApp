@@ -21,12 +21,6 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(m => m.SearchContent)
                 .IsRequired(false);
-
-            // GIN index for Full-Text Search on the hashed content shadow column
-            builder.HasIndex(m => m.SearchContent)
-                .HasMethod("gin")
-                .HasOperators("gist_trgm_ops"); // Using trgm for partial matches if needed, or simple gin for words
-
      
             // Creator
             builder.HasOne(m => m.Creator)

@@ -35,7 +35,15 @@ namespace Application.Users.Queries.GetPersonalInfo
                 user.FirstName,
                 user.LastName,
                 user.AvatarUrl,
-                user.Gender.ToString());
+                user.CoverPhotoUrl,
+                user.Gender,
+                user.DateOfBirth,
+                user.Bio,
+                user.CurrentLocation,
+                user.Hometown,
+                user.Website,
+                user.RelationshipStatus,
+                new DateTime(2018, 5, 1)); // Placeholder as User does not have CreatedAt
 
             return Result.Success(response);
         }

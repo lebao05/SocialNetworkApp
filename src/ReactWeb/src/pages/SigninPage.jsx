@@ -196,7 +196,7 @@ export default function SigninPage() {
           </form>
 
           <p style={{ textAlign: "center", fontSize: "14px", color: "#64748b", marginTop: "32px" }}>
-            New here? <a href="#" style={{ color: "#2563eb", fontWeight: 700, textDecoration: "none" }}>Create an account</a>
+            New here? <a href="/sign-up" style={{ color: "#2563eb", fontWeight: 700, textDecoration: "none" }}>Create an account</a>
           </p>
         </div>
       </div>

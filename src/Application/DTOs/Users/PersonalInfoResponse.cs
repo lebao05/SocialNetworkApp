@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 
 namespace Application.DTOs.Users
@@ -7,5 +8,13 @@ namespace Application.DTOs.Users
         string FirstName,
         string LastName,
         string? AvatarUrl,
-        string Gender);
+        string? CoverPhotoUrl,
+        Gender Gender,
+        DateOnly DateOfBirth,
+        string? Bio,
+        string? CurrentLocation,
+        string? Hometown,
+        string? Website,
+        RelationshipStatus? RelationshipStatus,
+        DateTime? CreatedAt);
 }

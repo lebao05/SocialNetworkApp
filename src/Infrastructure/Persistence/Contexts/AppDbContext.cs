@@ -28,9 +28,21 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<MessageAttachment> MessageAttachments { get; set; }
         public DbSet<FriendRequest> FriendRequests { get; set; }
         public DbSet<Friendship> Friendships { get; set; }        
+        public DbSet<Group> Groups { get; set; }
+        public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<GroupRequest> GroupRequests { get; set; }
+        public DbSet<Post> Posts { get; set; }
+        public DbSet<PostMedia> PostMedias { get; set; }
+        public DbSet<PostComment> PostComments { get; set; }
+        public DbSet<Reaction> Reactions { get; set; }
+        public DbSet<SavedPost> SavedPosts { get; set; }
+        public DbSet<UserFeed> UserFeeds { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<School> Schools { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            builder.ApplyConfiguration(new SchoolConfiguration());
             builder.ApplyConfiguration(new BlockChatConfiguration());
             builder.ApplyConfiguration(new ConversationConfiguration());
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
@@ -38,6 +50,16 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new MessageConfiguration());
             builder.ApplyConfiguration(new MessageAttachmentConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
+            builder.ApplyConfiguration(new GroupConfiguration());
+            builder.ApplyConfiguration(new GroupMemberConfiguration());
+            builder.ApplyConfiguration(new GroupRequestConfiguration());
+            builder.ApplyConfiguration(new PostConfiguration());
+            builder.ApplyConfiguration(new PostMediaConfiguration());
+            builder.ApplyConfiguration(new PostCommentConfiguration());
+            builder.ApplyConfiguration(new ReactionConfiguration());
+            builder.ApplyConfiguration(new SavedPostConfiguration());
+            builder.ApplyConfiguration(new UserFeedConfiguration());
+            builder.ApplyConfiguration(new NotificationConfiguration());
 
 
             base.OnModelCreating(builder);
