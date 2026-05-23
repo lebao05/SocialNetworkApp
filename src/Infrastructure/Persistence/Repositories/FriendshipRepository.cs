@@ -16,14 +16,6 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<bool> ExistsAsync(Guid user1Id, Guid user2Id)
         {
-            // normalize (same logic as entity)
-            if (user1Id.CompareTo(user2Id) > 0)
-            {
-                var temp = user1Id;
-                user1Id = user2Id;
-                user2Id = temp;
-            }
-
             return await _context.Friendships
                 .AnyAsync(f =>
                     f.User1Id == user1Id &&
@@ -73,6 +65,13 @@ namespace Infrastructure.Persistence.Repositories
                 .OrderBy(u => u.FirstName)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Friendship>> GetAllFriendshipsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Friendships
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }

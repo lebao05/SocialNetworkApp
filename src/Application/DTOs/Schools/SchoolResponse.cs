@@ -8,7 +8,7 @@ namespace Application.DTOs.Schools
         Guid UserId,
         string Name,
         SchoolType Type,
-        DegreeType Degree,
+        DegreeType? Degree,
         string? Major,
         int StartYear,
         int EndYear

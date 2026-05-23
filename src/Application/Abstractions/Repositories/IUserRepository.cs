@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 
 namespace Application.Abstractions.Repositories
 {
@@ -6,5 +6,6 @@ namespace Application.Abstractions.Repositories
     {
         Task<User?> GetByIdAsync(Guid id,CancellationToken cancellationToken);
         Task<bool> ExistsAsync(Guid id,CancellationToken cancellationToken);
+        Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default);
     }
 }

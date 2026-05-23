@@ -32,5 +32,45 @@ namespace Infrastructure.Services
 
             return result.SecureUrl.ToString();
         }
+
+        public async Task<string> UploadVideoAsync(Stream fileStream, string fileName)
+        {
+            var uploadParams = new VideoUploadParams
+            {
+                File = new FileDescription(fileName, fileStream),
+                UseFilename = true,
+                UniqueFilename = false,
+                Overwrite = true
+            };
+
+            var result = await _cloudinary.UploadAsync(uploadParams);
+
+            if (result.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                throw new Exception("Upload failed: " + result.Error?.Message);
+            }
+
+            return result.SecureUrl.ToString();
+        }
+
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName)
+        {
+            var uploadParams = new RawUploadParams
+            {
+                File = new FileDescription(fileName, fileStream),
+                UseFilename = true,
+                UniqueFilename = false,
+                Overwrite = true
+            };
+
+            var result = await _cloudinary.UploadAsync(uploadParams);
+
+            if (result.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                throw new Exception("Upload failed: " + result.Error?.Message);
+            }
+
+            return result.SecureUrl.ToString();
+        }
     }
 }

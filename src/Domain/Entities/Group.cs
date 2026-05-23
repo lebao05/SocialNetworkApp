@@ -16,10 +16,12 @@ namespace Domain.Entities
 
         private readonly List<GroupMember> _members = new();
         private readonly List<GroupRequest> _requests = new();
+        private readonly List<Post> _posts = new();
 
         // Navigation Collections
         public virtual IReadOnlyCollection<GroupMember> Members => _members;
         public virtual IReadOnlyCollection<GroupRequest> Requests => _requests;
+        public virtual IReadOnlyCollection<Post> Posts => _posts;
 
         private Group(long id) : base(id) { }
 

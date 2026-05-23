@@ -33,16 +33,23 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<GroupRequest> GroupRequests { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<PostMedia> PostMedias { get; set; }
+        public DbSet<PostTag> PostTags { get; set; }
         public DbSet<PostComment> PostComments { get; set; }
         public DbSet<Reaction> Reactions { get; set; }
         public DbSet<SavedPost> SavedPosts { get; set; }
         public DbSet<UserFeed> UserFeeds { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<School> Schools { get; set; }
+        public DbSet<Following> Followings { get; set; }
+        public DbSet<InterestRelationshipScore> InterestRelationshipScores { get; set; }
+        public DbSet<InterestGroupScore> InterestGroupScores { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             builder.ApplyConfiguration(new SchoolConfiguration());
+            builder.ApplyConfiguration(new FollowingConfiguration());
+            builder.ApplyConfiguration(new InterestRelationshipScoreConfiguration());
+            builder.ApplyConfiguration(new InterestGroupScoreConfiguration());
             builder.ApplyConfiguration(new BlockChatConfiguration());
             builder.ApplyConfiguration(new ConversationConfiguration());
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
@@ -55,6 +62,7 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new GroupRequestConfiguration());
             builder.ApplyConfiguration(new PostConfiguration());
             builder.ApplyConfiguration(new PostMediaConfiguration());
+            builder.ApplyConfiguration(new PostTagConfiguration());
             builder.ApplyConfiguration(new PostCommentConfiguration());
             builder.ApplyConfiguration(new ReactionConfiguration());
             builder.ApplyConfiguration(new SavedPostConfiguration());
@@ -89,7 +97,7 @@ namespace Infrastructure.Persistence.Contexts
             }
 
             var domainEvents = ChangeTracker
-                  .Entries<AggregateRoot>()
+                  .Entries<IHasDomainEvents>()
                   .Where(e => e.Entity.DomainEvents.Any())
                   .SelectMany(e => e.Entity.DomainEvents)
                   .ToList();
@@ -108,7 +116,7 @@ namespace Infrastructure.Persistence.Contexts
             }
 
             // Clear domain events from entities
-            foreach (var entry in ChangeTracker.Entries<AggregateRoot>())
+            foreach (var entry in ChangeTracker.Entries<IHasDomainEvents>())
                 entry.Entity.ClearDomainEvents();
             return base.SaveChangesAsync(cancellationToken);
         }

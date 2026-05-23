@@ -5,8 +5,21 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Domain.Entities
 {
-    public class User : IdentityUser<Guid>
+    public class User : IdentityUser<Guid>, IHasDomainEvents
     {
+        private readonly List<IDomainEvent> _domainEvents = new();
+
+        public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+        public void AddDomainEvent(IDomainEvent domainEvent)
+        {
+            _domainEvents.Add(domainEvent);
+        }
+
+        public void ClearDomainEvents()
+        {
+            _domainEvents.Clear();
+        }
         public string FirstName { get; private set; } = string.Empty;
         public string LastName { get; private set; } = string.Empty;
         public DateOnly DateOfBirth { get; private set; }
@@ -34,6 +47,18 @@ namespace Domain.Entities
 
         private readonly List<FriendRequest> _receivedRequests = new();
         public IReadOnlyCollection<FriendRequest> ReceivedRequests => _receivedRequests;
+
+        private readonly List<Following> _following = new();
+        public IReadOnlyCollection<Following> Following => _following;
+
+        private readonly List<Following> _followers = new();
+        public IReadOnlyCollection<Following> Followers => _followers;
+
+        private readonly List<InterestRelationshipScore> _interestScores = new();
+        public IReadOnlyCollection<InterestRelationshipScore> InterestScores => _interestScores;
+
+        private readonly List<InterestGroupScore> _groupInterestScores = new();
+        public IReadOnlyCollection<InterestGroupScore> GroupInterestScores => _groupInterestScores;
 
         private readonly List<Post> _posts = new();
         private readonly List<PostComment> _comments = new();

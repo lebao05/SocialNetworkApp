@@ -8,7 +8,7 @@ namespace Domain.Entities
         public Guid UserId { get; private set; }
         public string Name { get; private set; } = string.Empty;
         public SchoolType Type { get; private set; }
-        public DegreeType Degree { get; private set; }
+        public DegreeType? Degree { get; private set; }
         public string? Major { get; private set; } // e.g., Computer Science
         public int StartYear { get; private set; }
         public int EndYear { get; private set; }
@@ -23,7 +23,7 @@ namespace Domain.Entities
             Guid userId,
             string name,
             SchoolType type,
-            DegreeType degree,
+            DegreeType? degree,
             string? major,
             int startYear,
             int endYear) : base(id)
@@ -44,7 +44,7 @@ namespace Domain.Entities
         public void UpdateDetails(
             string name,
             SchoolType type,
-            DegreeType degree,
+            DegreeType? degree,
             string? major,
             int startYear,
             int endYear)

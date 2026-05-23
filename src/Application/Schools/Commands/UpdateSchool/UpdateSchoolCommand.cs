@@ -9,7 +9,7 @@ namespace Application.Schools.Commands.UpdateSchool
         Guid UserId,
         string Name,
         SchoolType Type,
-        DegreeType Degree,
+        DegreeType? Degree,
         string? Major,
         int StartYear,
         int EndYear

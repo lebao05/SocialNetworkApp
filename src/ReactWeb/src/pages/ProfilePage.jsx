@@ -12,9 +12,7 @@ import {
   Camera,
   Plus,
   Edit2,
-  MoreHorizontal,
   ChevronDown,
-  Briefcase,
   GraduationCap,
   Home,
   MapPin,
@@ -28,12 +26,10 @@ import {
   Video,
   X,
   Globe,
-  Users,
-  Moon,
-  Sun,
   ThumbsUp,
   MessageCircle,
-  Share2
+  Share2,
+  Heart
 } from "lucide-react";
 
 // Mock User matching the user's screenshots exactly
@@ -45,13 +41,19 @@ const mockProfileUser = {
   bio: "belief",
   friendsCount: 230,
   details: {
-    educationCollege: "Trường Đại học Khoa học Tự nhiên, Đại học Quốc gia TP.HCM",
-    educationCollegeYear: "2023",
-    educationHighSchool: "Trường THPT Nguyễn Trãi",
-    currentCity: "Ho Chi Minh City",
-    hometown: "Từ Tuy An, Phú Yên, Vietnam",
-    birthYear: "2005",
-    joinedDate: "Đã tham gia vào tháng 5 năm 2018"
+    educationCollege: null,
+    educationCollegeYear: null,
+    educationHighSchool: null,
+    currentCity: null,
+    hometown: null,
+    birthDate: null,
+    birthYear: null,
+    gender: null,
+    pronoun: null,
+    relationship: null,
+    family: null,
+    language: null,
+    joinedDate: null
   }
 };
 
@@ -85,7 +87,8 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const { personalInfo, loading: infoLoading } = usePersonalInfo(authUser?.id);
-  const { schools, loading: schoolsLoading } = useSchools(authUser?.id);
+  const { schools, loading: schoolsLoading, fetchSchools } = useSchools(authUser?.id);
+
 
   // Theme state: defaults to white theme (light mode) as requested!
   const [darkMode, setDarkMode] = useState(false);
@@ -94,22 +97,12 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("all"); // all, about, friends, photos
 
   // Edit Profile / Bio States
-  const [bio, setBio] = useState(mockProfileUser.bio);
+  const [bio, setBio] = useState(personalInfo?.bio || "");
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioInput, setBioInput] = useState(mockProfileUser.bio);
+  const [bioInput, setBioInput] = useState(personalInfo?.bio || "");
 
-  // User Profile details editable state
-  const [profileDetails, setProfileDetails] = useState(mockProfileUser.details);
-  const [profileName, setProfileName] = useState(mockProfileUser.name);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: mockProfileUser.name,
-    college: mockProfileUser.details.educationCollege,
-    highSchool: mockProfileUser.details.educationHighSchool,
-    currentCity: mockProfileUser.details.currentCity,
-    hometown: mockProfileUser.details.hometown,
-    birthYear: mockProfileUser.details.birthYear
-  });
+  const [profileDetails, setProfileDetails] = useState(personalInfo?.details || {});
+  const [profileName, setProfileName] = useState(personalInfo ? `${personalInfo.firstName} ${personalInfo.lastName}` : "");
 
   // Post States (Start with empty list to match the "Không có bài viết" screenshot)
   const [postsList, setPostsList] = useState([]);
@@ -118,12 +111,42 @@ export default function ProfilePage() {
     if (personalInfo) {
       setBio(personalInfo.bio || "");
       setBioInput(personalInfo.bio || "");
-      setProfileName(`${personalInfo.firstName} ${personalInfo.lastName}`);
+      if (personalInfo.firstName || personalInfo.lastName) {
+        setProfileName(`${personalInfo.firstName} ${personalInfo.lastName}`);
+      }
+
+      const genderStr = personalInfo.gender === 0 ? "Nam" : "Nữ";
+
+      const relMapping = {
+        0: 'Độc thân',
+        1: 'Đang hẹn hò',
+        2: 'Đã đính hôn',
+        3: 'Đã kết hôn',
+        4: 'Trong một mối quan hệ mở',
+        5: 'Có mối quan hệ phức tạp',
+        6: 'Đã ly thân',
+        7: 'Đã ly hôn',
+        8: 'Góa'
+      };
+      const relationshipStr = relMapping[personalInfo.relationshipStatus] ?? 'Chưa cập nhật';
+
+      const formatDateToDayMonth = (dateStr) => {
+        if (!dateStr) return "";
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return "";
+        return `${date.getDate()} tháng ${date.getMonth() + 1}`;
+      };
+
       setProfileDetails(prev => ({
         ...prev,
         currentCity: personalInfo.currentLocation || "",
         hometown: personalInfo.hometown || "",
-        birthYear: personalInfo.dateOfBirth ? personalInfo.dateOfBirth.split("-")[0] : ""
+        birthDate: personalInfo.dateOfBirth ? formatDateToDayMonth(personalInfo.dateOfBirth) : "",
+        birthYear: personalInfo.dateOfBirth ? personalInfo.dateOfBirth.split("-")[0] : "",
+        gender: genderStr || "",
+        relationship: relationshipStr || "",
+        website: personalInfo.website || "",
+        pronoun: ""
       }));
     }
   }, [personalInfo]);
@@ -182,8 +205,17 @@ export default function ProfilePage() {
 
       if (field === 'currentCity') updateData.currentLocation = value;
       if (field === 'hometown') updateData.hometown = value;
-      if (field === 'birthYear') updateData.dateOfBirth = `${value}-01-01`;
-      if (field === 'gender') updateData.gender = value === 'Nam' ? 0 : 1;
+      if (field === 'website') updateData.website = value;
+      if (field === 'birthYear') {
+        const parts = (personalInfo?.dateOfBirth || "2005-10-07").split("-");
+        updateData.dateOfBirth = `${value}-${parts[1] || "10"}-${parts[2] || "07"}`;
+      }
+      if (field === 'dateOfBirth') {
+        updateData.dateOfBirth = value;
+      }
+      if (field === 'gender') {
+        updateData.gender = (value === 'Male' || value === 'Nam') ? 0 : 1;
+      }
       if (field === 'relationship') {
         const mapping = {
           'Độc thân': 0,
@@ -191,68 +223,56 @@ export default function ProfilePage() {
           'Đã đính hôn': 2,
           'Đã kết hôn': 3,
           'Trong một mối quan hệ mở': 4,
-          'Phức tạp': 5,
+          'Có mối quan hệ phức tạp': 5,
           'Đã ly thân': 6,
           'Đã ly hôn': 7,
-          'Góa': 8
+          'Góa': 8,
+          'Chưa cập nhật': null
         };
-        updateData.relationshipStatus = mapping[value] ?? 0;
+        updateData.relationshipStatus = mapping[value] !== undefined ? mapping[value] : null;
       }
 
       await updateUserInfoApi(updateData);
-      
-      setProfileDetails(prev => ({
-        ...prev,
-        [field]: value
-      }));
+
+      if (field === 'dateOfBirth') {
+        const parts = value.split("-");
+        const monthNames = ["", "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
+        const day = parseInt(parts[2] || "1");
+        const monthNum = parseInt(parts[1] || "1");
+        setProfileDetails(prev => ({
+          ...prev,
+          birthDate: `${day} ${monthNames[monthNum] || ""}`,
+          birthYear: parts[0] || ""
+        }));
+      } else {
+        setProfileDetails(prev => ({
+          ...prev,
+          [field]: value
+        }));
+      }
     } catch (error) {
       console.error("Failed to update profile field", error);
+      if (field === 'dateOfBirth') {
+        const parts = value.split("-");
+        const monthNames = ["", "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
+        const day = parseInt(parts[2] || "1");
+        const monthNum = parseInt(parts[1] || "1");
+        setProfileDetails(prev => ({
+          ...prev,
+          birthDate: `${day} ${monthNames[monthNum] || ""}`,
+          birthYear: parts[0] || ""
+        }));
+      } else {
+        setProfileDetails(prev => ({
+          ...prev,
+          [field]: value
+        }));
+      }
     }
   };
 
   const handleOpenEditDetails = () => {
-    setEditForm({
-      name: profileName,
-      college: profileDetails.educationCollege,
-      highSchool: profileDetails.educationHighSchool,
-      currentCity: profileDetails.currentCity,
-      hometown: profileDetails.hometown,
-      birthYear: profileDetails.birthYear
-    });
-    setIsEditingDetails(true);
-  };
-
-  const handleSaveDetails = async (e) => {
-    e.preventDefault();
-    try {
-      const [firstName, ...lastNameParts] = editForm.name.split(" ");
-      const lastName = lastNameParts.join(" ");
-
-      const updateData = {
-        firstName: firstName || "",
-        lastName: lastName || "",
-        dateOfBirth: `${editForm.birthYear}-01-01`,
-        gender: personalInfo?.gender || 0,
-        bio: bio,
-        currentLocation: editForm.currentCity,
-        hometown: editForm.hometown,
-        website: personalInfo?.website || "",
-        relationshipStatus: personalInfo?.relationshipStatus || 0
-      };
-
-      await updateUserInfoApi(updateData);
-
-      setProfileName(editForm.name);
-      setProfileDetails({
-        ...profileDetails,
-        currentCity: editForm.currentCity,
-        hometown: editForm.hometown,
-        birthYear: editForm.birthYear
-      });
-      setIsEditingDetails(false);
-    } catch (error) {
-      console.error("Failed to update details", error);
-    }
+    setActiveTab("about");
   };
 
   const handleCreatePost = (e) => {
@@ -311,7 +331,13 @@ export default function ProfilePage() {
     sidebarHr: darkMode ? "border-[#3e4042]" : "border-[#e4e6eb]",
     tabHover: darkMode ? "hover:bg-[#3a3b3c]" : "hover:bg-[#f2f2f2]"
   };
-
+  if (personalInfo === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#18191a]">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+      </div>
+    );
+  }
   return (
     <div className={`min-h-screen transition-colors duration-200 ${theme.bg}`}>
       {/* Navbar Integration */}
@@ -336,15 +362,6 @@ export default function ProfilePage() {
             <button className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer">
               <Camera size={16} />
               <span className="hidden sm:inline">Thêm ảnh bìa</span>
-            </button>
-
-            {/* Dark Mode Floating Toggle Switch */}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer"
-              title={darkMode ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-            >
-              {darkMode ? <Sun size={18} className="text-yellow-400 animate-spin-slow" /> : <Moon size={18} />}
             </button>
           </div>
 
@@ -527,6 +544,32 @@ export default function ProfilePage() {
                     </div>
                   )}
 
+                  {profileDetails.relationship && profileDetails.relationship !== 'Chưa cập nhật' && (
+                    <div className={`flex items-start gap-3 ${theme.text}`}>
+                      <Heart className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
+                      <span>{profileDetails.relationship}</span>
+                    </div>
+                  )}
+                  {schools && schools.map(school => (
+                    <div key={school.id} className={`flex items-start gap-3 ${theme.text}`}>
+                      <GraduationCap className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
+                      <span>
+                        {school.type === 1 || school.type === 2
+                          ? "Học tại"
+                          : "Từng học tại"}{" "}
+                        <span className="font-semibold">{school.name}</span>
+                      </span>
+                    </div>
+                  ))}
+                  {personalInfo?.website && (
+                    <div className={`flex items-start gap-3 ${theme.text}`}>
+                      <Globe className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
+                      <span>
+                        Website: <a href={personalInfo.website.startsWith('http') ? personalInfo.website : `https://${personalInfo.website}`} target="_blank" rel="noopener noreferrer" className="text-[#1877f2] hover:underline font-semibold">{personalInfo.website}</a>
+                      </span>
+                    </div>
+                  )}
+
                   {profileDetails.birthYear && (
                     <div className={`flex items-start gap-3 ${theme.text}`}>
                       <Clock className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
@@ -650,7 +693,7 @@ export default function ProfilePage() {
                     />
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
-                      className={`flex-1 text-left px-4 py-2.5 rounded-full text-[15px] transition-all cursor-pointer text-gray-500 bg-gray-100 hover:bg-gray-200 dark:bg-[#3a3b3c] dark:hover:bg-[#4e4f50] dark:text-gray-400`}
+                      className={`flex-1 text-left px-4 py-2.5 rounded-full text-[15px] transition-all cursor-pointer text-gray-500 ${darkMode ? 'bg-[#3a3b3c] hover:bg-[#4e4f50] text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
                     >
                       {displayUser.name} ơi, bạn đang nghĩ gì thế?
                     </button>
@@ -658,15 +701,15 @@ export default function ProfilePage() {
 
                   {/* Actions inside create card */}
                   <div className="flex items-center justify-around pt-3">
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} dark:hover:bg-[#3a3b3c] hover:bg-gray-100`}>
+                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                       <Video size={18} className="text-red-500" />
                       <span>Video trực tiếp</span>
                     </button>
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} dark:hover:bg-[#3a3b3c] hover:bg-gray-100`}>
+                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                       <ImageIcon size={18} className="text-green-500" />
                       <span>Ảnh/video</span>
                     </button>
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} dark:hover:bg-[#3a3b3c] hover:bg-gray-100`}>
+                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                       <Smile size={18} className="text-yellow-500" />
                       <span>Cảm xúc/hoạt động</span>
                     </button>
@@ -696,7 +739,7 @@ export default function ProfilePage() {
                       <ListIcon size={16} />
                       Chế độ xem danh sách
                     </button>
-                    <button className={`flex-1 flex items-center justify-center gap-2 py-2 font-semibold text-sm ${theme.textSub} dark:hover:bg-[#3a3b3c] hover:bg-gray-100 rounded-lg`}>
+                    <button className={`flex-1 flex items-center justify-center gap-2 py-2 font-semibold text-sm ${theme.textSub} ${theme.tabHover} rounded-lg`}>
                       <Grid size={16} />
                       Chế độ xem lưới
                     </button>
@@ -706,7 +749,7 @@ export default function ProfilePage() {
                 {/* Feed Section (Shows "Không có bài viết" empty state or dynamically created posts) */}
                 {postsList.length === 0 ? (
                   <div className={`${theme.card} rounded-xl shadow p-12 flex flex-col items-center justify-center text-center transition-colors duration-200`}>
-                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-[#3a3b3c] flex items-center justify-center text-3xl mb-4 shadow-inner">
+                    <div className={`w-20 h-20 rounded-full ${theme.input} flex items-center justify-center text-3xl mb-4 shadow-inner`}>
                       📭
                     </div>
                     <h3 className={`text-xl font-bold mb-1.5 ${theme.text}`}>Không có bài viết</h3>
@@ -737,7 +780,7 @@ export default function ProfilePage() {
                               </div>
                             </div>
                           </div>
-                          <button className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${theme.textSub} dark:hover:bg-[#3a3b3c] hover:bg-gray-100`}>
+                          <button className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${theme.textSub} ${theme.tabHover}`}>
                             ···
                           </button>
                         </div>
@@ -774,16 +817,16 @@ export default function ProfilePage() {
                         <div className="flex items-center p-1">
                           <button
                             onClick={() => handleLikePost(post.id)}
-                            className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all dark:hover:bg-[#3a3b3c] hover:bg-gray-100 ${post.liked ? "text-[#1877f2]" : theme.textSub}`}
+                            className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${post.liked ? "text-[#1877f2]" : theme.textSub}`}
                           >
                             <ThumbsUp size={16} />
                             Thích
                           </button>
-                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all dark:hover:bg-[#3a3b3c] hover:bg-gray-100 ${theme.textSub}`}>
+                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${theme.textSub}`}>
                             <MessageCircle size={16} />
                             Bình luận
                           </button>
-                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all dark:hover:bg-[#3a3b3c] hover:bg-gray-100 ${theme.textSub}`}>
+                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${theme.textSub}`}>
                             <Share2 size={16} />
                             Chia sẻ
                           </button>
@@ -796,7 +839,7 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "about" && (
-              <AboutTab theme={theme} schools={schools} profileDetails={profileDetails} handleEdit={handleUpdateProfileField} />
+              <AboutTab theme={theme} schools={schools} profileDetails={profileDetails} dateOfBirth={personalInfo?.dateOfBirth} handleEdit={handleUpdateProfileField} fetchSchools={fetchSchools} />
             )}
 
             {activeTab === "friends" && (
@@ -835,7 +878,7 @@ export default function ProfilePage() {
                       <img src={displayUser.avatar} alt={displayUser.name} className="w-10 h-10 rounded-full object-cover border" />
                       <div>
                         <p className={`font-semibold text-sm ${theme.text}`}>{displayUser.name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-[#3a3b3c] flex items-center gap-1 w-max font-semibold ${theme.textSub}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded ${theme.input} flex items-center gap-1 w-max font-semibold ${theme.textSub}`}>
                           <Globe size={11} /> Công khai <ChevronDown size={11} />
                         </span>
                       </div>
@@ -911,6 +954,8 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+
+
 
           </div>
         </div>

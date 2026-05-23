@@ -120,6 +120,22 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_receivedRequests")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+            builder.Navigation(u => u.Following)
+                .HasField("_following")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Navigation(u => u.Followers)
+                .HasField("_followers")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Navigation(u => u.InterestScores)
+                .HasField("_interestScores")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Navigation(u => u.GroupInterestScores)
+                .HasField("_groupInterestScores")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
             // =============================
             // Newly added backing fields & relationships
             // =============================

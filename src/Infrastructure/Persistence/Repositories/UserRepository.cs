@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +23,13 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.Users
                 .AnyAsync(u => u.Id == id, cancellationToken);
+        }
+
+        public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
     }
 }

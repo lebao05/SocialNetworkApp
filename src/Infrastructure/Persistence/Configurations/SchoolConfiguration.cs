@@ -28,7 +28,6 @@ namespace Infrastructure.Persistence.Configurations
 
             // Degree (SMALLINT representing DegreeType enum)
             builder.Property(s => s.Degree)
-                .IsRequired()
                 .HasColumnType("SMALLINT");
 
             // Major

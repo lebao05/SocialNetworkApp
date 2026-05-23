@@ -19,6 +19,8 @@
     <Folder Include="Messages\Commands\InvokeMessage\" />
     <Folder Include="Messages\Commands\FowardMessage\" />
     <Folder Include="Messages\Commands\ReactToMessage\" />
+    <Folder Include="Posts\Commands\CreatePost\" />
+    <Folder Include="Posts\Queries\" />
     <Folder Include="Users\Commands\" />
   </ItemGroup>
 

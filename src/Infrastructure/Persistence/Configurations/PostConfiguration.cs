@@ -15,15 +15,16 @@ namespace Infrastructure.Persistence.Configurations
             
             builder.Property(p => p.Id)
                 .HasColumnName("PostId");
-
-            // Author Type configuration (SMALLINT)
-            builder.Property(p => p.AuthorType)
-                .IsRequired()
-                .HasColumnType("SMALLINT");
+                
+            // Post -> Group (many-to-one)
+            builder.HasOne(p => p.Group)
+                .WithMany(g => g.Posts)
+                .HasForeignKey(p => p.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Content configuration (TEXT)
             builder.Property(p => p.Content)
-                .IsRequired()
+                .IsRequired(false)
                 .HasColumnType("TEXT");
 
             // Visibility configuration (SMALLINT)
@@ -105,6 +106,16 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Navigation(p => p.Reactions)
                 .HasField("_reactions")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // Post -> Tags
+            builder.HasMany(p => p.Tags)
+                .WithOne(pt => pt.Post)
+                .HasForeignKey(pt => pt.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Navigation(p => p.Tags)
+                .HasField("_tags")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
             // Soft delete query filter (ignores soft-deleted rows by default!)

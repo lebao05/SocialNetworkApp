@@ -1,131 +1,241 @@
-import React, { useState } from 'react';
-import { GraduationCap, Globe, Home, MapPin, Clock, Edit2, Cake, Heart, Users, Smile, Lock, X, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GraduationCap, Globe, Home, MapPin, Clock, Edit2, Cake, Heart, Users, Smile, Lock, X, Check, Plus, Trash2 } from 'lucide-react';
+import { addSchoolApi, updateSchoolApi, deleteSchoolApi } from '../../apis/schoolApi';
 
-export default function AboutTab({ theme, schools, profileDetails, handleEdit }) {
-  const [activeSubTab, setActiveSubTab] = useState('Thông tin cá nhân');
+// Helper to match C# Enums to client strings
+const SCHOOL_TYPES = {
+  0: { label: 'Đại học (University)', supportsDegree: true },
+  1: { label: 'Cao đẳng (College)', supportsDegree: true },
+  2: { label: 'Trung học phổ thông (High School)', supportsDegree: false },
+  3: { label: 'Trung học cơ sở (Secondary School)', supportsDegree: false },
+  4: { label: 'Tiểu học (Primary School)', supportsDegree: false },
+};
+
+const DEGREE_TYPES = {
+  0: 'Bachelor',
+  1: 'Master',
+  2: 'Doctorate',
+  3: 'Other'
+};
+
+export default function AboutTab({ theme, schools = [], profileDetails, dateOfBirth, handleEdit, fetchSchools }) {
+  const [activeSubTab, setActiveSubTab] = useState('Personal Information');
   const [editingField, setEditingField] = useState(null);
+  
+  // Sorted schools list (0 to 4 sorting guarantees University -> Primary order)
+  const [sortedSchools, setSortedSchools] = useState([]);
+  
+  // Single school form state for Add/Edit
+  const [isEditingSchool, setIsEditingSchool] = useState(false);
+  const [editingSchoolId, setEditingSchoolId] = useState(null); // null means "Adding New"
+  const [schoolForm, setSchoolForm] = useState({
+    name: '',
+    type: 0,
+    degree: null,
+    major: '',
+    startYear: new Date().getFullYear() - 4,
+    endYear: new Date().getFullYear()
+  });
+
   const [editValues, setEditValues] = useState({
-    currentCity: profileDetails.currentCity || '',
-    hometown: profileDetails.hometown || '',
-    birthYear: profileDetails.birthYear || '',
-    gender: 'Nam',
-    relationship: 'Độc thân'
+    currentCity: profileDetails?.currentCity || '',
+    hometown: profileDetails?.hometown || '',
+    birthDate: dateOfBirth || '',
+    birthYear: profileDetails?.birthYear || '',
+    relationship: profileDetails?.relationship || '',
+    family: profileDetails?.family || '',
+    gender: profileDetails?.gender || '',
+    pronoun: profileDetails?.pronoun || '',
+    language: profileDetails?.language || '',
+    website: profileDetails?.website || ''
   });
 
-  const [isEditingCollege, setIsEditingCollege] = useState(false);
-  const [isEditingHighSchool, setIsEditingHighSchool] = useState(false);
+  useEffect(() => {
+    setEditValues({
+      currentCity: profileDetails?.currentCity || '',
+      hometown: profileDetails?.hometown || '',
+      birthDate: dateOfBirth || '',
+      birthYear: profileDetails?.birthYear || '',
+      relationship: profileDetails?.relationship || '',
+      family: profileDetails?.family || '',
+      gender: profileDetails?.gender || '',
+      pronoun: profileDetails?.pronoun || '',
+      language: profileDetails?.language || '',
+      website: profileDetails?.website || ''
+    });
+  }, [profileDetails, dateOfBirth]);
 
-  const [collegeForm, setCollegeForm] = useState({
-    name: 'Trường Đại học Khoa học Tự nhiên, Đại học Quốc gia TP.HCM',
-    startYear: '2023',
-    endYear: '2027',
-    isGraduated: false
-  });
-
-  const [highSchoolForm, setHighSchoolForm] = useState({
-    name: 'Trường THPT Nguyễn Trãi',
-    startYear: '2020',
-    endYear: '2023',
-    isGraduated: true
-  });
+  // Sort schools whenever the schools list updates from backend
+  useEffect(() => {
+    if (schools && Array.isArray(schools)) {
+      const sorted = [...schools].sort((a, b) => a.type - b.type);
+      setSortedSchools(sorted);
+    }
+  }, [schools]);
 
   const menuItems = [
-    'Giới thiệu',
-    'Thông tin cá nhân',
-    'Công việc',
-    'Trình độ học vấn',
-    'Sở thích',
-    'Mối quan tâm',
-    'Du lịch',
-    'Liên kết',
-    'Thông tin liên hệ',
-    'Tên',
-    'Chi tiết về bạn'
+    { id: 'Personal Information', label: 'Thông tin cá nhân' },
+    { id: 'Education', label: 'Học vấn' },
   ];
 
-  const handleSave = (field) => {
-    console.log(`Saving ${field}:`, editValues[field]);
+  const handleSavePersonal = (field) => {
     setEditingField(null);
     if (handleEdit) {
-      handleEdit(field, editValues[field]);
+      if (field === 'birthDate') {
+        handleEdit('dateOfBirth', editValues.birthDate);
+      } else {
+        handleEdit(field, editValues[field]);
+      }
     }
   };
 
-  const handleCancel = (field) => {
+  const handleCancelPersonal = (field) => {
     setEditingField(null);
-    // Reset to original value if needed
     setEditValues({
       ...editValues,
-      [field]: profileDetails[field] || editValues[field]
+      [field]: profileDetails[field] || ''
     });
   };
 
-  const renderField = (label, value, fieldName, icon, options = null) => {
+  // Education Actions
+  const handleOpenAddForm = () => {
+    setEditingSchoolId(null);
+    setSchoolForm({
+      name: '',
+      type: 0,
+      degree: 0, // Bachelor default for Uni
+      major: '',
+      startYear: new Date().getFullYear() - 4,
+      endYear: new Date().getFullYear()
+    });
+    setIsEditingSchool(true);
+  };
+
+  const handleOpenEditForm = (school) => {
+    setEditingSchoolId(school.id);
+    setSchoolForm({
+      name: school.name || '',
+      type: school.type,
+      degree: school.degree !== null && school.degree !== undefined ? school.degree : null,
+      major: school.major || '',
+      startYear: school.startYear,
+      endYear: school.endYear
+    });
+    setIsEditingSchool(true);
+  };
+
+  const handleSchoolTypeChange = (typeVal) => {
+    const type = parseInt(typeVal, 10);
+    const supportsDegree = SCHOOL_TYPES[type].supportsDegree;
+    setSchoolForm({
+      ...schoolForm,
+      type,
+      degree: supportsDegree ? 0 : null, // Clear degree validation requirements
+      major: supportsDegree ? schoolForm.major : '' // Clear major for lower schools
+    });
+  };
+
+  const handleSaveSchool = async () => {
+    if (!schoolForm.name.trim()) return alert("School name is required.");
+    if (schoolForm.startYear > schoolForm.endYear) return alert("Start year cannot be later than end year.");
+
+    try {
+      if (editingSchoolId) {
+        await updateSchoolApi(editingSchoolId, schoolForm);
+      } else {
+        await addSchoolApi(schoolForm);
+      }
+      setIsEditingSchool(false);
+      if (fetchSchools) fetchSchools();
+    } catch (err) {
+      console.error("Failed to save school parameters", err);
+    }
+  };
+
+  const handleDeleteSchool = async (id) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa trường học này?")) {
+      try {
+        await deleteSchoolApi(id);
+        setIsEditingSchool(false);
+        if (fetchSchools) fetchSchools();
+      } catch (err) {
+        console.error("Failed to delete school", err);
+      }
+    }
+  };
+
+  const renderField = (label, value, fieldName, icon, options = null, showActions = true) => {
     const isEditing = editingField === fieldName;
+    const hasValue = !!value;
 
     return (
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 group/field">
         <div className="flex gap-3 flex-1">
-          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#3a3b3c] flex items-center justify-center flex-shrink-0 mt-0.5">
-            {icon}
+          <div className={`w-10 h-10 rounded-full ${theme.input} flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-200`}>
+            {React.cloneElement(icon, { className: `${theme.textSub} w-5 h-5` })}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {isEditing ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 max-w-md">
                 <label className={`text-xs font-bold ${theme.textSub}`}>{label}</label>
                 {options ? (
                   <select
                     value={editValues[fieldName]}
                     onChange={(e) => setEditValues({ ...editValues, [fieldName]: e.target.value })}
-                    className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500 border ${theme.border} ${theme.text}`}
                     autoFocus
                   >
                     {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
                   <input
-                    type="text"
+                    type={fieldName === 'birthDate' ? 'date' : 'text'}
                     value={editValues[fieldName]}
                     onChange={(e) => setEditValues({ ...editValues, [fieldName]: e.target.value })}
-                    className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500 border ${theme.border} ${theme.text}`}
                     autoFocus
                   />
                 )}
               </div>
             ) : (
               <div>
-                <p className={`font-semibold ${theme.text}`}>{value || 'Chưa có thông tin'}</p>
-                <p className={theme.textSub}>{label}</p>
+                {hasValue ? (
+                  <>
+                    {fieldName === 'website' ? (
+                      <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-[15px] leading-snug text-[#1877f2] hover:underline truncate block">
+                        {value}
+                      </a>
+                    ) : (
+                      <p className={`font-semibold text-[15px] leading-snug truncate ${theme.text}`}>{value}</p>
+                    )}
+                    <p className={`text-xs mt-0.5 ${theme.textSub}`}>{label}</p>
+                  </>
+                ) : (
+                  <p className={`text-[15px] font-medium ${theme.textSub} py-1.5 cursor-pointer hover:text-blue-500 transition-colors`} onClick={() => showActions && setEditingField(fieldName)}>
+                    {label}
+                  </p>
+                )}
               </div>
             )}
           </div>
         </div>
+
         <div className="flex items-center gap-2 ml-4">
           {isEditing ? (
-            <>
-              <button
-                onClick={() => handleSave(fieldName)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all bg-green-100 hover:bg-green-200 text-green-600 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-500`}
-              >
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleSavePersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500" title="Lưu">
                 <Check size={16} />
               </button>
-              <button
-                onClick={() => handleCancel(fieldName)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-500`}
-              >
+              <button onClick={() => handleCancelPersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500" title="Hủy">
                 <X size={16} />
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <Globe size={16} className="text-gray-500" />
-              <button
-                onClick={() => setEditingField(fieldName)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}
-              >
-                <Edit2 size={16} />
+            hasValue && showActions && (
+              <button onClick={() => setEditingField(fieldName)} className={`w-8 h-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 ${theme.btnGray}`} title="Chỉnh sửa">
+                <Edit2 size={14} />
               </button>
-            </>
+            )
           )}
         </div>
       </div>
@@ -135,188 +245,226 @@ export default function AboutTab({ theme, schools, profileDetails, handleEdit })
   return (
     <div className={`${theme.card} rounded-xl shadow p-6 flex flex-col md:flex-row gap-6 transition-colors duration-200`}>
       {/* Left Side Menu */}
-      <div className="md:w-1/3 flex flex-col gap-1 border-r border-gray-200 dark:border-[#3e4042] pr-4">
+      <div className={`md:w-1/3 flex flex-col gap-1 border-r ${theme.border} pr-4`}>
         <h3 className={`text-xl font-bold mb-4 ${theme.text}`}>Giới thiệu</h3>
         {menuItems.map((item) => (
           <button
-            key={item}
-            onClick={() => setActiveSubTab(item)}
-            className={`text-left px-3 py-2 text-[14px] font-semibold rounded-lg transition-all ${activeSubTab === item ? 'bg-blue-100 dark:bg-blue-900/30 text-[#1877f2]' : theme.textSub + ' dark:hover:bg-[#3a3b3c] hover:bg-gray-100'}`}
+            key={item.id}
+            onClick={() => setActiveSubTab(item.id)}
+            className={`text-left px-3 py-2 text-[14px] font-semibold rounded-lg transition-all ${activeSubTab === item.id ? 'bg-blue-100 dark:bg-blue-900/30 text-[#1877f2]' : `${theme.textSub} ${theme.tabHover}`}`}
           >
-            {item}
+            {item.label}
           </button>
         ))}
       </div>
 
       {/* Right Side Content Pane */}
       <div className="flex-1 flex flex-col gap-6">
-        {activeSubTab === 'Thông tin cá nhân' && (
+        {activeSubTab === 'Personal Information' && (
           <div>
-            {/* Vị trí */}
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Vị trí</h4>
-            {renderField('Tỉnh/Thành phố hiện tại', editValues.currentCity, 'currentCity', <Home className="text-gray-500 w-6 h-6" />)}
-
+            {renderField('Tỉnh/Thành phố hiện tại', editValues.currentCity, 'currentCity', <Home />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            {/* Quê quán */}
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Quê quán</h4>
-            {renderField('Quê quán', editValues.hometown, 'hometown', <MapPin className="text-gray-500 w-6 h-6" />)}
-
+            {renderField('Quê quán', editValues.hometown, 'hometown', <MapPin />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            {/* Sinh nhật */}
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Sinh nhật</h4>
-            {renderField('Năm sinh', editValues.birthYear, 'birthYear', <Cake className="text-gray-500 w-6 h-6" />)}
-
+            {renderField('Ngày sinh', profileDetails?.birthDate && profileDetails?.birthYear ? `${profileDetails.birthDate}, ${profileDetails.birthYear}` : (profileDetails?.birthDate || profileDetails?.birthYear || ''), 'birthDate', <Cake />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            {/* Trạng thái */}
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Trạng thái</h4>
-            {renderField('Tình trạng mối quan hệ', editValues.relationship, 'relationship', <Heart className="text-gray-500 w-6 h-6" />, ['Độc thân', 'Đang hẹn hò', 'Đã đính hôn', 'Đã kết hôn', 'Trong một mối quan hệ mở', 'Phức tạp', 'Đã ly thân', 'Đã ly hôn', 'Góa'])}
-
+            {renderField('Tình trạng mối quan hệ', editValues.relationship, 'relationship', <Heart />, ['Độc thân', 'Đang hẹn hò', 'Đã đính hôn', 'Đã kết hôn', 'Trong một mối quan hệ mở', 'Có mối quan hệ phức tạp', 'Đã ly thân', 'Đã ly hôn', 'Góa', 'Chưa cập nhật'])}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            {/* Giới tính */}
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Giới tính</h4>
-            {renderField('Giới tính', editValues.gender, 'gender', <Smile className="text-gray-500 w-6 h-6" />, ['Nam', 'Nữ'])}
-          </div>
-        )}
-
-        {activeSubTab === 'Trình độ học vấn' && (
-          <div>
-            {/* Đại học */}
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Đại học</h4>
-
-            {isEditingCollege ? (
-              <div className={`border rounded-lg p-4 mb-6 ${theme.border} bg-gray-50 dark:bg-[#242526]`}>
-                <div className="flex justify-between items-center mb-4">
-                  <button className={`px-3 py-1.5 text-sm font-semibold rounded-lg ${theme.btnGray} flex items-center gap-1`}>
-                    <Globe size={14} /> Công khai
-                  </button>
-                </div>
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className={`text-xs font-bold ${theme.textSub}`}>Tên trường cao đẳng/đại học</label>
-                    <input
-                      type="text"
-                      value={collegeForm.name}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
-                      className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500`}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Bắt buộc</p>
-                  </div>
-
-                  {/* Additional fields from screenshot can be added here if needed */}
-
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t dark:border-[#3e4042]">
-                    <button className={`px-4 py-2 text-sm font-semibold rounded-lg ${theme.btnGray} text-red-500`}>
-                      Gỡ
-                    </button>
-                    <div className="flex gap-2">
-                      <button onClick={() => setIsEditingCollege(false)} className={`px-4 py-2 text-sm font-semibold rounded-lg ${theme.btnGray}`}>
-                        Hủy
-                      </button>
-                      <button onClick={() => setIsEditingCollege(false)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#1877f2] text-white">
-                        Lưu
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                    <img src="https://images.unsplash.com/photo-1592288331572-88206d226061?w=100&q=80" className="w-8 h-8 object-contain" alt="Logo" />
-                  </div>
-                  <div>
-                    <p className={`font-semibold ${theme.text}`}>{collegeForm.name}</p>
-                    <p className={theme.textSub}>Trong {collegeForm.startYear}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Globe size={16} className="text-gray-500" />
-                  <button onClick={() => setIsEditingCollege(true)} className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}>
-                    <Edit2 size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className={`flex items-center gap-3 mb-6 ${theme.textSub} cursor-pointer hover:underline`}>
-              <GraduationCap size={20} />
-              <span>Trường cao đẳng/đại học</span>
-            </div>
-
+            {renderField('Giới tính', editValues.gender, 'gender', <Smile />, ['Nam', 'Nữ'])}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            {/* Trường trung học */}
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Trường trung học</h4>
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Website</h4>
+            {renderField('Website', editValues.website, 'website', <Globe />)}
+          </div>
+        )}
 
-            {isEditingHighSchool ? (
-              <div className={`border rounded-lg p-4 mb-6 ${theme.border} bg-gray-50 dark:bg-[#242526]`}>
-                <div className="flex justify-between items-center mb-4">
-                  <button className={`px-3 py-1.5 text-sm font-semibold rounded-lg ${theme.btnGray} flex items-center gap-1`}>
-                    <Globe size={14} /> Công khai
-                  </button>
-                </div>
+        {activeSubTab === 'Education' && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h4 className={`text-base font-bold ${theme.text}`}>Quá trình học tập</h4>
+              {!isEditingSchool && (
+                <button 
+                  onClick={handleOpenAddForm} 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 text-xs font-bold text-[#1877f2] hover:underline px-3 py-1 rounded-lg transition-colors"
+                >
+                  <Plus size={14} /> Thêm trường học
+                </button>
+              )}
+            </div>
+
+            {/* School Form Component (Forced Pure White Theme Background) */}
+            {isEditingSchool && (
+              <div className="border border-gray-200 rounded-lg p-4 mb-6 bg-white shadow-sm text-gray-900">
+                <h5 className="text-sm font-bold mb-3 text-gray-900">
+                  {editingSchoolId ? "Cập nhật trường học" : "Thêm mới trường học"}
+                </h5>
                 <div className="flex flex-col gap-4">
+                  {/* School Type Selection */}
                   <div>
-                    <label className={`text-xs font-bold ${theme.textSub}`}>Trường học</label>
-                    <input
-                      type="text"
-                      value={highSchoolForm.name}
-                      onChange={(e) => setHighSchoolForm({ ...highSchoolForm, name: e.target.value })}
-                      className={`w-full rounded-lg p-2 text-sm ${theme.input} outline-none focus:ring-2 focus:ring-blue-500`}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Bắt buộc</p>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Cấp học</label>
+                    <select
+                      value={schoolForm.type}
+                      onChange={(e) => handleSchoolTypeChange(e.target.value)}
+                      className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Object.entries(SCHOOL_TYPES).map(([val, obj]) => (
+                        <option key={val} value={val}>{obj.label}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t dark:border-[#3e4042]">
-                    <button className={`px-4 py-2 text-sm font-semibold rounded-lg ${theme.btnGray} text-red-500`}>
-                      Gỡ
-                    </button>
+                  {/* School Name */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Tên trường học</label>
+                    <input
+                      type="text"
+                      value={schoolForm.name}
+                      onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
+                      className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nhập tên trường..."
+                    />
+                  </div>
+
+                  {/* Degree Selection (Conditional based on University/College) */}
+                  {SCHOOL_TYPES[schoolForm.type].supportsDegree && (
+                    <>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">Bằng cấp</label>
+                        <select
+                          value={schoolForm.degree ?? 0}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, degree: parseInt(e.target.value, 10) })}
+                          className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {Object.entries(DEGREE_TYPES).map(([val, name]) => (
+                            <option key={val} value={val}>{name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">Chuyên ngành (Major)</label>
+                        <input
+                          type="text"
+                          value={schoolForm.major}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, major: e.target.value })}
+                          className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="e.g. Software Engineering"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Years */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">Năm bắt đầu</label>
+                      <input
+                        type="number"
+                        value={schoolForm.startYear}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, startYear: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">Năm kết thúc</label>
+                      <input
+                        type="number"
+                        value={schoolForm.endYear}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, endYear: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                    {editingSchoolId ? (
+                      <button 
+                        onClick={() => handleDeleteSchool(editingSchoolId)} 
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 size={14} /> Xóa trường
+                      </button>
+                    ) : <div />}
+                    
                     <div className="flex gap-2">
-                      <button onClick={() => setIsEditingHighSchool(false)} className={`px-4 py-2 text-sm font-semibold rounded-lg ${theme.btnGray}`}>
+                      <button 
+                        onClick={() => setIsEditingSchool(false)} 
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                      >
                         Hủy
                       </button>
-                      <button onClick={() => setIsEditingHighSchool(false)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#1877f2] text-white">
-                        Lưu
+                      <button onClick={handleSaveSchool} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#1877f2] text-white hover:bg-blue-600 transition-colors">
+                        Lưu thay đổi
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#3a3b3c] flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="text-gray-500 w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className={`font-semibold ${theme.text}`}>{highSchoolForm.name}</p>
-                    <p className={theme.textSub}>Học sinh</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Globe size={16} className="text-gray-500" />
-                  <button onClick={() => setIsEditingHighSchool(true)} className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}>
-                    <Edit2 size={16} />
-                  </button>
-                </div>
-              </div>
             )}
 
-            <div className={`flex items-center gap-3 ${theme.textSub} cursor-pointer hover:underline`}>
-              <Home size={20} />
-              <span>Trường trung học phổ thông</span>
+            {/* Sorted Schools Render Pipeline */}
+            <div className="flex flex-col gap-4">
+              {sortedSchools.length > 0 ? (
+                sortedSchools.map((school) => {
+                  const isHigherEd = SCHOOL_TYPES[school.type]?.supportsDegree;
+                  return (
+                    <div key={school.id} className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100 dark:border-zinc-800 last:border-none">
+                      <div className="flex gap-3">
+                        <div className={`w-10 h-10 rounded-full ${theme.input} flex items-center justify-center flex-shrink-0`}>
+                          <GraduationCap className={`${theme.textSub} w-6 h-6`} />
+                        </div>
+                        <div>
+                          <p className={`font-semibold ${theme.text}`}>{school.name}</p>
+                          <p className={`text-xs font-medium text-blue-500`}>
+                            {SCHOOL_TYPES[school.type]?.label || 'Trường học'}
+                          </p>
+                          {isHigherEd && school.major && (
+                            <p className={`text-sm ${theme.text} mt-0.5`}>
+                              Chuyên ngành: <span className="font-medium">{school.major}</span>
+                              {school.degree !== null && ` (${DEGREE_TYPES[school.degree]})`}
+                            </p>
+                          )}
+                          <p className={`text-xs ${theme.textSub} mt-0.5`}>
+                            Thời gian: {school.startYear} - {school.endYear}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleOpenEditForm(school)} 
+                          className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                !isEditingSchool && (
+                  <p className={`text-center py-6 text-sm ${theme.textSub}`}>
+                    Chưa có thông tin học vấn. Hãy thêm trường học của bạn.
+                  </p>
+                )
+              )}
             </div>
           </div>
         )}
 
-        {activeSubTab !== 'Thông tin cá nhân' && activeSubTab !== 'Trình độ học vấn' && (
-          <div className={`flex items-center justify-center h-full ${theme.textSub}`}>
-            Phần này đang được phát triển
+        {activeSubTab !== 'Personal Information' && activeSubTab !== 'Education' && (
+          <div className={`flex items-center justify-center h-full min-h-[200px] ${theme.textSub}`}>
+            Mục này đang được phát triển
           </div>
         )}
       </div>

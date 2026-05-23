@@ -1,9 +1,11 @@
-﻿using Application.Abstractions;
+using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Shared;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace Application.Friend.Commands.AcceptFriendRequest;
 
@@ -12,16 +14,22 @@ internal sealed class AcceptFriendRequestCommandHandler
 {
     private readonly IFriendRequestRepository _friendRequestRepository;
     private readonly IFriendshipRepository _friendshipRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<AcceptFriendRequestCommandHandler> _logger;
 
     public AcceptFriendRequestCommandHandler(
         IFriendRequestRepository friendRequestRepository,
         IFriendshipRepository friendshipRepository,
-        IUnitOfWork unitOfWork)
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<AcceptFriendRequestCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _friendRequestRepository = friendRequestRepository;
         _friendshipRepository = friendshipRepository;
+        _userRepository = userRepository;
+        _logger = logger;
     }
 
     public async Task<Result<bool>> Handle(
@@ -60,6 +68,14 @@ internal sealed class AcceptFriendRequestCommandHandler
                 new Error("Friendship.Exists", "Already friends"));
         }
 
+        // Fetch the user accepting the request to raise domain event on them
+        var receiverUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+        if (receiverUser == null)
+        {
+            return Result.Failure<bool>(
+                new Error("User.NotFound", "User not found"));
+        }
+
         // ✅ Accept request
         friendRequest.Accept();
 
@@ -71,7 +87,16 @@ internal sealed class AcceptFriendRequestCommandHandler
         );
 
         await _friendshipRepository.AddAsync(friendship);
+
+        // Add domain event for Neo4j synchronization
+        receiverUser.AddDomainEvent(new Domain.Events.FriendshipCreatedDomainEvent(
+            Guid.NewGuid(),
+            friendRequest.SenderId,
+            friendRequest.ReceiverId
+        ));
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         return Result.Success(true);
     }
 }

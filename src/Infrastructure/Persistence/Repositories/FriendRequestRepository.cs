@@ -1,4 +1,5 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
+using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
@@ -28,6 +29,23 @@ namespace Infrastructure.Persistence.Repositories
                     x.SenderId == senderId &&
                     x.ReceiverId == receiverId &&
                     x.Status == FriendRequestStatus.Pending);
+        }
+
+        public async Task<PagedList<FriendRequest>> GetIncomingPendingAsync(
+            Guid receiverId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.FriendRequests
+                .AsNoTracking()
+                .Include(request => request.Sender)
+                .Where(request =>
+                    request.ReceiverId == receiverId
+                    && request.Status == FriendRequestStatus.Pending)
+                .OrderByDescending(request => request.CreatedAt);
+
+            return await PagedList<FriendRequest>.CreateAsync(query, page, pageSize, cancellationToken);
         }
 
         public async Task AddAsync(FriendRequest request)

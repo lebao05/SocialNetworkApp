@@ -5,7 +5,7 @@ public abstract class BaseEntity : IEquatable<BaseEntity>
     public long Id { get; init; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public bool IsDeleted { get; private set; }
+    public bool IsDeleted { get; set; }
 
     protected BaseEntity(long id)
     {

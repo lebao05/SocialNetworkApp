@@ -41,5 +41,11 @@ namespace Domain.Entities
             IsSeen = true;
             UpdatedAt = DateTime.UtcNow;
         }
+
+        public void UpdateScore(float score)
+        {
+            Score = score;
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

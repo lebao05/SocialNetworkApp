@@ -2,10 +2,10 @@ namespace Domain.Enums
 {
     public enum SchoolType
     {
-        HighSchool = 0,
-        University = 1,
-        College = 2,
-        PrimarySchool = 3,
-        SecondarySchool = 4
+        University = 0,
+        College = 1,
+        HighSchool = 2,
+        SecondarySchool = 3,
+        PrimarySchool = 4,
     }
 }
