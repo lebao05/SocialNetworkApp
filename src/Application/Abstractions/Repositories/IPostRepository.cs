@@ -9,6 +9,7 @@ namespace Application.Abstractions.Repositories
         Task<IEnumerable<Post>> GetByGroupIdAsync(long groupId, CancellationToken cancellationToken = default);
         Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, CancellationToken cancellationToken = default);
         Task<IEnumerable<Post>> GetByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default);
+        Task<PagedList<Post>> GetByAuthorIdPagedAsync(Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default);
         void Add(Post post);
         void Update(Post post);
         void Delete(Post post);

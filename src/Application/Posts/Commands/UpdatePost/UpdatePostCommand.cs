@@ -9,6 +9,6 @@ namespace Application.Posts.Commands.UpdatePost
         string? Content,
         PostVisibility Visibility,
         string? LocationTag = null,
-        string? FeelingActivity = null
+        Feeling? FeelingActivity = null
     ) : ICommand;
 }

@@ -11,7 +11,7 @@ namespace Domain.Entities
         public PostVisibility Visibility { get; private set; }
         public long? SharePostId { get; private set; }
         public string? LocationTag { get; private set; }
-        public string? FeelingActivity { get; private set; }
+        public Feeling? FeelingActivity { get; private set; }
 
 
         // Soft delete
@@ -47,7 +47,7 @@ namespace Domain.Entities
             PostVisibility visibility,
             long? sharePostId = null,
             string? locationTag = null,
-            string? feelingActivity = null) : base(id)
+            Feeling? feelingActivity = null) : base(id)
         {
             AuthorId = authorId;
             GroupId = groupId;
@@ -63,7 +63,7 @@ namespace Domain.Entities
             string? content,
             PostVisibility visibility,
             string? locationTag,
-            string? feelingActivity)
+            Feeling? feelingActivity)
         {
             Content = string.IsNullOrWhiteSpace(content) ? null : content.Trim();
             Visibility = visibility;
@@ -98,6 +98,22 @@ namespace Domain.Entities
         public void ClearTags()
         {
             _tags.Clear();
+        }
+
+        // Media management
+        public void AddMedia(PostMedia media)
+        {
+            _media.Add(media);
+        }
+
+        public void RemoveMedia(PostMedia media)
+        {
+            _media.Remove(media);
+        }
+
+        public void ClearMedia()
+        {
+            _media.Clear();
         }
     }
 }

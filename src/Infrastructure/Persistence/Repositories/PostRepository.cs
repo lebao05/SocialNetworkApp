@@ -18,9 +18,14 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<Post?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
         {
             return await _context.Posts
+                .Include(post => post.Author)
                 .Include(post => post.Group)
                 .Include(post => post.SharePost)
                     .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
                 .Include(post => post.Media)
                 .FirstOrDefaultAsync(post => post.Id == id, cancellationToken);
         }
@@ -29,9 +34,15 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.Posts
                 .AsNoTracking()
+                .Include(post => post.Author)
                 .Include(post => post.Group)
                 .Include(post => post.SharePost)
                     .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(post => post.Media)
                 .Where(post => post.GroupId == groupId)
                 .OrderByDescending(post => post.CreatedAt)
                 .ToListAsync(cancellationToken);
@@ -41,9 +52,15 @@ namespace Infrastructure.Persistence.Repositories
         {
             var query = _context.Posts
                 .AsNoTracking()
+                .Include(post => post.Author)
                 .Include(post => post.Group)
                 .Include(post => post.SharePost)
                     .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(post => post.Media)
                 .Where(post => post.GroupId == groupId)
                 .OrderByDescending(post => post.CreatedAt);
 
@@ -54,12 +71,37 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.Posts
                 .AsNoTracking()
+                .Include(post => post.Author)
                 .Include(post => post.Group)
                 .Include(post => post.SharePost)
                     .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(post => post.Media)
                 .Where(post => post.AuthorId == authorId)
                 .OrderByDescending(post => post.CreatedAt)
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<PagedList<Post>> GetByAuthorIdPagedAsync(Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Posts
+                .AsNoTracking()
+                .Include(post => post.Author)
+                .Include(post => post.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(post => post.Media)
+                .Where(post => post.AuthorId == authorId)
+                .OrderByDescending(post => post.CreatedAt);
+
+            return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);
         }
 
         public void Add(Post post)

@@ -19,6 +19,7 @@ namespace Infrastructure
             services.AddScoped<IBlindIndexService, BlindIndexService>();
             services.AddScoped<IFeedGenerator, FeedGenerator>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IGroupRepository, GroupRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
             services.AddScoped<IFriendshipRepository, FriendshipRepository>();

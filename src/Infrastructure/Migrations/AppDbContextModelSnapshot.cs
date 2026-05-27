@@ -130,6 +130,39 @@ namespace Infrastructure.Migrations
                     b.ToTable("ConversationMembers", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Following", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FolloweeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FollowerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolloweeId");
+
+                    b.HasIndex("FollowerId", "FolloweeId")
+                        .IsUnique();
+
+                    b.ToTable("Followings", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.FriendRequest", b =>
                 {
                     b.Property<long>("Id")
@@ -312,6 +345,88 @@ namespace Infrastructure.Migrations
                     b.HasIndex("GroupId", "UserId", "Status");
 
                     b.ToTable("GroupRequests", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.InterestGroupScore", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastInteractionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<float>("Score")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("UserId", "GroupId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Score");
+
+                    b.ToTable("InterestGroupScores", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.InterestRelationshipScore", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastInteractionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<float>("Score")
+                        .HasColumnType("real");
+
+                    b.Property<Guid>("TargetUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.HasIndex("UserId", "Score");
+
+                    b.HasIndex("UserId", "TargetUserId")
+                        .IsUnique();
+
+                    b.ToTable("InterestRelationshipScores", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.MemberMessage", b =>
@@ -524,11 +639,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("AuthorId")
                         .HasColumnType("uuid");
 
-                    b.Property<byte>("AuthorType")
-                        .HasColumnType("SMALLINT");
-
                     b.Property<string>("Content")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -538,8 +649,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FeelingActivity")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
+
+                    b.Property<long?>("GroupId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -560,6 +673,8 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("GroupId");
 
                     b.HasIndex("SharePostId");
 
@@ -655,6 +770,39 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PostId");
 
                     b.ToTable("PostMedia", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.PostTag", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("PostTagId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TagName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostTags", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Reaction", b =>
@@ -1139,6 +1287,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Following", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "Followee")
+                        .WithMany("Followers")
+                        .HasForeignKey("FolloweeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "Follower")
+                        .WithMany("Following")
+                        .HasForeignKey("FollowerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Followee");
+
+                    b.Navigation("Follower");
+                });
+
             modelBuilder.Entity("Domain.Entities.FriendRequest", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Receiver")
@@ -1222,6 +1389,44 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.InterestGroupScore", b =>
+                {
+                    b.HasOne("Domain.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("GroupInterestScores")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.InterestRelationshipScore", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("InterestScores")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TargetUser");
 
                     b.Navigation("User");
                 });
@@ -1315,12 +1520,19 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.Group", "Group")
+                        .WithMany("Posts")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Domain.Entities.Post", "SharePost")
                         .WithMany()
                         .HasForeignKey("SharePostId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Author");
+
+                    b.Navigation("Group");
 
                     b.Navigation("SharePost");
                 });
@@ -1355,6 +1567,17 @@ namespace Infrastructure.Migrations
                 {
                     b.HasOne("Domain.Entities.Post", "Post")
                         .WithMany("Media")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PostTag", b =>
+                {
+                    b.HasOne("Domain.Entities.Post", "Post")
+                        .WithMany("Tags")
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1511,6 +1734,8 @@ namespace Infrastructure.Migrations
                 {
                     b.Navigation("Members");
 
+                    b.Navigation("Posts");
+
                     b.Navigation("Requests");
                 });
 
@@ -1533,6 +1758,8 @@ namespace Infrastructure.Migrations
 
                     b.Navigation("SavedPosts");
 
+                    b.Navigation("Tags");
+
                     b.Navigation("UserFeeds");
                 });
 
@@ -1551,9 +1778,17 @@ namespace Infrastructure.Migrations
 
                     b.Navigation("Conversations");
 
+                    b.Navigation("Followers");
+
+                    b.Navigation("Following");
+
                     b.Navigation("Friends");
 
+                    b.Navigation("GroupInterestScores");
+
                     b.Navigation("GroupMemberships");
+
+                    b.Navigation("InterestScores");
 
                     b.Navigation("OwnedGroups");
 

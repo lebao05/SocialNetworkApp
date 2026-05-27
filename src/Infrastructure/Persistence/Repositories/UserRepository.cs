@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,32 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Users
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<PagedList<User>> SearchUsersAsync(string? searchQuery, long? groupId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Users.AsNoTracking();
+
+            // Filter by search query (FirstName or LastName)
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var lowerQuery = searchQuery.ToLower();
+                query = query.Where(u =>
+                    u.FirstName.ToLower().Contains(lowerQuery) ||
+                    u.LastName.ToLower().Contains(lowerQuery));
+            }
+
+            // Filter by group if groupId is provided
+            if (groupId.HasValue)
+            {
+                query = query.Where(u =>
+                    u.GroupMemberships.Any(gm => gm.GroupId == groupId.Value));
+            }
+
+            // Order by FirstName, then LastName
+            query = query.OrderBy(u => u.FirstName).ThenBy(u => u.LastName);
+
+            return await PagedList<User>.CreateAsync(query, pageNumber, pageSize, cancellationToken);
         }
     }
 }

@@ -5,6 +5,7 @@ import MessengerPage from "./pages/MessengerPage";
 import SignupPage from "./pages/SignUpPage";
 import SigninPage from "./pages/SigninPage";
 import ProfilePage from "./pages/ProfilePage";
+import FriendsPage from "./pages/FriendsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
 
       {/* Protected Routes */}
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+      <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
       <Route path="/messenger" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/messenger/:convId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

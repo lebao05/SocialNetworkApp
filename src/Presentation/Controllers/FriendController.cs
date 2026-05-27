@@ -20,14 +20,14 @@ namespace Presentation.Controllers
     {
         public FriendController(ISender sender) : base(sender)
         {
-
         }
+
         [HttpPost("friend-request")]
         public async Task<IActionResult> SendFriendRequest(
             Guid receiverId,
             CancellationToken ct)
         {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User); // from JWT
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
             var command = new SendFriendRequestCommand(userId, receiverId);
 
@@ -38,12 +38,13 @@ namespace Presentation.Controllers
 
             return Ok();
         }
+
         [HttpPost("accept")]
         public async Task<IActionResult> AcceptFriendRequest(
             long requestId,
             CancellationToken ct)
         {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User); 
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
             var command = new AcceptFriendRequestCommand(requestId, userId);
 
@@ -54,12 +55,15 @@ namespace Presentation.Controllers
 
             return Ok();
         }
+
         [HttpGet]
-        public async Task<IActionResult> GetFriends(CancellationToken ct)
+        public async Task<IActionResult> GetFriends(
+            [FromQuery] int page = 1,
+            CancellationToken ct = default)
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
-            var query = new GetFriendsQuery(userId);
+            var query = new GetFriendsQuery(userId, page);
 
             var result = await _sender.Send(query, ct);
 
@@ -69,12 +73,11 @@ namespace Presentation.Controllers
         [HttpGet("requests/incoming")]
         public async Task<IActionResult> GetIncomingFriendRequests(
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
             CancellationToken ct = default)
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
-            var query = new GetIncomingFriendRequestsQuery(userId, page, pageSize);
+            var query = new GetIncomingFriendRequestsQuery(userId, page);
             var result = await _sender.Send(query, ct);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

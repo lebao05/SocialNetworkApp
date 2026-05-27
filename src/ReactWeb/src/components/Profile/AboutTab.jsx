@@ -18,7 +18,7 @@ const DEGREE_TYPES = {
   3: 'Other'
 };
 
-export default function AboutTab({ theme, schools = [], profileDetails, dateOfBirth, handleEdit, fetchSchools }) {
+export default function AboutTab({ theme, schools = [], profileDetails, dateOfBirth, handleEdit, fetchSchools, canEdit = true }) {
   const [activeSubTab, setActiveSubTab] = useState('Personal Information');
   const [editingField, setEditingField] = useState(null);
   
@@ -65,6 +65,14 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
     });
   }, [profileDetails, dateOfBirth]);
 
+  // Prevent edit mode when viewing another user's profile
+  useEffect(() => {
+    if (!canEdit) {
+      setEditingField(null);
+      setIsEditingSchool(false);
+    }
+  }, [canEdit]);
+
   // Sort schools whenever the schools list updates from backend
   useEffect(() => {
     if (schools && Array.isArray(schools)) {
@@ -80,12 +88,11 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
 
   const handleSavePersonal = (field) => {
     setEditingField(null);
-    if (handleEdit) {
-      if (field === 'birthDate') {
-        handleEdit('dateOfBirth', editValues.birthDate);
-      } else {
-        handleEdit(field, editValues[field]);
-      }
+    if (!canEdit || !handleEdit) return;
+    if (field === 'birthDate') {
+      handleEdit('dateOfBirth', editValues.birthDate);
+    } else {
+      handleEdit(field, editValues[field]);
     }
   };
 
@@ -167,6 +174,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
   const renderField = (label, value, fieldName, icon, options = null, showActions = true) => {
     const isEditing = editingField === fieldName;
     const hasValue = !!value;
+    const editable = showActions && canEdit;
 
     return (
       <div className="flex items-start justify-between mb-6 group/field">
@@ -211,7 +219,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                     <p className={`text-xs mt-0.5 ${theme.textSub}`}>{label}</p>
                   </>
                 ) : (
-                  <p className={`text-[15px] font-medium ${theme.textSub} py-1.5 cursor-pointer hover:text-blue-500 transition-colors`} onClick={() => showActions && setEditingField(fieldName)}>
+                  <p className={`text-[15px] font-medium ${theme.textSub} py-1.5 ${canEdit ? 'cursor-pointer hover:text-blue-500' : ''} transition-colors`} onClick={() => canEdit && showActions && setEditingField(fieldName)}>
                     {label}
                   </p>
                 )}
@@ -231,7 +239,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
               </button>
             </div>
           ) : (
-            hasValue && showActions && (
+            hasValue && editable && (
               <button onClick={() => setEditingField(fieldName)} className={`w-8 h-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 ${theme.btnGray}`} title="Chỉnh sửa">
                 <Edit2 size={14} />
               </button>
@@ -291,7 +299,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
           <div>
             <div className="flex justify-between items-center mb-4">
               <h4 className={`text-base font-bold ${theme.text}`}>Quá trình học tập</h4>
-              {!isEditingSchool && (
+              {canEdit && !isEditingSchool && (
                 <button 
                   onClick={handleOpenAddForm} 
                   className="flex items-center gap-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 text-xs font-bold text-[#1877f2] hover:underline px-3 py-1 rounded-lg transition-colors"
@@ -441,12 +449,14 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleOpenEditForm(school)} 
-                          className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                        {canEdit && (
+                          <button 
+                            onClick={() => handleOpenEditForm(school)} 
+                            className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme.btnGray}`}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

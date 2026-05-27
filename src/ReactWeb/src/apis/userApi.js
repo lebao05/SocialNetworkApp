@@ -29,3 +29,29 @@ export async function updateUserInfoApi(data) {
     const response = await axios.put("/users/info", data);
     return response.data;
 }
+
+export async function uploadAvatarApi(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await axios.post("/users/avatar", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data"
+        }
+    });
+
+    return response.data;
+}
+
+export async function uploadCoverPhotoApi(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await axios.post("/users/cover-photo", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data"
+        }
+    });
+
+    return response.data;
+}

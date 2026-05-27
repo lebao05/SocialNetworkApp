@@ -27,29 +27,23 @@ export default function HomePage() {
     <div className="bg-fb-bg min-h-screen">
       <Navbar />
 
-      <div className="flex pt-14">
+      <div className="pt-14">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-[280px] xl:px-[280px]">
+          <main className="mx-auto w-full max-w-[680px] py-4 flex flex-col gap-4">
+            <StoryBar />
+            <CreatePost />
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </main>
+        </div>
+
         <LeftSidebar />
-        <main
-          className="flex-1 flex flex-col gap-4 py-4"
-          style={{
-            marginLeft: 280,
-            marginRight: 280,
-            maxWidth: 680,
-            margin: "56px auto 0",
-            padding: "16px",
-          }}
-        >
-          <StoryBar />
-          <CreatePost />
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </main>
         <RightSidebar onContactClick={handleContactClick} />
       </div>
 
       {openChats.length > 0 && (
-        <div className="fixed bottom-0 right-4 flex items-end gap-3 z-50">
+        <div className="fixed bottom-0 right-4 flex items-end gap-3 z-50 sm:right-2 sm:gap-2">
           {openChats.map((contact) => (
             <MiniChatBox key={contact.id} contact={contact} onClose={() => handleCloseChat(contact.id)} />
           ))}

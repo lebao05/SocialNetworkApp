@@ -37,6 +37,8 @@ namespace Infrastructure.Persistence.Repositories
                     new PostDto(
                         feed.Post.Id,
                         feed.Post.AuthorId,
+                        feed.Post.Author != null ? feed.Post.Author.FirstName + " " + feed.Post.Author.LastName : "Người dùng",
+                        feed.Post.Author != null ? feed.Post.Author.AvatarUrl : null,
                         feed.Post.GroupId,
                         feed.Post.Content,
                         feed.Post.Visibility,
@@ -46,6 +48,14 @@ namespace Infrastructure.Persistence.Repositories
                         feed.Post.CreatedAt,
                         feed.Post.UpdatedAt,
                         feed.Post.DeletedAt,
+                        feed.Post.Media.Select(m => new PostMediaDto(
+                            m.Id,
+                            m.MediaType,
+                            m.MediaUrl,
+                            m.ThumbnailUrl,
+                            m.Metadata,
+                            m.UploadedAt
+                        )).ToList(),
                         feed.Post.Group == null
                             ? null
                             : new GroupDto(
@@ -60,6 +70,8 @@ namespace Infrastructure.Persistence.Repositories
                             : new PostDto(
                                 feed.Post.SharePost.Id,
                                 feed.Post.SharePost.AuthorId,
+                                feed.Post.SharePost.Author != null ? feed.Post.SharePost.Author.FirstName + " " + feed.Post.SharePost.Author.LastName : "Người dùng",
+                                feed.Post.SharePost.Author != null ? feed.Post.SharePost.Author.AvatarUrl : null,
                                 feed.Post.SharePost.GroupId,
                                 feed.Post.SharePost.Content,
                                 feed.Post.SharePost.Visibility,
@@ -69,6 +81,14 @@ namespace Infrastructure.Persistence.Repositories
                                 feed.Post.SharePost.CreatedAt,
                                 feed.Post.SharePost.UpdatedAt,
                                 feed.Post.SharePost.DeletedAt,
+                                feed.Post.SharePost.Media.Select(m => new PostMediaDto(
+                                    m.Id,
+                                    m.MediaType,
+                                    m.MediaUrl,
+                                    m.ThumbnailUrl,
+                                    m.Metadata,
+                                    m.UploadedAt
+                                )).ToList(),
                                 feed.Post.SharePost.Group == null
                                     ? null
                                     : new GroupDto(

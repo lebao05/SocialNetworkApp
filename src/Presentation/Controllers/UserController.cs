@@ -1,5 +1,6 @@
 using Application.Friend.Queries.GetFriends;
 using Application.Users.Queries.GetPersonalInfo;
+using Application.Users.Queries.GetUserHoverCard;
 using Application.Users.Commands.UploadAvatar;
 using Application.Users.Commands.UploadCoverPhoto;
 using Application.Users.Commands.UpdateInfo;
@@ -43,6 +44,24 @@ namespace Presentation.Controllers
         public async Task<IActionResult> GetPersonalInfo(Guid id, CancellationToken cancellationToken)
         {
             var query = new GetPersonalInfoQuery(id);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{id:guid}/hover-card")]
+        public async Task<IActionResult> GetUserHoverCard(Guid id, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid? currentUserId = null;
+
+            if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+            {
+                currentUserId = userId;
+            }
+
+            var query = new GetUserHoverCardQuery(id, currentUserId);
 
             var result = await _sender.Send(query, cancellationToken);
 

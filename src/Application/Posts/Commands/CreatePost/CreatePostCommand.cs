@@ -16,7 +16,7 @@ namespace Application.Posts.Commands.CreatePost
         PostVisibility Visibility,
         long? SharePostId = null,
         string? LocationTag = null,
-        string? FeelingActivity = null,
+        Feeling? FeelingActivity = null,
         IReadOnlyCollection<Guid>? TaggedUserIds = null,
         IReadOnlyCollection<PostAttachment>? Attachments = null
     ) : ICommand<long>;

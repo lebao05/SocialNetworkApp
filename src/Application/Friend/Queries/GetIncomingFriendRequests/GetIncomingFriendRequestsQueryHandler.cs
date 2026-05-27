@@ -1,3 +1,4 @@
+using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Friends;
@@ -10,11 +11,17 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
     internal sealed class GetIncomingFriendRequestsQueryHandler
         : IQueryHandler<GetIncomingFriendRequestsQuery, PagedList<FriendRequestDto>>
     {
-        private readonly IFriendRequestRepository _friendRequestRepository;
+        private const int PageSize = 10;
 
-        public GetIncomingFriendRequestsQueryHandler(IFriendRequestRepository friendRequestRepository)
+        private readonly IFriendRequestRepository _friendRequestRepository;
+        private readonly IFriendGraphService _friendGraphService;
+
+        public GetIncomingFriendRequestsQueryHandler(
+            IFriendRequestRepository friendRequestRepository,
+            IFriendGraphService friendGraphService)
         {
             _friendRequestRepository = friendRequestRepository;
+            _friendGraphService = friendGraphService;
         }
 
         public async Task<Result<PagedList<FriendRequestDto>>> Handle(
@@ -22,25 +29,28 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
             CancellationToken cancellationToken)
         {
             var page = Math.Max(1, request.Page);
-            var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
             var friendRequests = await _friendRequestRepository.GetIncomingPendingAsync(
                 request.ReceiverId,
                 page,
-                pageSize,
+                PageSize,
                 cancellationToken);
 
-            var items = friendRequests.Items.Select(Map).ToList();
+            var items = await Task.WhenAll(friendRequests.Items.Select(async fr => await MapAsync(fr, request.ReceiverId, cancellationToken)));
 
             return Result.Success(new PagedList<FriendRequestDto>(
-                items,
+                items.ToList(),
                 friendRequests.PageNumber,
                 friendRequests.PageSize,
                 friendRequests.TotalCount));
         }
 
-        private static FriendRequestDto Map(FriendRequest friendRequest)
+        private async Task<FriendRequestDto> MapAsync(FriendRequest friendRequest, Guid receiverId, CancellationToken cancellationToken)
         {
+            var mutualFriendCount = await _friendGraphService.GetMutualFriendCountAsync(
+                friendRequest.SenderId,
+                receiverId);
+
             return new FriendRequestDto(
                 friendRequest.Id,
                 friendRequest.SenderId,
@@ -49,7 +59,8 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
                 friendRequest.Sender.AvatarUrl,
                 friendRequest.ReceiverId,
                 friendRequest.Status,
-                friendRequest.CreatedAt);
+                friendRequest.CreatedAt,
+                mutualFriendCount);
         }
     }
 }

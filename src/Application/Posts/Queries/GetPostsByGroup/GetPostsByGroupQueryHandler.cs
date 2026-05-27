@@ -1,3 +1,4 @@
+using System.Linq;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
@@ -37,6 +38,8 @@ namespace Application.Posts.Queries.GetPostsByGroup
             return new PostDto(
                 post.Id,
                 post.AuthorId,
+                post.Author != null ? $"{post.Author.FirstName} {post.Author.LastName}" : "Người dùng",
+                post.Author?.AvatarUrl,
                 post.GroupId,
                 post.Content,
                 post.Visibility,
@@ -46,6 +49,14 @@ namespace Application.Posts.Queries.GetPostsByGroup
                 post.CreatedAt,
                 post.UpdatedAt,
                 post.DeletedAt,
+                post.Media.Select(m => new PostMediaDto(
+                    m.Id,
+                    m.MediaType,
+                    m.MediaUrl,
+                    m.ThumbnailUrl,
+                    m.Metadata,
+                    m.UploadedAt
+                )).ToList(),
                 MapGroup(post.Group),
                 post.SharePost is null ? null : MapSharedPost(post.SharePost));
         }
@@ -55,6 +66,8 @@ namespace Application.Posts.Queries.GetPostsByGroup
             return new PostDto(
                 post.Id,
                 post.AuthorId,
+                post.Author != null ? $"{post.Author.FirstName} {post.Author.LastName}" : "Người dùng",
+                post.Author?.AvatarUrl,
                 post.GroupId,
                 post.Content,
                 post.Visibility,
@@ -64,6 +77,14 @@ namespace Application.Posts.Queries.GetPostsByGroup
                 post.CreatedAt,
                 post.UpdatedAt,
                 post.DeletedAt,
+                post.Media.Select(m => new PostMediaDto(
+                    m.Id,
+                    m.MediaType,
+                    m.MediaUrl,
+                    m.ThumbnailUrl,
+                    m.Metadata,
+                    m.UploadedAt
+                )).ToList(),
                 MapGroup(post.Group),
                 null);
         }

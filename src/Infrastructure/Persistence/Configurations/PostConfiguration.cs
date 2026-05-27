@@ -36,9 +36,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(p => p.LocationTag)
                 .HasMaxLength(255);
 
-            // Feeling/Activity status configuration
+            // Feeling/Activity status configuration (store enum as string)
             builder.Property(p => p.FeelingActivity)
-                .HasMaxLength(100);
+                .HasConversion<string>();
 
             // Timestamp tracking
             builder.Property(p => p.CreatedAt)

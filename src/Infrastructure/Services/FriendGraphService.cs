@@ -163,6 +163,32 @@ namespace Infrastructure.Services
             });
         }
 
+        public async Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId)
+        {
+            const string query = @"
+                MATCH (u1:User {id: $userId})-[:FRIEND]-(mutual:User)-[:FRIEND]-(u2:User {id: $otherUserId})
+                RETURN count(DISTINCT mutual) AS Count";
+
+            var parameters = new Dictionary<string, object?>
+            {
+                { "userId", userId.ToString() },
+                { "otherUserId", otherUserId.ToString() }
+            };
+
+            return await ExecuteReadAsync(async tx =>
+            {
+                var result = await tx.RunAsync(query, parameters);
+                if (await result.FetchAsync())
+                {
+                    var record = result.Current;
+                    var countValue = record["Count"].As<long>();
+                    return Convert.ToInt32(countValue);
+                }
+
+                return 0;
+            });
+        }
+
         public async Task<List<FriendResponse>> GetShortestPathAsync(Guid startUserId, Guid endUserId)
         {
             const string query = @"

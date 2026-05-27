@@ -5,13 +5,16 @@ import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./contexts/authContext.jsx";
 import { ConversationProvider } from "./contexts/conversationContext.jsx";
+import { FriendProvider } from "./contexts/friendContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <ConversationProvider>
-          <App />
+          <FriendProvider>
+            <App />
+          </FriendProvider>
         </ConversationProvider>
       </AuthProvider>
     </BrowserRouter>

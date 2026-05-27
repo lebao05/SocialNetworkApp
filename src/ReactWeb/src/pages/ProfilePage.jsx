@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar/Navbar";
 import { useAuth } from "../contexts/authContext";
 import { usePersonalInfo } from "../hooks/usePersonalInfo";
+import { useUserPosts } from "../hooks/useUserPosts";
 import { useSchools } from "../hooks/useSchools";
-import { updateUserInfoApi } from "../apis/userApi";
+import { updateUserInfoApi, uploadAvatarApi, uploadCoverPhotoApi } from "../apis/userApi";
 import AboutTab from "../components/Profile/AboutTab";
 import FriendsTab from "../components/Profile/FriendsTab";
 import PhotosTab from "../components/Profile/PhotosTab";
+import FollowingTab from "../components/Profile/FollowingTab";
+import CreatePostModal from "../components/Profile/CreatePostModal";
 import {
   Camera,
   Plus,
@@ -29,8 +32,10 @@ import {
   ThumbsUp,
   MessageCircle,
   Share2,
-  Heart
+  Heart,
+  ArrowLeft
 } from "lucide-react";
+import PostCard from "../components/Feed/PostCard";
 
 // Mock User matching the user's screenshots exactly
 const mockProfileUser = {
@@ -80,15 +85,23 @@ const mockPhotos = [
   "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300&auto=format&fit=crop&q=80", // photo 6
   "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=300&auto=format&fit=crop&q=80", // photo 7
   "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=300&auto=format&fit=crop&q=80", // photo 8
-  "https://images.unsplash.com/photo-1472214222541-d510753a4907?w=300&auto=format&fit=crop&q=80"  // photo 9
 ];
+
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const { personalInfo, loading: infoLoading } = usePersonalInfo(authUser?.id);
-  const { schools, loading: schoolsLoading, fetchSchools } = useSchools(authUser?.id);
+  const { userId } = useParams();
+  const viewUserId = userId || authUser?.id;
+  const isOwnProfile = !userId || String(authUser?.id) === String(userId);
+  const { personalInfo, loading: infoLoading, error: infoError, setPersonalInfo } = usePersonalInfo(viewUserId);
+  const { schools, loading: schoolsLoading, fetchSchools } = useSchools(viewUserId);
 
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
 
   // Theme state: defaults to white theme (light mode) as requested!
   const [darkMode, setDarkMode] = useState(false);
@@ -104,8 +117,19 @@ export default function ProfilePage() {
   const [profileDetails, setProfileDetails] = useState(personalInfo?.details || {});
   const [profileName, setProfileName] = useState(personalInfo ? `${personalInfo.firstName} ${personalInfo.lastName}` : "");
 
-  // Post States (Start with empty list to match the "Không có bài viết" screenshot)
-  const [postsList, setPostsList] = useState([]);
+  // Posts loaded from server for this profile
+  const { posts: postsList, isLoading: postsLoading, refresh: refreshPosts, createPost: createUserPost } = useUserPosts(viewUserId, { initialPage: 1, pageSize: 10 });
+
+  useEffect(() => {
+    if (!viewUserId) return;
+    setBio("");
+    setBioInput("");
+    setProfileDetails({});
+    setProfileName("");
+    // posts are managed by useUserPosts; nothing local to reset
+    setIsEditingBio(false);
+    setIsCreateModalOpen(false);
+  }, [viewUserId]);
 
   useEffect(() => {
     if (personalInfo) {
@@ -151,8 +175,7 @@ export default function ProfilePage() {
     }
   }, [personalInfo]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newPostContent, setNewPostContent] = useState("");
-  const [newPostImage, setNewPostImage] = useState("");
+
 
   // Localized User details
   const displayUser = {
@@ -163,6 +186,7 @@ export default function ProfilePage() {
   };
 
   const handleSaveBio = async () => {
+    if (!isOwnProfile) return;
     try {
       const updateData = {
         firstName: personalInfo?.firstName || "",
@@ -189,7 +213,54 @@ export default function ProfilePage() {
     setIsEditingBio(false);
   };
 
+  const handleAvatarUpload = async (file) => {
+    if (!file || !isOwnProfile) return;
+    try {
+      setAvatarUploading(true);
+      const response = await uploadAvatarApi(file);
+      if (response?.Url) {
+        setPersonalInfo(prev => prev ? { ...prev, avatarUrl: response.Url } : prev);
+      }
+    } catch (error) {
+      console.error("Avatar upload failed", error);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleCoverUpload = async (file) => {
+    if (!file || !isOwnProfile) return;
+    try {
+      setCoverUploading(true);
+      const response = await uploadCoverPhotoApi(file);
+      if (response?.Url) {
+        setPersonalInfo(prev => prev ? { ...prev, coverPhotoUrl: response.Url } : prev);
+      }
+    } catch (error) {
+      console.error("Cover photo upload failed", error);
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const handleAvatarFileSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await handleAvatarUpload(file);
+    }
+    event.target.value = "";
+  };
+
+  const handleCoverFileSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await handleCoverUpload(file);
+    }
+    event.target.value = "";
+  };
+
   const handleUpdateProfileField = async (field, value) => {
+    if (!isOwnProfile) return;
     try {
       const updateData = {
         firstName: personalInfo?.firstName || "",
@@ -275,43 +346,17 @@ export default function ProfilePage() {
     setActiveTab("about");
   };
 
-  const handleCreatePost = (e) => {
-    e.preventDefault();
-    if (!newPostContent.trim() && !newPostImage) return;
-
-    const newPost = {
-      id: Date.now(),
-      user: displayUser.name,
-      avatar: displayUser.avatar,
-      time: "Vừa xong",
-      privacy: "public",
-      content: newPostContent,
-      image: newPostImage || null,
-      likes: 0,
-      likedBy: [],
-      comments: 0,
-      shares: 0,
-      liked: false
-    };
-
-    setPostsList([newPost, ...postsList]);
-    setNewPostContent("");
-    setNewPostImage("");
-    setIsCreateModalOpen(false);
+  const handleCreatePost = async (payload) => {
+    if (!isOwnProfile) return;
+    try {
+      await createUserPost(payload);
+      await refreshPosts();
+    } catch (err) {
+      console.error("Create post failed:", err);
+    }
   };
 
-  const handleLikePost = (postId) => {
-    setPostsList(postsList.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          likes: post.liked ? post.likes - 1 : post.likes + 1,
-          liked: !post.liked
-        };
-      }
-      return post;
-    }));
-  };
+  // Likes are handled within PostCard component; no local like handling required.
 
   // Set page title
   useEffect(() => {
@@ -331,13 +376,30 @@ export default function ProfilePage() {
     sidebarHr: darkMode ? "border-[#3e4042]" : "border-[#e4e6eb]",
     tabHover: darkMode ? "hover:bg-[#3a3b3c]" : "hover:bg-[#f2f2f2]"
   };
-  if (personalInfo === null) {
+  if (infoLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#18191a]">
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
       </div>
     );
   }
+
+  if (infoError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#18191a] px-4 text-center">
+        <div className="max-w-lg rounded-2xl bg-white dark:bg-[#242526] shadow-sm p-8">
+          <h2 className="text-2xl font-bold mb-3 text-[#111827] dark:text-[#e4e6eb]">Không thể tải trang cá nhân</h2>
+          <p className="text-sm text-[#4b5563] dark:text-[#b0b3b8] mb-6">
+            {infoError?.message || 'Đã xảy ra lỗi khi tải thông tin người dùng. Vui lòng thử lại sau.'}
+          </p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-[#1877f2] text-white hover:bg-blue-600 transition-all">
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-200 ${theme.bg}`}>
       {/* Navbar Integration */}
@@ -358,11 +420,24 @@ export default function ProfilePage() {
               alt="Cover"
               className="w-full h-full object-cover"
             />
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverFileSelect}
+            />
             {/* Edit Cover Photo Button */}
-            <button className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer">
-              <Camera size={16} />
-              <span className="hidden sm:inline">Thêm ảnh bìa</span>
-            </button>
+            {isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
+              >
+                <Camera size={16} />
+                <span className="hidden sm:inline">{coverUploading ? "Đang tải..." : "Thêm ảnh bìa"}</span>
+              </button>
+            )}
           </div>
 
           {/* Avatar and Info Grid */}
@@ -372,6 +447,13 @@ export default function ProfilePage() {
             <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-[80px] md:-mt-[45px] z-10 w-full md:w-auto text-center md:text-left">
               {/* Avatar circle */}
               <div className="relative group w-[168px] h-[168px]">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileSelect}
+                />
                 {displayUser.avatar ? (
                   <img
                     src={displayUser.avatar}
@@ -383,10 +465,18 @@ export default function ProfilePage() {
                     {displayUser.name.charAt(0)}
                   </div>
                 )}
-                {/* Camera icon over avatar on hover */}
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera size={28} className="text-white" />
-                </div>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <span className="flex items-center gap-2 text-white font-semibold">
+                      <Camera size={24} />
+                      {avatarUploading ? "Đang tải..." : "Đổi ảnh đại diện"}
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Bio & Details text */}
@@ -456,6 +546,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Header Action Buttons */}
+            {isOwnProfile ? (
             <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
               <button className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
                 <Plus size={16} />
@@ -472,6 +563,24 @@ export default function ProfilePage() {
                 <ChevronDown size={18} />
               </button>
             </div>
+          ) : (
+            <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
+              <button
+                onClick={() => navigate('/messenger')}
+                className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+              >
+                <MessageCircle size={16} />
+                Nhắn tin
+              </button>
+              <button className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}>
+                <Plus size={16} />
+                Kết bạn
+              </button>
+              <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
+                <ChevronDown size={18} />
+              </button>
+            </div>
+          )}
 
           </div>
 
@@ -593,12 +702,14 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Edit details button */}
-                <button
-                  onClick={handleOpenEditDetails}
-                  className={`w-full mt-4 py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}
-                >
-                  Chỉnh sửa chi tiết
-                </button>
+                {isOwnProfile && (
+                  <button
+                    onClick={handleOpenEditDetails}
+                    className={`w-full mt-4 py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}
+                  >
+                    Chỉnh sửa chi tiết
+                  </button>
+                )}
 
                 {/* Tin nổi bật section */}
                 <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
@@ -684,37 +795,39 @@ export default function ProfilePage() {
             {activeTab === "all" && (
               <>
                 {/* Create Post Card */}
-                <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
-                  <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-[#3e4042]">
-                    <img
-                      src={displayUser.avatar}
-                      alt={displayUser.name}
-                      className="w-10 h-10 rounded-full object-cover border"
-                    />
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className={`flex-1 text-left px-4 py-2.5 rounded-full text-[15px] transition-all cursor-pointer text-gray-500 ${darkMode ? 'bg-[#3a3b3c] hover:bg-[#4e4f50] text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
-                    >
-                      {displayUser.name} ơi, bạn đang nghĩ gì thế?
-                    </button>
-                  </div>
+                {isOwnProfile && (
+                  <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-[#3e4042]">
+                      <img
+                        src={displayUser.avatar}
+                        alt={displayUser.name}
+                        className="w-10 h-10 rounded-full object-cover border"
+                      />
+                      <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className={`flex-1 text-left px-4 py-2.5 rounded-full text-[15px] transition-all cursor-pointer text-gray-500 ${darkMode ? 'bg-[#3a3b3c] hover:bg-[#4e4f50] text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
+                      >
+                        {displayUser.name} ơi, bạn đang nghĩ gì thế?
+                      </button>
+                    </div>
 
-                  {/* Actions inside create card */}
-                  <div className="flex items-center justify-around pt-3">
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
-                      <Video size={18} className="text-red-500" />
-                      <span>Video trực tiếp</span>
-                    </button>
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
-                      <ImageIcon size={18} className="text-green-500" />
-                      <span>Ảnh/video</span>
-                    </button>
-                    <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
-                      <Smile size={18} className="text-yellow-500" />
-                      <span>Cảm xúc/hoạt động</span>
-                    </button>
+                    {/* Actions inside create card */}
+                    <div className="flex items-center justify-around pt-3">
+                      <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
+                        <Video size={18} className="text-red-500" />
+                        <span>Video trực tiếp</span>
+                      </button>
+                      <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
+                        <ImageIcon size={18} className="text-green-500" />
+                        <span>Ảnh/video</span>
+                      </button>
+                      <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
+                        <Smile size={18} className="text-yellow-500" />
+                        <span>Cảm xúc/hoạt động</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Post Filters & Settings Box */}
                 <div className={`${theme.card} rounded-xl shadow p-4 flex flex-col gap-3 transition-colors duration-200`}>
@@ -752,86 +865,32 @@ export default function ProfilePage() {
                     <div className={`w-20 h-20 rounded-full ${theme.input} flex items-center justify-center text-3xl mb-4 shadow-inner`}>
                       📭
                     </div>
-                    <h3 className={`text-xl font-bold mb-1.5 ${theme.text}`}>Không có bài viết</h3>
+                    <h3 className={`text-xl font-bold mb-1.5 ${theme.text}`}>{isOwnProfile ? 'Không có bài viết' : 'Người dùng chưa có bài viết'}</h3>
                     <p className={`text-sm max-w-sm ${theme.textSub}`}>
-                      Không tìm thấy bài viết nào của bạn. Hãy chia sẻ khoảnh khắc đầu tiên của bạn ngay lúc này nhé!
+                      {isOwnProfile
+                        ? 'Không tìm thấy bài viết nào của bạn. Hãy chia sẻ khoảnh khắc đầu tiên của bạn ngay lúc này nhé!'
+                        : 'Người dùng này chưa chia sẻ bài viết nào. Hãy quay lại sau để kiểm tra.'}
                     </p>
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="mt-5 px-5 py-2.5 bg-[#1877f2] hover:bg-blue-600 text-white font-bold rounded-lg text-sm shadow-md transition-all cursor-pointer"
-                    >
-                      Tạo bài viết mới
-                    </button>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="mt-5 px-5 py-2.5 bg-[#1877f2] hover:bg-blue-600 text-white font-bold rounded-lg text-sm shadow-md transition-all cursor-pointer"
+                      >
+                        Tạo bài viết mới
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
                     {postsList.map((post) => (
-                      <div key={post.id} className={`${theme.card} rounded-xl shadow overflow-hidden transition-colors duration-200`}>
-                        {/* Post Header */}
-                        <div className="flex items-center justify-between p-4">
-                          <div className="flex items-center gap-3">
-                            <img src={post.avatar} alt={post.user} className="w-10 h-10 rounded-full object-cover border" />
-                            <div>
-                              <div className={`font-semibold text-[15px] flex items-center gap-1.5 ${theme.text}`}>
-                                {post.user}
-                              </div>
-                              <div className={`text-xs flex items-center gap-1.5 ${theme.textSub}`}>
-                                {post.time} · <Globe size={12} />
-                              </div>
-                            </div>
-                          </div>
-                          <button className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${theme.textSub} ${theme.tabHover}`}>
-                            ···
-                          </button>
-                        </div>
-
-                        {/* Post Content */}
-                        {post.content && (
-                          <p className={`px-4 pb-3 text-[15px] whitespace-pre-wrap ${theme.text}`}>
-                            {post.content}
-                          </p>
-                        )}
-
-                        {/* Post Image */}
-                        {post.image && (
-                          <div className="bg-[#18191a] max-h-[500px] overflow-hidden flex items-center justify-center border-y dark:border-[#3e4042]">
-                            <img src={post.image} alt="Post Attachment" className="w-full object-cover" />
-                          </div>
-                        )}
-
-                        {/* Stats Panel */}
-                        <div className="flex items-center justify-between px-4 py-2.5 text-xs">
-                          <div className="flex items-center gap-1.5 cursor-pointer hover:underline text-[#1877f2] font-medium">
-                            <span className="flex items-center justify-center bg-[#1877f2] text-white w-4 h-4 rounded-full text-[10px]">👍</span>
-                            <span className={theme.textSub}>{post.likes}</span>
-                          </div>
-                          <div className={`flex gap-3 ${theme.textSub}`}>
-                            <span className="cursor-pointer hover:underline">{post.comments} bình luận</span>
-                            <span className="cursor-pointer hover:underline">{post.shares} lượt chia sẻ</span>
-                          </div>
-                        </div>
-
-                        <hr className={`mx-4 ${theme.sidebarHr}`} />
-
-                        {/* Reaction Buttons */}
-                        <div className="flex items-center p-1">
-                          <button
-                            onClick={() => handleLikePost(post.id)}
-                            className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${post.liked ? "text-[#1877f2]" : theme.textSub}`}
-                          >
-                            <ThumbsUp size={16} />
-                            Thích
-                          </button>
-                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${theme.textSub}`}>
-                            <MessageCircle size={16} />
-                            Bình luận
-                          </button>
-                          <button className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center gap-2 rounded-lg transition-all ${theme.tabHover} ${theme.textSub}`}>
-                            <Share2 size={16} />
-                            Chia sẻ
-                          </button>
-                        </div>
-                      </div>
+                      <PostCard
+                        key={post.id}
+                        post={{
+                          ...post,
+                          authorName: post.authorName || displayUser.name,
+                          authorAvatarUrl: post.authorAvatarUrl || displayUser.avatar,
+                        }}
+                      />
                     ))}
                   </div>
                 )}
@@ -839,7 +898,7 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "about" && (
-              <AboutTab theme={theme} schools={schools} profileDetails={profileDetails} dateOfBirth={personalInfo?.dateOfBirth} handleEdit={handleUpdateProfileField} fetchSchools={fetchSchools} />
+              <AboutTab theme={theme} schools={schools} profileDetails={profileDetails} dateOfBirth={personalInfo?.dateOfBirth} handleEdit={isOwnProfile ? handleUpdateProfileField : undefined} fetchSchools={fetchSchools} canEdit={isOwnProfile} />
             )}
 
             {activeTab === "friends" && (
@@ -849,111 +908,21 @@ export default function ProfilePage() {
             {activeTab === "photos" && (
               <PhotosTab theme={theme} mockPhotos={mockPhotos} />
             )}
-
+            {activeTab === "following" && (
+              <FollowingTab theme={theme}  />
+            )}
             {/* ========================================================
           3. DIALOGS & OVERLAYS (Post Creator, Details Editor)
           ======================================================== */}
 
             {/* A. CREATE POST MODAL DIALOG */}
-            {isCreateModalOpen && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center px-4 animate-fade-in">
-                <div className={`${theme.card} w-full max-w-[500px] rounded-xl shadow-2xl overflow-hidden flex flex-col border dark:border-[#3e4042]`}>
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b dark:border-[#3e4042]">
-                    <div className="w-8" /> {/* Balance spacer */}
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Tạo bài viết</h2>
-                    <button
-                      onClick={() => setIsCreateModalOpen(false)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${theme.btnGray}`}
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-
-                  {/* Form body */}
-                  <form onSubmit={handleCreatePost} className="p-4 flex flex-col gap-4">
-
-                    {/* User badge */}
-                    <div className="flex items-center gap-3">
-                      <img src={displayUser.avatar} alt={displayUser.name} className="w-10 h-10 rounded-full object-cover border" />
-                      <div>
-                        <p className={`font-semibold text-sm ${theme.text}`}>{displayUser.name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded ${theme.input} flex items-center gap-1 w-max font-semibold ${theme.textSub}`}>
-                          <Globe size={11} /> Công khai <ChevronDown size={11} />
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Text textarea */}
-                    <textarea
-                      value={newPostContent}
-                      onChange={(e) => setNewPostContent(e.target.value)}
-                      placeholder={`${displayUser.name} ơi, bạn đang nghĩ gì thế?`}
-                      className={`w-full h-36 bg-transparent resize-none text-[18px] outline-none border-none border-transparent p-1 focus:ring-0 ${theme.text}`}
-                      autoFocus
-                    />
-
-                    {/* Optional image input url block */}
-                    <div className="flex flex-col gap-1">
-                      <label className={`text-xs font-bold ${theme.textSub}`}>Liên kết ảnh (tùy chọn)</label>
-                      <div className={`flex items-center gap-2 rounded-lg p-1 ${theme.input}`}>
-                        <input
-                          type="url"
-                          value={newPostImage}
-                          onChange={(e) => setNewPostImage(e.target.value)}
-                          placeholder="https://example.com/image.jpg"
-                          className="bg-transparent text-sm w-full outline-none px-2 py-1 text-inherit"
-                        />
-                        {newPostImage && (
-                          <button
-                            type="button"
-                            onClick={() => setNewPostImage("")}
-                            className="text-red-500 hover:bg-black/10 dark:hover:bg-white/10 p-1 rounded"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Image Preview Block */}
-                    {newPostImage && (
-                      <div className="border rounded-lg overflow-hidden max-h-[140px] bg-black/20 flex items-center justify-center">
-                        <img
-                          src={newPostImage}
-                          alt="Preview"
-                          className="max-h-[140px] object-contain"
-                          onError={(e) => {
-                            e.target.src = "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?w=400&q=80"; // error placeholder
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Actions panel */}
-                    <div className="border rounded-lg p-3 flex items-center justify-between dark:border-[#3e4042]">
-                      <span className={`text-sm font-semibold ${theme.text}`}>Thêm vào bài viết của bạn</span>
-                      <div className="flex items-center gap-1 text-lg">
-                        <span className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full cursor-pointer" title="Ảnh/Video">🖼️</span>
-                        <span className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full cursor-pointer" title="Cảm xúc">😊</span>
-                        <span className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full cursor-pointer" title="Check-in">📍</span>
-                        <span className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full cursor-pointer" title="File GIF">👾</span>
-                      </div>
-                    </div>
-
-                    {/* Submit btn */}
-                    <button
-                      type="submit"
-                      disabled={!newPostContent.trim() && !newPostImage}
-                      className="w-full py-2.5 bg-[#1877f2] hover:bg-blue-600 disabled:bg-[#1877f2]/50 disabled:cursor-not-allowed text-white font-bold rounded-lg text-sm transition-all"
-                    >
-                      Đăng bài
-                    </button>
-
-                  </form>
-                </div>
-              </div>
-            )}
+            <CreatePostModal
+              isOpen={isCreateModalOpen}
+              onClose={() => setIsCreateModalOpen(false)}
+              displayUser={displayUser}
+              onSubmit={handleCreatePost}
+              theme={theme}
+            />
 
 
 

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
@@ -11,17 +15,20 @@ namespace Application.Posts.Commands.CreatePost
     {
         private readonly IPostRepository _postRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IUploadService _uploadService;
         private readonly IUnitOfWork _unitOfWork;
 
         public CreatePostCommandHandler(
             IPostRepository postRepository,
             IUserRepository userRepository,
+            IGroupRepository groupRepository,
             IUploadService uploadService,
             IUnitOfWork unitOfWork)
         {
             _postRepository = postRepository;
             _userRepository = userRepository;
+            _groupRepository = groupRepository;
             _uploadService = uploadService;
             _unitOfWork = unitOfWork;
         }
@@ -78,6 +85,21 @@ namespace Application.Posts.Commands.CreatePost
                 }
             }
 
+            // Validate that all tagged users belong to the group if post is created in a group
+            if (request.GroupId.HasValue && (request.TaggedUserIds?.Count > 0))
+            {
+                foreach (var taggedUserId in request.TaggedUserIds)
+                {
+                    var isUserInGroup = await _groupRepository.IsUserInGroupAsync(taggedUserId, request.GroupId.Value, cancellationToken);
+                    if (!isUserInGroup)
+                    {
+                        return Result.Failure<long>(new Error(
+                            "Post.TaggedUserNotInGroup",
+                            $"The tagged user with Id {taggedUserId} is not a member of the group."));
+                    }
+                }
+            }
+
             var visibility = request.GroupId.HasValue
                 ? PostVisibility.Group
                 : request.Visibility;
@@ -92,35 +114,54 @@ namespace Application.Posts.Commands.CreatePost
                 locationTag: request.LocationTag,
                 feelingActivity: request.FeelingActivity);
 
-            _postRepository.Add(post);
+            var uploadedUrls = new List<string>();
+            try
+            {
+                foreach (var attachment in attachments)
+                {
+                    var mediaType = GetMediaType(attachment);
+                    var mediaUrl = await UploadAttachmentAsync(attachment, mediaType);
+                    uploadedUrls.Add(mediaUrl);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    post.AddMedia(new PostMedia(
+                        id: 0,
+                        postId: 0,
+                        mediaType: mediaType,
+                        mediaUrl: mediaUrl,
+                        thumbnailUrl: null,
+                        metadata: null));
+                }
+            }
+            catch (Exception ex)
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _uploadService.DeleteFileAsync(url);
+                }
+                return Result.Failure<long>(new Error("Post.UploadFailed", ex.Message));
+            }
 
             foreach (var taggedUserId in request.TaggedUserIds ?? Array.Empty<Guid>())
             {
-                _postRepository.AddTag(new PostTag(
+                post.AddTag(new PostTag(
                     id: 0,
-                    postId: post.Id,
+                    postId: 0,
                     tagName: taggedUserId.ToString()));
             }
 
-            foreach (var attachment in attachments)
-            {
-                var mediaType = GetMediaType(attachment);
-                var mediaUrl = await UploadAttachmentAsync(attachment, mediaType);
+            _postRepository.Add(post);
 
-                _postRepository.AddMedia(new PostMedia(
-                    id: 0,
-                    postId: post.Id,
-                    mediaType: mediaType,
-                    mediaUrl: mediaUrl,
-                    thumbnailUrl: null,
-                    metadata: null));
-            }
-
-            if ((request.TaggedUserIds?.Count > 0) || attachments.Count > 0)
+            try
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _uploadService.DeleteFileAsync(url);
+                }
+                return Result.Failure<long>(new Error("Post.SaveFailed", ex.Message));
             }
 
             return Result.Success(post.Id);

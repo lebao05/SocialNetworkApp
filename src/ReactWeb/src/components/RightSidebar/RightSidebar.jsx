@@ -3,7 +3,7 @@ import { contacts, ads, birthdays } from "../../data/mockData";
 
 export default function RightSidebar({ onContactClick }) {
   return (
-    <aside className="fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white z-10">
+    <aside className="hidden xl:flex fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white z-10 flex-col">
       {/* Birthday */}
       {birthdays.length > 0 && (
         <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-fb-hover cursor-pointer mb-3">

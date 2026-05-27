@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -22,10 +23,33 @@ namespace Infrastructure.Persistence.Repositories
                     f.User2Id == user2Id);
         }
 
+        public async Task<bool> ExistsFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken)
+        {
+            return await _context.Followings
+                .AnyAsync(f => f.FollowerId == followerId && f.FolloweeId == followeeId, cancellationToken);
+        }
+
         public async Task AddAsync(Friendship friendship)
         {
             await _context.Friendships.AddAsync(friendship);
         }
+
+        public async Task AddFollowingAsync(Following following)
+        {
+            await _context.Followings.AddAsync(following);
+        }
+
+        public async Task RemoveFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken)
+        {
+            var following = await _context.Followings
+                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FolloweeId == followeeId, cancellationToken);
+
+            if (following is not null)
+            {
+                _context.Followings.Remove(following);
+            }
+        }
+
         public async Task<List<User>> GetFriendsAsync(Guid userId, CancellationToken cancellationToken)
         {
             return await _context.Friendships
@@ -33,6 +57,20 @@ namespace Infrastructure.Persistence.Repositories
                 .Select(f => f.User1Id == userId ? f.User2 : f.User1)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<PagedList<User>> GetFriendsPagedAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            var query = _context.Friendships
+                .Where(f => f.User1Id == userId || f.User2Id == userId)
+                .Select(f => f.User1Id == userId ? f.User2 : f.User1)
+                .AsNoTracking();
+
+            return await PagedList<User>.CreateAsync(query, page, pageSize, cancellationToken);
         }
 
         public async Task<List<User>> SearchFriendsToChatAsync(

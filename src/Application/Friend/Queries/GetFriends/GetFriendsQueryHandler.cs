@@ -1,39 +1,58 @@
-﻿using Application.Abstractions.Messaging;
+using Application.Abstractions;
+using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Friends;
+using Application.Shared;
 using Domain.Shared;
 
 namespace Application.Friend.Queries.GetFriends;
 
 internal sealed class GetFriendsQueryHandler
-    : IQueryHandler<GetFriendsQuery, List<FriendResponse>>
+    : IQueryHandler<GetFriendsQuery, PagedList<FriendResponse>>
 {
+    private const int PageSize = 10;
+
     private readonly IFriendshipRepository _friendshipRepository;
+    private readonly IFriendGraphService _friendGraphService;
 
     public GetFriendsQueryHandler(
-        IFriendshipRepository friendshipRepository)
+        IFriendshipRepository friendshipRepository,
+        IFriendGraphService friendGraphService)
     {
         _friendshipRepository = friendshipRepository;
+        _friendGraphService = friendGraphService;
     }
 
-    public async Task<Result<List<FriendResponse>>> Handle(
+    public async Task<Result<PagedList<FriendResponse>>> Handle(
         GetFriendsQuery request,
         CancellationToken cancellationToken)
     {
-        // 1. Fetch User entities from Friendship repository
-        var friends = await _friendshipRepository.GetFriendsAsync(
+        var page = Math.Max(1, request.Page);
+
+        var pagedFriends = await _friendshipRepository.GetFriendsPagedAsync(
             request.UserId,
+            page,
+            PageSize,
             cancellationToken);
 
-        // 2. Map to Response and check PresenceTracker for live status
-        var response = friends.Select(static friend => new FriendResponse(
-            friend.Id,
-            friend.UserName ?? string.Empty,
-            $"{friend.FirstName} {friend.LastName}".Trim(),
-            friend.AvatarUrl
-        ))
-        .ToList();
+        var items = await Task.WhenAll(pagedFriends.Items.Select(async friend =>
+        {
+            var mutualFriendCount = await _friendGraphService.GetMutualFriendCountAsync(
+                request.UserId,
+                friend.Id);
 
-        return Result.Success(response);
+            return new FriendResponse(
+                friend.Id,
+                friend.UserName ?? string.Empty,
+                $"{friend.FirstName} {friend.LastName}".Trim(),
+                friend.AvatarUrl,
+                mutualFriendCount);
+        }));
+
+        return Result.Success(new PagedList<FriendResponse>(
+            items.ToList(),
+            pagedFriends.PageNumber,
+            pagedFriends.PageSize,
+            pagedFriends.TotalCount));
     }
 }

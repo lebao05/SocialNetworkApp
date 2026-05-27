@@ -10,6 +10,7 @@ namespace Application.DTOs.Friends
         string? SenderAvatarUrl,
         Guid ReceiverId,
         FriendRequestStatus Status,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        int MutualFriendsCount = 0
     );
 }
