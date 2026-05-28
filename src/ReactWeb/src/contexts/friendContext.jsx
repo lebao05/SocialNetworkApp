@@ -4,10 +4,7 @@ import {
     getIncomingFriendRequestsApi,
     getFriendRecommendationsApi,
     sendFriendRequestApi,
-    acceptFriendRequestApi,
-    getMutualFriendsApi,
-    getShortestPathApi,
-    syncAllFriendsApi,
+    acceptFriendRequestApi
 } from "../apis/friendApi";
 
 const FriendContext = createContext(null);
@@ -131,6 +128,7 @@ export function FriendProvider({ children }) {
             setError(null);
             return data;
         } catch (err) {
+            console.log(`Error accepting friend request ${requestId}:`, err);
             handleApiError(err, "Unable to accept friend request");
             throw err;
         } finally {
@@ -138,47 +136,7 @@ export function FriendProvider({ children }) {
         }
     };
 
-    const getMutualFriends = async (otherUserId) => {
-        try {
-            setLoading(true);
-            const data = await getMutualFriendsApi(otherUserId);
-            setError(null);
-            return data;
-        } catch (err) {
-            handleApiError(err, "Unable to fetch mutual friends");
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const getShortestPath = async (otherUserId) => {
-        try {
-            setLoading(true);
-            const data = await getShortestPathApi(otherUserId);
-            setError(null);
-            return data;
-        } catch (err) {
-            handleApiError(err, "Unable to fetch shortest friend path");
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const syncAllFriends = async () => {
-        try {
-            setLoading(true);
-            const data = await syncAllFriendsApi();
-            setError(null);
-            return data;
-        } catch (err) {
-            handleApiError(err, "Unable to sync friends");
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const clearFriendError = () => setError(null);
 
@@ -201,9 +159,6 @@ export function FriendProvider({ children }) {
                 fetchFriendRecommendations,
                 sendFriendRequest,
                 acceptFriendRequest,
-                getMutualFriends,
-                getShortestPath,
-                syncAllFriends,
                 setFriends,
                 setIncomingRequests,
                 setRecommendations,

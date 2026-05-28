@@ -43,7 +43,7 @@ export default function FriendsTab({ displayUser, mockFriends }) {
       {/* Top Header Utilities */}
       <div className="flex items-start justify-between w-full mb-1">
         <div>
-          <h2 className="text-xl font-bold text-[#050505] tracking-tight">Bạn bè</h2>
+          <h2 className="text-xl font-bold text-[#050505] tracking-tight">Friends</h2>
         </div>
         <div className="flex items-center gap-4 text-sm font-medium">
           <button type="button" className="p-2 rounded-md bg-[#E4E6EB] hover:bg-[#D8DADF] flex items-center justify-center border border-[#ced0d4] text-[#050505]">
@@ -62,7 +62,7 @@ export default function FriendsTab({ displayUser, mockFriends }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm"
+              placeholder="Search"
               className="bg-transparent border-none outline-none text-[14px] w-full text-[#050505] placeholder:text-[#65676B]"
             />
           </div>
@@ -119,21 +119,21 @@ export default function FriendsTab({ displayUser, mockFriends }) {
                       <div className="flex items-start gap-2">
                         <User size={16} className="mt-0.5 flex-shrink-0 text-[#65676B]" />
                         <span>
-                          <strong className="text-[#050505] font-semibold">{friend.mutual || 0} bạn chung</strong> bao gồm Trần Phụng Đình và Quốc Tấn
+                          <strong className="text-[#050505] font-semibold">{friend.mutual || 0} mutual friends</strong> including Trần Phụng Đình and Quốc Tấn
                         </span>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="text-[#65676B] text-base leading-none flex-shrink-0">🎓</span>
-                        <span>Từng học tại <strong className="text-[#050505] font-semibold">Information Technology - HCMUS</strong></span>
+                        <span>Studied at <strong className="text-[#050505] font-semibold">Information Technology - HCMUS</strong></span>
                       </div>
                     </div>
 
                     <div className="flex gap-2">
                       <button className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-[#E4E6EB] hover:bg-[#D8DADF] py-2 text-[14px] font-semibold text-black transition">
-                        <UserCheck size={16} /> Bạn bè
+                        <UserCheck size={16} /> Friends
                       </button>
                       <button className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-[#1877F2] hover:bg-[#166fe5] py-2 text-[14px] font-semibold text-white transition">
-                        <MessageCircle size={16} /> Nhắn tin
+                        <MessageCircle size={16} /> Message
                       </button>
                       <button className="px-2.5 rounded-md bg-[#E4E6EB] hover:bg-[#D8DADF] font-bold text-black transition">
                         •••
@@ -185,24 +185,24 @@ export default function FriendsTab({ displayUser, mockFriends }) {
                 >
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-left text-[14px] font-semibold hover:bg-[#F2F2F2] transition">
                     <Star size={18} className="text-[#65676B]" />
-                    <span>Yêu thích</span>
+                    <span>Favorite</span>
                   </button>
                   
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-left text-[14px] font-semibold hover:bg-[#F2F2F2] transition">
                     <UserCheck size={18} className="text-[#65676B]" />
-                    <span>Chỉnh sửa danh sách bạn bè</span>
+                    <span>Edit friends list</span>
                   </button>
                   
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-left text-[14px] font-semibold hover:bg-[#F2F2F2] transition">
                     <EyeOff size={18} className="text-[#65676B]" />
-                    <span>Bỏ theo dõi</span>
+                    <span>Unfollow</span>
                   </button>
                   
                   <div className="h-[1px] bg-[#ced0d4] my-1" />
                   
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-left text-[14px] font-semibold text-red-600 hover:bg-red-50 transition">
                     <UserX size={18} />
-                    <span>Hủy kết bạn</span>
+                    <span>Unfriend</span>
                   </button>
                 </div>
               )}
@@ -215,7 +215,7 @@ export default function FriendsTab({ displayUser, mockFriends }) {
       {/* Empty State Fallback */}
       {filteredFriends.length === 0 && (
         <div className="py-12 text-center text-sm text-[#65676B]">
-          Không tìm thấy người bạn nào phù hợp.
+          No matching friends found.
         </div>
       )}
 

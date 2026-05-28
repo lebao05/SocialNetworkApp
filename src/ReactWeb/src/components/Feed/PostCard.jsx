@@ -1,4 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { GrLike } from "react-icons/gr";
+import { FaRegComment } from "react-icons/fa6";
+import { PiShareFatLight } from "react-icons/pi";
+import { createCommentApi, getCommentsApi, reactToCommentApi, reactToPostApi } from "../../apis/postApi";
+import { useAuth } from "../../contexts/authContext";
+import PostComment from "./PostComment";
+import MediaGallery from "./MediaGallery";
+import PostModal from "./PostModal";
 
 // ─── Feeling map (matches Domain.Enums.Feeling) ───
 const FEELING_MAP = {
@@ -37,6 +45,64 @@ const VISIBILITY_ICON = {
   2: "🔒", // Only Me
 };
 
+const REACTION_TYPE_MAP = {
+  "👍": "Like",
+  "❤️": "Love",
+  "😂": "Haha",
+  "😮": "Wow",
+  "😢": "Sad",
+  "😡": "Angry",
+};
+
+const REACTION_NAME_FROM_VALUE = {
+  0: "Like",
+  1: "Love",
+  2: "Haha",
+  3: "Wow",
+  4: "Sad",
+  5: "Angry",
+};
+
+const REACTION_ICON_FROM_NAME = Object.fromEntries(
+  Object.entries(REACTION_TYPE_MAP).map(([icon, name]) => [name, icon])
+);
+
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150";
+
+function getReactionIcon(reaction) {
+  if (reaction == null) return "";
+  if (typeof reaction === "number") {
+    return REACTION_ICON_FROM_NAME[REACTION_NAME_FROM_VALUE[reaction]] || "";
+  }
+  if (typeof reaction === "string") {
+    return REACTION_ICON_FROM_NAME[reaction] || reaction;
+  }
+  return "";
+}
+
+function getReactionName(reaction) {
+  if (reaction == null) return null;
+  if (typeof reaction === "number") return REACTION_NAME_FROM_VALUE[reaction] || null;
+  if (typeof reaction === "string") return REACTION_TYPE_MAP[reaction] ? REACTION_TYPE_MAP[reaction] : reaction;
+  return null;
+}
+
+function getTopReactionIcon(reactionCounts) {
+  if (!Array.isArray(reactionCounts) || reactionCounts.length === 0) return "";
+
+  const topReaction = reactionCounts
+    .filter((item) => item && typeof item.count === "number")
+    .sort((a, b) => b.count - a.count)[0];
+
+  if (!topReaction || topReaction.count === 0) return "";
+  return REACTION_ICON_FROM_NAME[REACTION_NAME_FROM_VALUE[topReaction.reactionType]] || "";
+}
+
+function getReactionTotal(reactionCounts) {
+  if (!Array.isArray(reactionCounts)) return 0;
+  return reactionCounts.reduce((sum, item) => sum + (item?.count || 0), 0);
+}
+
 // ─── Relative time helper ───
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -44,244 +110,406 @@ function timeAgo(dateStr) {
   const d = new Date(dateStr);
   const diffMs = now - d;
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return "Vừa xong";
+  if (diffSec < 60) return "Just now";
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} phút trước`;
+  if (diffMin < 60) return `${diffMin}m`;
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} giờ trước`;
+  if (diffHr < 24) return `${diffHr}h`;
   const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay} ngày trước`;
-  return d.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" });
+  if (diffDay < 7) return `${diffDay}d`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-// ─── Media Gallery (Facebook-style grid) ───
-function MediaGallery({ media }) {
-  const images = (media || []).filter(
-    (m) => m.mediaType === "Image" || m.mediaType === "image"
-  );
-  const videos = (media || []).filter(
-    (m) => m.mediaType === "Video" || m.mediaType === "video"
-  );
-  const count = images.length;
+function normalizeComment(comment) {
+  if (!comment) return null;
 
-  const [lightboxIdx, setLightboxIdx] = useState(null);
-
-  if (count === 0 && videos.length === 0) return null;
-
-  // Lightbox overlay
-  const lightbox = lightboxIdx !== null && (
-    <div
-      className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
-      onClick={() => setLightboxIdx(null)}
-    >
-      <button
-        onClick={() => setLightboxIdx(null)}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center z-10 transition-colors"
-      >
-        ✕
-      </button>
-
-      {/* Prev */}
-      {lightboxIdx > 0 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx - 1); }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center transition-colors"
-        >
-          ‹
-        </button>
-      )}
-
-      {/* Next */}
-      {lightboxIdx < images.length - 1 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx + 1); }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center transition-colors"
-        >
-          ›
-        </button>
-      )}
-
-      <img
-        src={images[lightboxIdx]?.mediaUrl}
-        alt=""
-        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      {/* Counter */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium bg-black/50 px-4 py-1.5 rounded-full">
-        {lightboxIdx + 1} / {images.length}
-      </div>
-    </div>
-  );
-
-  // Video rendering
-  const videoElements = videos.map((v) => (
-    <div key={v.id} className="w-full">
-      <video
-        src={v.mediaUrl}
-        controls
-        className="w-full max-h-[500px] object-contain bg-black rounded"
-      />
-    </div>
-  ));
-
-  // Single image
-  if (count === 1) {
-    return (
-      <>
-        {lightbox}
-        <div className="w-full">
-          <img
-            src={images[0].mediaUrl}
-            alt=""
-            className="w-full object-cover max-h-[500px] cursor-pointer hover:brightness-95 transition-all"
-            onClick={() => setLightboxIdx(0)}
-          />
-        </div>
-        {videoElements}
-      </>
-    );
+  if (comment.content !== undefined || comment.userName !== undefined) {
+    return {
+      id: comment.id,
+      postId: comment.postId,
+      userId: comment.userId,
+      user: comment.userName || "User",
+      avatar: comment.userAvatarUrl || DEFAULT_AVATAR,
+      parentId: comment.parentCommentId || null,
+      repliedUserId: comment.repliedUserId || null,
+      repliedUserName: comment.repliedUserName || null,
+      repliedAvatarUrl: comment.repliedAvatarUrl || null,
+      text: comment.content || "",
+      time: comment.createdAt ? timeAgo(comment.createdAt) : "",
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      reactionCounts: comment.reactionCounts || [],
+      likes: getReactionTotal(comment.reactionCounts),
+      replyCount: comment.replyCount || 0,
+      userReaction: getReactionName(comment.userReaction) || "",
+    };
   }
 
-  // Two images
-  if (count === 2) {
-    return (
-      <>
-        {lightbox}
-        <div className="grid grid-cols-2 gap-0.5">
-          {images.map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
-              <img
-                src={img.mediaUrl}
-                alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
-                onClick={() => setLightboxIdx(i)}
-              />
-            </div>
-          ))}
-        </div>
-        {videoElements}
-      </>
-    );
+  return comment;
+}
+
+function normalizePagedItems(data) {
+  if (!data) return { items: [], hasNextPage: false };
+  if (Array.isArray(data)) {
+    return { items: data.map(normalizeComment).filter(Boolean), hasNextPage: false };
   }
 
-  // Three images
-  if (count === 3) {
-    return (
-      <>
-        {lightbox}
-        <div className="grid grid-cols-2 gap-0.5">
-          <div className="row-span-2 overflow-hidden">
-            <img
-              src={images[0].mediaUrl}
-              alt=""
-              className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
-              onClick={() => setLightboxIdx(0)}
-            />
-          </div>
-          {images.slice(1).map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
-              <img
-                src={img.mediaUrl}
-                alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
-                onClick={() => setLightboxIdx(i + 1)}
-              />
-            </div>
-          ))}
-        </div>
-        {videoElements}
-      </>
-    );
-  }
-
-  // Four images
-  if (count === 4) {
-    return (
-      <>
-        {lightbox}
-        <div className="grid grid-cols-2 gap-0.5">
-          {images.map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
-              <img
-                src={img.mediaUrl}
-                alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
-                onClick={() => setLightboxIdx(i)}
-              />
-            </div>
-          ))}
-        </div>
-        {videoElements}
-      </>
-    );
-  }
-
-  // 5+ images: show first 4 in grid, last slot has "+N" overlay
-  const displayImages = images.slice(0, 4);
-  const remaining = count - 4;
-
-  return (
-    <>
-      {lightbox}
-      <div className="grid grid-cols-2 gap-0.5">
-        {displayImages.map((img, i) => (
-          <div key={img.id} className="aspect-square overflow-hidden relative">
-            <img
-              src={img.mediaUrl}
-              alt=""
-              className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
-              onClick={() => setLightboxIdx(i)}
-            />
-            {i === 3 && remaining > 0 && (
-              <div
-                className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/60 transition-colors"
-                onClick={() => setLightboxIdx(3)}
-              >
-                <span className="text-white text-3xl font-bold">+{remaining}</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      {videoElements}
-    </>
-  );
+  return {
+    items: (data.items || []).map(normalizeComment).filter(Boolean),
+    hasNextPage: Boolean(data.hasNextPage),
+  };
 }
 
 // ─── Reaction Button ───
-const ReactionBtn = ({ icon, label, onClick, active }) => (
+const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave }) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-fb-hover text-sm font-semibold transition-colors ${active ? "text-fb-blue" : "text-fb-subtext"}`}
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
+    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-[#F2F4F7] text-sm font-semibold transition-colors ${active ? "text-blue-600" : "text-gray-500"}`}
   >
-    <span>{icon}</span> {label}
+    <span className={active && typeof icon === "string" ? "scale-110" : ""}>{icon}</span> {label}
   </button>
 );
 
 // ─── Main PostCard ───
 export default function PostCard({ post }) {
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(post.likes || 0);
+  const { user } = useAuth();
+  const initialLikes = (post.reactionCounts || []).reduce(
+    (sum, item) => sum + (item?.count || 0),
+    0
+  );
+  const initialComments = (post.commentsData || []).map(normalizeComment).filter(Boolean);
+  const initialCommentCount =
+    typeof post.commentCount === "number"
+      ? post.commentCount
+      : typeof post.comments === "number"
+        ? post.comments
+        : initialComments.length;
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikes(liked ? likes - 1 : likes + 1);
+  const [liked, setLiked] = useState(post.userReaction != null);
+  const [reactionCounts, setReactionCounts] = useState(post.reactionCounts || []);
+  const [likes, setLikes] = useState(initialLikes);
+  const [comments, setComments] = useState(initialComments);
+  const [commentCount, setCommentCount] = useState(initialCommentCount);
+  const [commentsLoaded, setCommentsLoaded] = useState(initialComments.length > 0);
+  const [commentPage, setCommentPage] = useState(1);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [loadingReplyParentIds, setLoadingReplyParentIds] = useState([]);
+  const [openPostModal, setOpenPostModal] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [replyToCommentId, setReplyToCommentId] = useState(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState("");
+  
+  const [reactionHover, setReactionHover] = useState(false);
+  const [reaction, setReaction] = useState(getReactionIcon(post.userReaction));
+  const reactionOptions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+
+  const REACTION_VALUE_FROM_NAME = Object.fromEntries(
+    Object.entries(REACTION_NAME_FROM_VALUE).map(([value, name]) => [name, Number(value)])
+  );
+
+  const updateReactionCounts = (oldReaction, newReaction) => {
+    const oldName = getReactionName(oldReaction);
+    const newName = getReactionName(newReaction);
+
+    if (oldName === newName) {
+      return reactionCounts;
+    }
+
+    const next = reactionCounts.map((item) => ({ ...item }));
+
+    const adjustCount = (reactionName, delta) => {
+      if (!reactionName) return;
+      const reactionType = REACTION_VALUE_FROM_NAME[reactionName];
+      if (reactionType == null) return;
+
+      const existing = next.find((item) => item.reactionType === reactionType);
+      if (existing) {
+        existing.count = Math.max(0, existing.count + delta);
+      } else if (delta > 0) {
+        next.push({ reactionType, count: delta });
+      }
+    };
+
+    if (oldName) {
+      adjustCount(oldName, -1);
+    }
+
+    if (newName) {
+      adjustCount(newName, 1);
+    }
+
+    return next.filter((item) => item.count > 0);
   };
 
-  // Resolve author info – works with both old mock shape and new API shape
-  const authorName = post.authorName || post.user || "Người dùng";
-  const authorAvatar = post.authorAvatarUrl || post.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150";
+  // Refs to hold active timer references
+  const hoverTimerRef = useRef(null);
+  const leaveTimerRef = useRef(null);
 
-  // Feeling
+  const handleMouseEnter = () => {
+    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setReactionHover(true);
+    }, 500);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    leaveTimerRef.current = setTimeout(() => {
+      setReactionHover(false);
+    }, 300);
+  };
+
+  const handleLike = async () => {
+    const oldLiked = liked;
+    const oldReaction = reaction;
+    const oldReactionCounts = reactionCounts;
+    const newReaction = oldLiked ? "" : "👍";
+
+    setLiked(!oldLiked);
+    setReaction(newReaction);
+    setReactionCounts(updateReactionCounts(oldReaction, newReaction));
+    setLikes((prev) => prev + (oldLiked ? -1 : 1));
+
+    try {
+      await reactToPostApi(post.id, newReaction ? REACTION_TYPE_MAP[newReaction] : null);
+    } catch (error) {
+      setLiked(oldLiked);
+      setReaction(oldReaction);
+      setReactionCounts(oldReactionCounts);
+      setLikes((prev) => prev + (oldLiked ? 1 : -1));
+      console.error("Failed to update post reaction", error);
+    }
+  };
+
+  const handleReactionSelect = async (icon) => {
+    const oldReaction = reaction;
+    const oldLiked = liked;
+    const oldReactionCounts = reactionCounts;
+    const wasNewReaction = !oldLiked;
+
+    setLiked(true);
+    setReaction(icon);
+    setReactionCounts(updateReactionCounts(oldReaction, icon));
+    if (wasNewReaction) {
+      setLikes((prev) => prev + 1);
+    }
+    setReactionHover(false);
+
+    try {
+      await reactToPostApi(post.id, REACTION_TYPE_MAP[icon]);
+    } catch (error) {
+      setLiked(oldLiked);
+      setReaction(oldReaction);
+      setReactionCounts(oldReactionCounts);
+      if (wasNewReaction) {
+        setLikes((prev) => prev - 1);
+      }
+      console.error("Failed to set post reaction", error);
+    }
+  };
+
+  const handleReactComment = async (commentId) => {
+    if (String(commentId).startsWith("temp-")) return;
+
+    const comment = comments.find((comment) => comment.id === commentId);
+    const isLiked = comment?.userReaction === "Like";
+    const oldLikes = comment?.likes ?? 0;
+    const oldReaction = comment?.userReaction || "";
+
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? {
+              ...c,
+              likes: isLiked ? oldLikes - 1 : oldLikes + 1,
+              userReaction: isLiked ? "" : "Like",
+            }
+          : c
+      )
+    );
+
+    try {
+      await reactToCommentApi(commentId, isLiked ? null : "Like");
+    } catch (error) {
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? {
+                ...c,
+                likes: oldLikes,
+                userReaction: oldReaction,
+              }
+            : c
+        )
+      );
+      console.error("Failed to react to comment", error);
+    }
+  };
+
+  const mergeComments = (prev, incoming) => {
+    const existingIds = new Set(prev.map((comment) => comment.id));
+    return [...prev, ...incoming.filter((comment) => !existingIds.has(comment.id))];
+  };
+
+  const loadComments = async (pageToLoad = 1) => {
+    if (isLoadingComments) return;
+
+    setIsLoadingComments(true);
+    setCommentError("");
+
+    try {
+      const data = await getCommentsApi(post.id, { page: pageToLoad, pageSize: 10 });
+      const { items, hasNextPage } = normalizePagedItems(data);
+
+      setComments((prev) => {
+        const repliesAndTemps = prev.filter((comment) => comment.parentId || String(comment.id).startsWith("temp-"));
+        return pageToLoad === 1 ? [...items, ...repliesAndTemps] : mergeComments(prev, items);
+      });
+      setCommentPage(pageToLoad);
+      setHasMoreComments(hasNextPage);
+      setCommentsLoaded(true);
+    } catch (error) {
+      setCommentError("Could not load comments. Try again.");
+      console.error("Failed to load comments", error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const loadMoreComments = () => {
+    if (!hasMoreComments || isLoadingComments) return;
+    loadComments(commentPage + 1);
+  };
+
+  const loadReplies = async (parentCommentId) => {
+    if (!parentCommentId || loadingReplyParentIds.includes(parentCommentId)) return;
+
+    const loadedReplyCount = comments.filter((comment) => comment.parentId === parentCommentId).length;
+    const nextPage = Math.floor(loadedReplyCount / 10) + 1;
+
+    setLoadingReplyParentIds((prev) => [...prev, parentCommentId]);
+    setCommentError("");
+
+    try {
+      const data = await getCommentsApi(post.id, {
+        parentCommentId,
+        page: nextPage,
+        pageSize: 10,
+      });
+      const { items } = normalizePagedItems(data);
+      setComments((prev) => mergeComments(prev, items));
+    } catch (error) {
+      setCommentError("Could not load replies. Try again.");
+      console.error("Failed to load replies", error);
+    } finally {
+      setLoadingReplyParentIds((prev) => prev.filter((id) => id !== parentCommentId));
+    }
+  };
+
+  const openCommentsModal = () => {
+    setOpenPostModal(true);
+    if (!commentsLoaded) {
+      loadComments(1);
+    }
+  };
+  const closeCommentsModal = () => {
+    setOpenPostModal(false);
+    setReplyToCommentId(null);
+  };
+
+  const handleStartReply = (commentId) => {
+    setReplyToCommentId(commentId);
+    setOpenPostModal(true);
+  };
+
+  const handleCancelReply = () => setReplyToCommentId(null);
+
+  const handleSubmitComment = async () => {
+    const trimmed = newComment.trim();
+    if (!trimmed || isSubmittingComment) return;
+
+    const targetComment = comments.find((comment) => comment.id === replyToCommentId);
+    const topLevelParentId = targetComment ? (targetComment.parentId || targetComment.id) : null;
+    const tempId = `temp-${Date.now()}`;
+    const optimisticComment = {
+      id: tempId,
+      postId: post.id,
+      userId: user?.id,
+      user: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "You" : "You",
+      avatar: user?.avatarUrl || DEFAULT_AVATAR,
+      time: "Just now",
+      text: trimmed,
+      parentId: topLevelParentId,
+      repliedUserId: targetComment?.userId || null,
+      repliedUserName: targetComment?.user || null,
+      repliedAvatarUrl: targetComment?.avatar || null,
+      reactionCounts: [],
+      likes: 0,
+      replyCount: 0,
+      userReaction: "",
+    };
+
+    setCommentError("");
+    setIsSubmittingComment(true);
+    setComments((prev) => [optimisticComment, ...prev]);
+    if (topLevelParentId) {
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === topLevelParentId
+            ? { ...comment, replyCount: (comment.replyCount || 0) + 1 }
+            : comment
+        )
+      );
+    }
+    setCommentCount((prev) => prev + 1);
+    setNewComment("");
+    setReplyToCommentId(null);
+
+    try {
+      const createdCommentId = await createCommentApi(post.id, {
+        content: trimmed,
+        parentCommentId: topLevelParentId,
+        repliedUserId: targetComment?.userId || null,
+      });
+
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === tempId
+            ? { ...comment, id: createdCommentId || tempId }
+            : comment
+        )
+      );
+    } catch (error) {
+      setComments((prev) => prev.filter((comment) => comment.id !== tempId));
+      if (topLevelParentId) {
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment.id === topLevelParentId
+              ? { ...comment, replyCount: Math.max(0, (comment.replyCount || 0) - 1) }
+              : comment
+          )
+        );
+      }
+      setCommentCount((prev) => Math.max(0, prev - 1));
+      setNewComment(trimmed);
+      setReplyToCommentId(replyToCommentId);
+      setCommentError("Could not post comment. Try again.");
+      console.error("Failed to create comment", error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const authorName = post.authorName || post.user || "User";
+  const authorAvatar = post.authorAvatarUrl || post.avatar || DEFAULT_AVATAR;
   const feeling = post.feelingActivity != null ? FEELING_MAP[post.feelingActivity] : null;
-
-  // Time
   const displayTime = post.createdAt ? timeAgo(post.createdAt) : (post.time || "");
-
-  // Visibility
   const visIcon = VISIBILITY_ICON[post.visibility] ?? VISIBILITY_ICON[0];
+  const topReactionIcon = getTopReactionIcon(reactionCounts);
 
   return (
     <div className="bg-white rounded-xl shadow">
@@ -290,41 +518,40 @@ export default function PostCard({ post }) {
         <div className="flex items-center gap-2">
           <img src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full object-cover border" />
           <div>
-            <p className="text-[15px] font-semibold text-fb-text leading-tight flex items-center flex-wrap gap-1">
+            <p className="text-[15px] font-semibold text-gray-800 leading-tight flex items-center flex-wrap gap-1">
               <span className="font-bold hover:underline cursor-pointer">{authorName}</span>
               {feeling && (
-                <span className="text-fb-subtext font-normal text-[14px] flex items-center gap-0.5">
+                <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
                   đang cảm thấy {feeling.emoji} <span className="font-semibold text-[#050505]">{feeling.label}</span>
                 </span>
               )}
               {post.locationTag && (
-                <span className="text-fb-subtext font-normal text-[14px] flex items-center gap-0.5">
+                <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
                   ở <span className="font-semibold text-[#050505]">{post.locationTag}</span>
                 </span>
               )}
             </p>
-            <p className="text-xs text-fb-subtext mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               {displayTime} · {visIcon}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button className="w-9 h-9 rounded-full hover:bg-fb-hover flex items-center justify-center text-fb-subtext font-bold text-lg">
+          <button className="w-9 h-9 rounded-full hover:bg-[#F2F4F7] flex items-center justify-center text-gray-500 font-bold text-lg">
             ···
           </button>
-          <button className="w-9 h-9 rounded-full hover:bg-fb-hover flex items-center justify-center text-fb-subtext">
+          <button className="w-9 h-9 rounded-full hover:bg-[#F2F4F7] flex items-center justify-center text-gray-500">
             ✕
           </button>
         </div>
       </div>
 
       {/* Content */}
-      {post.content && <p className="px-4 pb-2 text-[15px] text-fb-text">{post.content}</p>}
+      {post.content && <p className="px-4 pb-2 text-[15px] text-gray-800">{post.content}</p>}
 
-      {/* Media Gallery (replaces old single-image) */}
+      {/* Media Gallery */}
       <MediaGallery media={post.media} />
 
-      {/* Legacy single image fallback */}
       {!post.media?.length && post.image && (
         <div className="w-full">
           <img src={post.image} alt="post" className="w-full object-cover max-h-[500px]" />
@@ -332,25 +559,101 @@ export default function PostCard({ post }) {
       )}
 
       {/* Stats */}
-      <div className="flex items-center justify-between px-4 py-2 text-fb-subtext text-sm">
-        <div className="flex items-center gap-1 cursor-pointer hover:underline">
-          <span>👍❤️😂</span>
-          <span>{likes.toLocaleString()}</span>
+      <div className="flex items-center justify-between px-4 py-2 text-gray-500 text-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 cursor-pointer hover:underline">
+            <span>{likes.toLocaleString()}</span>
+          </div>
+          <span className="text-gray-300 select-none">|</span>
+          <span className="cursor-pointer hover:underline" onClick={openCommentsModal}>
+            {commentCount} {commentCount === 1 ? "comment" : "comments"}
+          </span>
+          <span className="text-gray-300 select-none">|</span>
+          <span className="cursor-pointer hover:underline">{post.shares || 0} shares</span>
         </div>
-        <div className="flex gap-3">
-          <span className="cursor-pointer hover:underline">{post.comments || 0} bình luận</span>
-          <span className="cursor-pointer hover:underline">{post.shares || 0} lượt chia sẻ</span>
-        </div>
+        {topReactionIcon ? (
+          <div className="flex items-center tracking-[-0.2em] pr-1 select-none text-base">
+            <span>{topReactionIcon}</span>
+          </div>
+        ) : null}
       </div>
 
-      <hr className="mx-4 border-fb-sidebar" />
+      <hr className="mx-4 border-gray-200" />
 
-      {/* Actions */}
-      <div className="flex items-center px-2 py-1">
-        <ReactionBtn icon="👍" label="Thích" onClick={handleLike} active={liked} />
-        <ReactionBtn icon="💬" label="Bình luận" />
-        <ReactionBtn icon="↗️" label="Chia sẻ" />
+      {/* Actions Container */}
+      <div className="flex items-center justify-between px-4 py-1">
+        <div className="flex items-center gap-4">
+          <div
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <ReactionBtn
+              icon={reaction || <GrLike size={18} />}
+              label={reaction ? "Liked" : "Like"}
+              onClick={handleLike}
+              active={liked}
+            />
+            {reactionHover && (
+              <div 
+                className="absolute left-0 bottom-full mb-2 flex items-center gap-2 rounded-full bg-white p-2 shadow-lg ring-1 ring-black/5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                onMouseEnter={handleMouseEnter} 
+                onMouseLeave={handleMouseLeave}
+              >
+                {reactionOptions.map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    onClick={() => handleReactionSelect(icon)}
+                    className="h-10 w-10 rounded-full flex items-center justify-center text-xl hover:bg-[#F2F4F7] transition-transform hover:scale-125 duration-150"
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <ReactionBtn icon={<FaRegComment size={18} />} label="Comment" onClick={openCommentsModal} />
+          <ReactionBtn icon={<PiShareFatLight size={18} />} label="Share" />
+        </div>
+        <div className="flex items-center text-gray-500 text-xs"></div>
       </div>
+
+      <PostModal
+        isOpen={openPostModal}
+        onClose={closeCommentsModal}
+        post={post}
+        authorName={authorName}
+        authorAvatar={authorAvatar}
+        likes={likes}
+        liked={liked}
+        comments={comments}
+        commentCount={commentCount}
+        onLike={handleLike}
+        onSubmitComment={handleSubmitComment}
+        newComment={newComment}
+        onNewCommentChange={setNewComment}
+        isSubmittingComment={isSubmittingComment}
+        commentError={commentError}
+        isLoadingComments={isLoadingComments}
+        hasMoreComments={hasMoreComments}
+        onLoadMoreComments={loadMoreComments}
+        onLoadReplies={loadReplies}
+        loadingReplyParentIds={loadingReplyParentIds}
+        topReactionIcon={topReactionIcon}
+        // Passing shared features down into your details view
+        reaction={reaction}
+        reactionHover={reactionHover}
+        reactionOptions={reactionOptions}
+        replyTarget={comments.find((comment) => comment.id === replyToCommentId)}
+        onStartReply={handleStartReply}
+        onCancelReply={handleCancelReply}
+        onReactComment={handleReactComment}
+        handleReactionSelect={handleReactionSelect}
+        handleMouseEnter={handleMouseEnter}
+        handleMouseLeave={handleMouseLeave}
+      />
     </div>
   );
 }

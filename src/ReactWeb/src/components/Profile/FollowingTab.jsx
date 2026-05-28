@@ -51,7 +51,7 @@ export default function FollowingTab({ mockFollowing }) {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Tìm kiếm"
+                            placeholder="Search"
                             className="bg-transparent border-none outline-none text-[14px] w-full text-[#050505] placeholder:text-[#65676B]"
                         />
                     </div>
@@ -100,14 +100,14 @@ export default function FollowingTab({ mockFollowing }) {
 
                         {/* Right Action Trigger Context Area */}
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            {/* Show "Thêm bạn bè" if not currently friends */}
+                            {/* Show "Add Friend" if not currently friends */}
                             {!item.isFriend && (
                                 <button
                                     type="button"
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] font-semibold text-[14px] rounded-md transition"
                                 >
                                     <UserPlus size={16} />
-                                    <span>Thêm bạn bè</span>
+                                    <span>Add Friend</span>
                                 </button>
                             )}
 
@@ -127,7 +127,7 @@ export default function FollowingTab({ mockFollowing }) {
             {/* Fallback Area handler */}
             {filteredItems.length === 0 && (
                 <div className="py-12 text-center text-sm text-[#65676B]">
-                    Không tìm thấy trang hoặc người dùng nào phù hợp.
+                    No pages or people found.
                 </div>
             )}
 

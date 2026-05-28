@@ -169,7 +169,7 @@ export default function FriendsPage() {
 
                       <div className="flex flex-col gap-2">
                         {activeTab === "friends" ? (
-                          <button className="w-full rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]">
+                          <button className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]">
                             Message
                           </button>
                         ) : (
@@ -177,13 +177,13 @@ export default function FriendsPage() {
                             <button
                               type="button"
                               onClick={() => handlePrimaryAction(item)}
-                              className="w-full rounded-md bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5]"
+                              className="w-full rounded-md cursor-pointer bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5]"
                             >
                               Confirm
                             </button>
                             <button
                               type="button"
-                              className="w-full rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]"
+                              className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]"
                             >
                               Dismiss
                             </button>

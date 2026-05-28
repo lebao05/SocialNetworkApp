@@ -28,25 +28,25 @@ export default function LeftSidebar() {
 
   // Main menu primary structural data
   const primaryMenu = [
-    { id: "friends", label: "Bạn bè", iconLabel: "👥", iconBg: "bg-gradient-to-r from-blue-400 to-blue-600 text-white", active: true },
-    { id: "memories", label: "Kỷ niệm", iconLabel: "🕐", iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500 text-white" },
-    { id: "saved", label: "Đã lưu", iconLabel: "🔖", iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white" },
-    { id: "groups", label: "Nhóm", iconLabel: "👥", iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500 text-white" },
-    { id: "reels", label: "Thước phim", iconLabel: "🎬", iconBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white" },
+    { id: "friends", label: "Friends", iconLabel: "👥", iconBg: "bg-gradient-to-r from-blue-400 to-blue-600 text-white", active: true },
+    { id: "memories", label: "Memories", iconLabel: "🕐", iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500 text-white" },
+    { id: "saved", label: "Saved", iconLabel: "🔖", iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white" },
+    { id: "groups", label: "Groups", iconLabel: "👥", iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500 text-white" },
+    { id: "reels", label: "Reels", iconLabel: "🎬", iconBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white" },
     { id: "marketplace", label: "Marketplace", iconLabel: "🛒", iconBg: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white" },
-    { id: "feeds", label: "Bảng feed", iconLabel: "📋", iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white" },
+    { id: "feeds", label: "Feed", iconLabel: "📋", iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white" },
   ];
 
   // Secondary sub-level lists data
   const extendedMenu = [
     { id: "meta-ai", label: "Meta AI", iconLabel: "🔮", iconBg: "bg-gradient-to-tr from-purple-600 via-pink-500 to-blue-500 text-white" },
-    { id: "chat-ai", label: "Chat với AI", iconLabel: "✨", iconBg: "bg-gradient-to-r from-sky-400 to-blue-500 text-white" },
-    { id: "gaming", label: "Chơi game", iconLabel: "🎮", iconBg: "bg-gradient-to-r from-blue-500 to-indigo-500 text-white" },
-    { id: "orders", label: "Đơn đặt hàng và thanh toán", iconLabel: "💳", iconBg: "bg-gradient-to-r from-slate-600 to-slate-800 text-white" },
-    { id: "dating", label: "Hẹn hò", iconLabel: "❤️", iconBg: "bg-gradient-to-r from-pink-500 to-red-500 text-white" },
+    { id: "chat-ai", label: "Chat with AI", iconLabel: "✨", iconBg: "bg-gradient-to-r from-sky-400 to-blue-500 text-white" },
+    { id: "gaming", label: "Gaming", iconLabel: "🎮", iconBg: "bg-gradient-to-r from-blue-500 to-indigo-500 text-white" },
+    { id: "orders", label: "Orders & Payments", iconLabel: "💳", iconBg: "bg-gradient-to-r from-slate-600 to-slate-800 text-white" },
+    { id: "dating", label: "Dating", iconLabel: "❤️", iconBg: "bg-gradient-to-r from-pink-500 to-red-500 text-white" },
     { id: "messenger", label: "Messenger", iconLabel: "💬", iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500 text-white" },
-    { id: "birthdays", label: "Sinh nhật", iconLabel: "🎁", iconBg: "bg-gradient-to-r from-pink-400 to-purple-500 text-white" },
-    { id: "events", label: "Sự kiện", iconLabel: "📅", iconBg: "bg-gradient-to-r from-red-500 to-orange-500 text-white" },
+    { id: "birthdays", label: "Birthdays", iconLabel: "🎁", iconBg: "bg-gradient-to-r from-pink-400 to-purple-500 text-white" },
+    { id: "events", label: "Events", iconLabel: "📅", iconBg: "bg-gradient-to-r from-red-500 to-orange-500 text-white" },
   ];
 
   // Realistic Shortcut Group Data array constructed from image_7b5ac.png
@@ -99,7 +99,7 @@ export default function LeftSidebar() {
         <div className="w-9 h-9 bg-[#E4E6EB] rounded-full flex items-center justify-center text-black border border-gray-300/40 shadow-sm">
           {isExpanded ? <ChevronUp size={20} className="stroke-[2.5]" /> : <ChevronDown size={20} className="stroke-[2.5]" />}
         </div>
-        <span className="text-[15px] font-medium">{isExpanded ? "Ẩn bớt" : "Xem thêm"}</span>
+        <span className="text-[15px] font-medium">{isExpanded ? "See less" : "See more"}</span>
       </div>
 
       <hr className="my-2 border-[#ced0d4]" />
@@ -108,9 +108,9 @@ export default function LeftSidebar() {
       {/* SHORTCUTS ROW LIST (image_72b5ac.png) */}
       {/* ========================================== */}
       <div className="flex items-center justify-between px-2 mb-1.5">
-        <p className="text-[#65676B] font-semibold text-[15px]">Lối tắt của bạn</p>
+        <p className="text-[#65676B] font-semibold text-[15px]">Your Shortcuts</p>
         <button type="button" className="text-[#1877F2] hover:bg-[#F2F2F2] px-2 py-0.5 rounded-md text-[14px] transition">
-          Chỉnh sửa
+          Edit
         </button>
       </div>
 
@@ -143,12 +143,12 @@ export default function LeftSidebar() {
       {/* LEGAL FOOTER PARAGRAPH (image_72b5ac.png) */}
       {/* ========================================== */}
       <div className="px-2 py-4 text-[12px] text-[#65676B] leading-normal tracking-wide border-t border-[#ced0d4]/60 mt-2">
-        <p className="hover:underline cursor-pointer inline">Quyền riêng tư</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Điều khoản</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Quảng cáo</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Lựa chọn quảng cáo</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Cookie</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Xem thêm</p>
+        <p className="hover:underline cursor-pointer inline">Privacy</p> {" · "}
+        <p className="hover:underline cursor-pointer inline">Terms</p> {" · "}
+        <p className="hover:underline cursor-pointer inline">Ads</p> {" · "}
+        <p className="hover:underline cursor-pointer inline">Ad Choices</p> {" · "}
+        <p className="hover:underline cursor-pointer inline">Cookies</p> {" · "}
+        <p className="hover:underline cursor-pointer inline">See more</p>
         <p className="mt-1 text-gray-400 select-none">Meta © 2026</p>
       </div>
 

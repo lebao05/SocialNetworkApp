@@ -473,7 +473,7 @@ export default function ProfilePage() {
                   >
                     <span className="flex items-center gap-2 text-white font-semibold">
                       <Camera size={24} />
-                      {avatarUploading ? "Đang tải..." : "Đổi ảnh đại diện"}
+                      {avatarUploading ? "Uploading..." : "Change Profile Photo"}
                     </span>
                   </button>
                 )}
@@ -516,11 +516,11 @@ export default function ProfilePage() {
                 <div className="mt-3 flex flex-col items-center md:items-start">
                   {!isEditingBio ? (
                     <div className="flex items-center gap-2 group">
-                      <span className={`text-[15px] italic font-medium ${theme.text}`}>{bio || "Thêm tiểu sử..."}</span>
+                      <span className={`text-[15px] italic font-medium ${theme.text}`}>{bio || "Add a bio..."}</span>
                       <button
                         onClick={() => setIsEditingBio(true)}
                         className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs ${theme.textSub}`}
-                        title="Sửa tiểu sử"
+                        title="Edit bio"
                       >
                         <Edit2 size={12} />
                       </button>
@@ -530,14 +530,14 @@ export default function ProfilePage() {
                       <textarea
                         value={bioInput}
                         onChange={(e) => setBioInput(e.target.value)}
-                        placeholder="Nội dung tiểu sử..."
+                        placeholder="Write something about yourself..."
                         maxLength={100}
                         className={`w-full p-2 text-sm rounded-lg border outline-none ${darkMode ? "bg-[#3a3b3c] border-[#3e4042] text-white" : "bg-white border-gray-300 text-black"} focus:border-[#1877f2]`}
                         rows={2}
                       />
                       <div className="flex justify-end gap-2 text-xs font-semibold">
-                        <button onClick={handleCancelBio} className={`px-3 py-1.5 rounded-lg ${theme.btnGray}`}>Hủy</button>
-                        <button onClick={handleSaveBio} className="px-3 py-1.5 rounded-lg bg-[#1877f2] hover:bg-blue-600 text-white">Lưu</button>
+                        <button onClick={handleCancelBio} className={`px-3 py-1.5 rounded-lg ${theme.btnGray}`}>Cancel</button>
+                        <button onClick={handleSaveBio} className="px-3 py-1.5 rounded-lg bg-[#1877f2] hover:bg-blue-600 text-white">Save</button>
                       </div>
                     </div>
                   )}
@@ -550,14 +550,14 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
               <button className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
                 <Plus size={16} />
-                Thêm vào tin
+                Add to Story
               </button>
               <button
                 onClick={handleOpenEditDetails}
                 className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}
               >
                 <Edit2 size={16} />
-                Chỉnh sửa trang cá nhân
+                Edit Profile
               </button>
               <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
                 <ChevronDown size={18} />
@@ -570,11 +570,11 @@ export default function ProfilePage() {
                 className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <MessageCircle size={16} />
-                Nhắn tin
+                Message
               </button>
               <button className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}>
                 <Plus size={16} />
-                Kết bạn
+                Add Friend
               </button>
               <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
                 <ChevronDown size={18} />
@@ -589,12 +589,12 @@ export default function ProfilePage() {
           {/* Navigation Tabs */}
           <div className="flex overflow-x-auto scrollbar-none px-6 mt-1">
             {[
-              { id: "all", label: "Tất cả" },
-              { id: "about", label: "Giới thiệu" },
-              { id: "friends", label: "Bạn bè" },
-              { id: "photos", label: "Ảnh" },
-              { id: "following", label: "Đang theo dõi" },
-              { id: "more", label: "Xem thêm" }
+              { id: "all", label: "All" },
+              { id: "about", label: "About" },
+              { id: "friends", label: "Friends" },
+              { id: "photos", label: "Photos" },
+              { id: "following", label: "Following" },
+              { id: "more", label: "More" }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -620,7 +620,7 @@ export default function ProfilePage() {
 
               {/* Introduction Card */}
               <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
-                <h2 className={`text-xl font-bold mb-3 ${theme.text}`}>Thông tin cá nhân</h2>
+                <h2 className={`text-xl font-bold mb-3 ${theme.text}`}>Personal Information</h2>
 
                 {/* Intro Items List */}
                 <div className="flex flex-col gap-3.5 text-[15px]">
@@ -629,7 +629,7 @@ export default function ProfilePage() {
                     <div key={school.id} className={`flex items-start gap-3 ${theme.text}`}>
                       <GraduationCap className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <span>
-                        {school.type === 1 || school.type === 2 ? "Học tại" : "Từng học tại"} <span className="font-semibold">{school.name}</span>
+                        {school.type === 1 || school.type === 2 ? "Studied at" : "Previously studied at"} <span className="font-semibold">{school.name}</span>
                       </span>
                     </div>
                   ))}
@@ -639,7 +639,7 @@ export default function ProfilePage() {
                     <div className={`flex items-start gap-3 ${theme.text}`}>
                       <Home className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <span>
-                        Sống tại <span className="font-semibold">{profileDetails.currentCity}</span>
+                        Lives in <span className="font-semibold">{profileDetails.currentCity}</span>
                       </span>
                     </div>
                   )}
@@ -648,7 +648,7 @@ export default function ProfilePage() {
                     <div className={`flex items-start gap-3 ${theme.text}`}>
                       <MapPin className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <span>
-                        Đến từ <span className="font-semibold">{profileDetails.hometown}</span>
+                        From <span className="font-semibold">{profileDetails.hometown}</span>
                       </span>
                     </div>
                   )}
@@ -664,8 +664,8 @@ export default function ProfilePage() {
                       <GraduationCap className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <span>
                         {school.type === 1 || school.type === 2
-                          ? "Học tại"
-                          : "Từng học tại"}{" "}
+                          ? "Studied at"
+                          : "Previously studied at"}{" "}
                         <span className="font-semibold">{school.name}</span>
                       </span>
                     </div>
@@ -683,7 +683,7 @@ export default function ProfilePage() {
                     <div className={`flex items-start gap-3 ${theme.text}`}>
                       <Clock className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <div className="flex items-center gap-1.5">
-                        <span>Sinh năm <span className="font-semibold">{profileDetails.birthYear}</span></span>
+                        <span>Born in <span className="font-semibold">{profileDetails.birthYear}</span></span>
                         <Lock size={13} className="text-gray-400" title="Chỉ mình tôi" />
                       </div>
                     </div>
@@ -693,7 +693,7 @@ export default function ProfilePage() {
                     <Clock className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                     <span>
                       {personalInfo?.createdAt ? (
-                        `Đã tham gia vào tháng ${new Date(personalInfo.createdAt).getMonth() + 1} năm ${new Date(personalInfo.createdAt).getFullYear()}`
+                        `Joined in ${new Date(personalInfo.createdAt).toLocaleString('en-US', { month: 'long' })} ${new Date(personalInfo.createdAt).getFullYear()}`
                       ) : (
                         profileDetails.joinedDate
                       )}
@@ -707,15 +707,15 @@ export default function ProfilePage() {
                     onClick={handleOpenEditDetails}
                     className={`w-full mt-4 py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}
                   >
-                    Chỉnh sửa chi tiết
+                    Edit details
                   </button>
                 )}
 
                 {/* Tin nổi bật section */}
                 <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
-                  <h3 className={`text-sm font-semibold mb-3 ${theme.text}`}>Tin nổi bật</h3>
+                  <h3 className={`text-sm font-semibold mb-3 ${theme.text}`}>Featured Stories</h3>
                   <button className={`w-full py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}>
-                    Thêm tin nổi bật
+                    Add Featured Story
                   </button>
                 </div>
               </div>
@@ -724,13 +724,13 @@ export default function ProfilePage() {
               <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Ảnh</h2>
+                    <h2 className={`text-xl font-bold ${theme.text}`}>Photos</h2>
                   </div>
                   <button
                     onClick={() => setActiveTab("photos")}
                     className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
                   >
-                    Xem tất cả ảnh
+                    View all photos
                   </button>
                 </div>
 
@@ -748,14 +748,14 @@ export default function ProfilePage() {
               <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
                 <div className="flex items-center justify-between mb-1">
                   <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Bạn bè</h2>
-                    <p className={`text-sm ${theme.textSub}`}>{displayUser.friendsCount} người bạn</p>
+                    <h2 className={`text-xl font-bold ${theme.text}`}>Friends</h2>
+                    <p className={`text-sm ${theme.textSub}`}>{displayUser.friendsCount} friends</p>
                   </div>
                   <button
                     onClick={() => setActiveTab("friends")}
                     className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
                   >
-                    Xem tất cả bạn bè
+                    View all friends
                   </button>
                 </div>
 
@@ -815,15 +815,15 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-around pt-3">
                       <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                         <Video size={18} className="text-red-500" />
-                        <span>Video trực tiếp</span>
+                        <span>Live Video</span>
                       </button>
                       <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                         <ImageIcon size={18} className="text-green-500" />
-                        <span>Ảnh/video</span>
+                        <span>Photo/video</span>
                       </button>
                       <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                         <Smile size={18} className="text-yellow-500" />
-                        <span>Cảm xúc/hoạt động</span>
+                        <span>Feeling/activity</span>
                       </button>
                     </div>
                   </div>
@@ -832,15 +832,15 @@ export default function ProfilePage() {
                 {/* Post Filters & Settings Box */}
                 <div className={`${theme.card} rounded-xl shadow p-4 flex flex-col gap-3 transition-colors duration-200`}>
                   <div className="flex items-center justify-between">
-                    <h3 className={`text-lg font-bold ${theme.text}`}>Bài viết</h3>
+                    <h3 className={`text-lg font-bold ${theme.text}`}>Posts</h3>
                     <div className="flex items-center gap-2">
                       <button className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${theme.btnGray}`}>
                         <Search size={14} />
-                        Bộ lọc
+                        Filters
                       </button>
                       <button className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${theme.btnGray}`}>
                         <Edit2 size={14} />
-                        Quản lý bài viết
+                        Manage posts
                       </button>
                     </div>
                   </div>
@@ -850,11 +850,11 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between">
                     <button className="flex-1 flex items-center justify-center gap-2 py-2 border-b-2 border-[#1877f2] text-[#1877f2] font-semibold text-sm">
                       <ListIcon size={16} />
-                      Chế độ xem danh sách
+                      List view
                     </button>
                     <button className={`flex-1 flex items-center justify-center gap-2 py-2 font-semibold text-sm ${theme.textSub} ${theme.tabHover} rounded-lg`}>
                       <Grid size={16} />
-                      Chế độ xem lưới
+                      Grid view
                     </button>
                   </div>
                 </div>
@@ -865,18 +865,18 @@ export default function ProfilePage() {
                     <div className={`w-20 h-20 rounded-full ${theme.input} flex items-center justify-center text-3xl mb-4 shadow-inner`}>
                       📭
                     </div>
-                    <h3 className={`text-xl font-bold mb-1.5 ${theme.text}`}>{isOwnProfile ? 'Không có bài viết' : 'Người dùng chưa có bài viết'}</h3>
+                    <h3 className={`text-xl font-bold mb-1.5 ${theme.text}`}>{isOwnProfile ? 'No posts found' : 'This user has not shared any posts yet'}</h3>
                     <p className={`text-sm max-w-sm ${theme.textSub}`}>
                       {isOwnProfile
-                        ? 'Không tìm thấy bài viết nào của bạn. Hãy chia sẻ khoảnh khắc đầu tiên của bạn ngay lúc này nhé!'
-                        : 'Người dùng này chưa chia sẻ bài viết nào. Hãy quay lại sau để kiểm tra.'}
+                        ? 'No posts found. Share your first moment now!'
+                        : 'This user has not shared any posts yet. Please check back later.'}
                     </p>
                     {isOwnProfile && (
                       <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="mt-5 px-5 py-2.5 bg-[#1877f2] hover:bg-blue-600 text-white font-bold rounded-lg text-sm shadow-md transition-all cursor-pointer"
                       >
-                        Tạo bài viết mới
+                          Create a new post
                       </button>
                     )}
                   </div>
