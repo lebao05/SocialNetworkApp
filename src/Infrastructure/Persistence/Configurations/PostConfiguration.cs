@@ -48,6 +48,22 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(p => p.DeletedAt)
                 .IsRequired(false);
 
+            // Post approval status (group posts with IsPostApprovalRequired = true)
+            builder.Property(p => p.ApprovalStatus)
+                .IsRequired()
+                .HasColumnType("SMALLINT")
+                .HasDefaultValue(Domain.Enums.PostApprovalStatus.NotRequired);
+
+            builder.Property(p => p.IsHiddenFromGroup)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(p => p.HiddenAt)
+                .IsRequired(false);
+
+            builder.Property(p => p.HideReason)
+                .HasMaxLength(1000);
+
             // Self-referencing Relationship: Post -> SharePost (Post)
             builder.HasOne(p => p.SharePost)
                 .WithMany()

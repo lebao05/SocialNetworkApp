@@ -19,7 +19,13 @@ namespace Application.DTOs.Posts
         DateTime? UpdatedAt,
         DateTime? DeletedAt,
         IReadOnlyCollection<PostMediaDto> Media,
+        IReadOnlyCollection<ReactionCountDto> ReactionCounts,
+        int CommentCount,
         GroupDto? Group,
-        PostDto? SharePost
+        PostDto? SharePost,
+        ReactionType? UserReaction = null,
+        bool IsHiddenFromGroup = false,
+        DateTime? HiddenAt = null,
+        string? HideReason = null
     );
 }

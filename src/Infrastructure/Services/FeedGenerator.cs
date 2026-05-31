@@ -8,20 +8,19 @@ namespace Infrastructure.Services
 {
     public sealed class FeedGenerator : IFeedGenerator
     {
-        private const int RecentFeedWindow = 100;
+        private const int RecentFeedWindow = 20;
         private const double FriendScore = 40;
         private const double FollowingScore = 20;
         private const double OwnScore = 25;
         private const double ActiveGroupScore = 30;
-        private const double AuthorDiversityPenalty = 20;
-        private const int RelationshipCandidateLimit = 200;
-        private const int FriendPostCandidateLimit = 150;
-        private const int FollowingPostCandidateLimit = 100;
-        private const int GroupPostCandidateLimit = 100;
+        private const int RelationshipCandidateLimit = 50;
+        private const int FriendPostCandidateLimit = 50;
+        private const int FollowingPostCandidateLimit = 50;
+        private const int GroupPostCandidateLimit = 50;
         private const int OtherPostCandidateLimit = 30;
-
+        private const int OwnCandidateLimit = 5;
         private readonly AppDbContext _context;
-
+        private const int FeedItemLimit = 100;
         public FeedGenerator(AppDbContext context)
         {
             _context = context;
@@ -29,8 +28,6 @@ namespace Infrastructure.Services
 
         public async Task<int> GenerateAsync(
             Guid userId,
-            int candidateLimit = 500,
-            int feedItemLimit = 100,
             CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
@@ -43,10 +40,6 @@ namespace Infrastructure.Services
                 .Where(member => member.UserId == userId)
                 .Select(member => member.GroupId)
                 .ToHashSetAsync(cancellationToken);
-
-            var groupInterestScores = await _context.InterestGroupScores
-                .Where(score => score.UserId == userId && groupIds.Contains(score.GroupId))
-                .ToDictionaryAsync(score => score.GroupId, score => score.Score, cancellationToken);
 
             var recentPostIds = await _context.UserFeeds
                 .Where(feed => feed.UserId == userId)
@@ -92,7 +85,7 @@ namespace Infrastructure.Services
                 .AsNoTracking()
                 .Where(post => post.AuthorId == userId)
                 .OrderByDescending(post => post.CreatedAt)
-                .Take(Math.Max(0, candidateLimit - FriendPostCandidateLimit - FollowingPostCandidateLimit - GroupPostCandidateLimit - OtherPostCandidateLimit))
+                .Take(OwnCandidateLimit)
                 .ToListAsync(cancellationToken);
 
             var candidates = friendPosts
@@ -102,13 +95,12 @@ namespace Infrastructure.Services
                 .Concat(ownPosts)
                 .GroupBy(post => post.Id)
                 .Select(group => group.First())
-                .Take(candidateLimit)
                 .ToList();
 
             var candidatePostIds = candidates.Select(post => post.Id).ToHashSet();
-            var reactionCounts = await _context.Reactions
-                .Where(reaction => reaction.PostId.HasValue && candidatePostIds.Contains(reaction.PostId.Value))
-                .GroupBy(reaction => reaction.PostId!.Value)
+            var reactionCounts = await _context.PostReactions
+                .Where(reaction => candidatePostIds.Contains(reaction.PostId))
+                .GroupBy(reaction => reaction.PostId)
                 .Select(group => new { PostId = group.Key, Count = group.Count() })
                 .ToDictionaryAsync(group => group.PostId, group => group.Count, cancellationToken);
 
@@ -137,16 +129,16 @@ namespace Infrastructure.Services
                         groupIds,
                         reactionCounts,
                         commentCounts,
-                        shareCounts,
-                        groupInterestScores);
+                        shareCounts);
 
                     return new ScoredPost(post, score, ResolveFeedType(post, userId, friendIds, followingIds, groupIds));
                 })
                 .OrderByDescending(candidate => candidate.Score)
                 .ToList();
 
-            var arranged = ApplyDiversityPenalty(scoredCandidates)
-                .Take(feedItemLimit)
+            var arranged = scoredCandidates
+                .DistinctBy(c => c.Post.Id)
+                .Take(FeedItemLimit)
                 .ToList();
 
             foreach (var candidate in arranged)
@@ -179,8 +171,7 @@ namespace Infrastructure.Services
             HashSet<long> groupIds,
             IReadOnlyDictionary<long, int> reactionCounts,
             IReadOnlyDictionary<long, int> commentCounts,
-            IReadOnlyDictionary<long, int> shareCounts,
-            IReadOnlyDictionary<long, float> groupInterestScores)
+            IReadOnlyDictionary<long, int> shareCounts)
         {
             var hours = Math.Max(0, (now - post.CreatedAt).TotalHours);
             var freshnessScore = 100 / (1 + hours);
@@ -201,23 +192,19 @@ namespace Infrastructure.Services
                 relationshipScore += FollowingScore;
             }
 
-            var engagementScore =
+            var engagementScore = Math.Max(
                 reactionCounts.GetValueOrDefault(post.Id)
                 + (commentCounts.GetValueOrDefault(post.Id) * 3)
-                + (shareCounts.GetValueOrDefault(post.Id) * 5);
+                + (shareCounts.GetValueOrDefault(post.Id) * 5), 100);
 
-            var interestScore = 0.0;
             var groupScore = 0.0;
 
             if (post.GroupId.HasValue && groupIds.Contains(post.GroupId.Value))
             {
                 groupScore += ActiveGroupScore;
-                var groupInterestScore = groupInterestScores.GetValueOrDefault(post.GroupId.Value);
-                groupScore += Math.Min(60, groupInterestScore);
-                interestScore += groupInterestScore;
             }
 
-            return freshnessScore + relationshipScore + engagementScore + interestScore + groupScore;
+            return freshnessScore + relationshipScore + engagementScore + groupScore;
         }
 
         private async Task<HashSet<Guid>> GetTopFriendIdsAsync(
@@ -228,9 +215,10 @@ namespace Infrastructure.Services
             var friendIds = await _context.Friendships
                 .Where(friendship => friendship.User1Id == userId || friendship.User2Id == userId)
                 .Select(friendship => friendship.User1Id == userId ? friendship.User2Id : friendship.User1Id)
+                .Take(limit)
                 .ToListAsync(cancellationToken);
 
-            return await RankRelationshipIdsByInterestAsync(userId, friendIds, limit, cancellationToken);
+            return friendIds.ToHashSet();
         }
 
         private async Task<HashSet<Guid>> GetTopFollowingIdsAsync(
@@ -242,62 +230,10 @@ namespace Infrastructure.Services
                 .Where(following => following.FollowerId == userId)
                 .OrderByDescending(following => following.CreatedAt)
                 .Select(following => following.FolloweeId)
-                .ToListAsync(cancellationToken);
-
-            return await RankRelationshipIdsByInterestAsync(userId, followingIds, limit, cancellationToken);
-        }
-
-        private async Task<HashSet<Guid>> RankRelationshipIdsByInterestAsync(
-            Guid userId,
-            IReadOnlyCollection<Guid> relationshipIds,
-            int limit,
-            CancellationToken cancellationToken)
-        {
-            if (relationshipIds.Count <= limit)
-            {
-                return relationshipIds.ToHashSet();
-            }
-
-            var interestScores = await _context.InterestRelationshipScores
-                .Where(score => score.UserId == userId && relationshipIds.Contains(score.TargetUserId))
-                .Select(score => new
-                {
-                    score.TargetUserId,
-                    score.Score,
-                    score.LastInteractionAt
-                })
-                .ToListAsync(cancellationToken);
-
-            var rankedIds = interestScores
-                .OrderByDescending(score => score.Score)
-                .ThenByDescending(score => score.LastInteractionAt)
-                .Select(score => score.TargetUserId)
                 .Take(limit)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
-            if (rankedIds.Count < limit)
-            {
-                rankedIds.AddRange(relationshipIds
-                    .Where(id => !rankedIds.Contains(id))
-                    .Take(limit - rankedIds.Count));
-            }
-
-            return rankedIds.ToHashSet();
-        }
-
-        private static IEnumerable<ScoredPost> ApplyDiversityPenalty(IReadOnlyList<ScoredPost> candidates)
-        {
-            var authorCounts = new Dictionary<Guid, int>();
-
-            foreach (var candidate in candidates)
-            {
-                var sameAuthorCount = authorCounts.GetValueOrDefault(candidate.Post.AuthorId);
-                var adjustedScore = candidate.Score - (sameAuthorCount * AuthorDiversityPenalty);
-
-                authorCounts[candidate.Post.AuthorId] = sameAuthorCount + 1;
-
-                yield return candidate with { Score = adjustedScore };
-            }
+            return followingIds.ToHashSet();
         }
 
         private static UserFeedType ResolveFeedType(

@@ -4,6 +4,7 @@ using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Shared;
 
 namespace Application.Posts.Queries.GetPost
@@ -27,10 +28,14 @@ namespace Application.Posts.Queries.GetPost
                     $"The post with Id {request.PostId} was not found."));
             }
 
-            return Result.Success(Map(post));
+            var userReaction = request.UserId.HasValue
+                ? await _postRepository.GetPostReactionAsync(request.PostId, request.UserId.Value, cancellationToken)
+                : null;
+
+            return Result.Success(Map(post, userReaction?.ReactionType));
         }
 
-        private static PostDto Map(Post post)
+        private static PostDto Map(Post post, ReactionType? userReaction)
         {
             return new PostDto(
                 post.Id,
@@ -54,8 +59,14 @@ namespace Application.Posts.Queries.GetPost
                     m.Metadata,
                     m.UploadedAt
                 )).ToList(),
+                MapReactionCounts(post),
+                post.Comments.Count,
                 MapGroup(post.Group),
-                post.SharePost is null ? null : MapSharedPost(post.SharePost));
+                post.SharePost is null ? null : MapSharedPost(post.SharePost),
+                userReaction,
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason);
         }
 
         private static PostDto MapSharedPost(Post post)
@@ -82,8 +93,18 @@ namespace Application.Posts.Queries.GetPost
                     m.Metadata,
                     m.UploadedAt
                 )).ToList(),
+                MapReactionCounts(post),
+                post.Comments.Count,
                 MapGroup(post.Group),
                 null);
+        }
+
+        private static IReadOnlyCollection<ReactionCountDto> MapReactionCounts(Post post)
+        {
+            return post.Reactions
+                .GroupBy(reaction => reaction.ReactionType)
+                .Select(group => new ReactionCountDto(group.Key, group.Count()))
+                .ToList();
         }
 
         private static GroupDto? MapGroup(Group? group)

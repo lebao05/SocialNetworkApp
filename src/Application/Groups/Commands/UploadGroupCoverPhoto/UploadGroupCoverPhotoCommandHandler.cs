@@ -45,7 +45,7 @@ namespace Application.Groups.Commands.UploadGroupCoverPhoto
             try
             {
                 var imageUrl = await _uploadService.UploadImageAsync(request.FileStream, request.FileName);
-                group.Update(group.Name, group.Description, group.PrivacyType, imageUrl);
+                group.UpdateCoverPhoto(imageUrl);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return Result.Success(imageUrl);

@@ -1,8 +1,11 @@
+using System.Linq;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Feeds;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
 using Application.Shared;
+using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,34 +24,166 @@ namespace Infrastructure.Persistence.Repositories
             Guid userId,
             int page,
             int pageSize,
+            bool isRefresh = false,
             CancellationToken cancellationToken = default)
         {
             var query = _context.UserFeeds
                 .AsNoTracking()
                 .Where(feed => feed.UserId == userId)
-                .OrderByDescending(feed => feed.Score)
-                .ThenByDescending(feed => feed.CreatedAt)
-                .Select(feed => new FeedPostDto(
-                    feed.Id,
-                    feed.Score,
-                    feed.FeedType,
-                    feed.IsSeen,
-                    feed.CreatedAt,
-                    new PostDto(
-                        feed.Post.Id,
-                        feed.Post.AuthorId,
-                        feed.Post.Author != null ? feed.Post.Author.FirstName + " " + feed.Post.Author.LastName : "Người dùng",
-                        feed.Post.Author != null ? feed.Post.Author.AvatarUrl : null,
-                        feed.Post.GroupId,
-                        feed.Post.Content,
-                        feed.Post.Visibility,
-                        feed.Post.SharePostId,
-                        feed.Post.LocationTag,
-                        feed.Post.FeelingActivity,
-                        feed.Post.CreatedAt,
-                        feed.Post.UpdatedAt,
-                        feed.Post.DeletedAt,
-                        feed.Post.Media.Select(m => new PostMediaDto(
+                .Where(feed => !feed.Post.IsHiddenFromGroup)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.Author)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.Group)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.Media)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.Reactions)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.Comments)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Author)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Group)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Media)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Reactions)
+                .Include(feed => feed.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Comments)
+                .OrderBy(feed => feed.Score)
+                .ThenByDescending(feed => feed.CreatedAt);
+
+            var feeds = await PagedList<UserFeed>.CreateAsync(query, page, pageSize, cancellationToken);
+
+            if (feeds.Items.Count == 0 && isRefresh)
+            {
+                var fallbackPosts = await _context.Posts
+                    .AsNoTracking()
+                    .Include(post => post.Author)
+                    .Include(post => post.Group)
+                    .Include(post => post.Media)
+                    .Include(post => post.Reactions)
+                    .Include(post => post.Comments)
+                    .Include(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Author)
+                    .Include(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Group)
+                    .Include(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Media)
+                    .Include(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Reactions)
+                    .Include(post => post.SharePost)
+                        .ThenInclude(sharePost => sharePost!.Comments)
+                    .Where(post => !post.IsHiddenFromGroup)
+                    .OrderBy(post => post.Id)
+                    .Take(20)
+                    .ToListAsync(cancellationToken);
+
+                var fallbackPostIds = fallbackPosts.Select(p => p.Id).ToList();
+                var fallbackReactions = await _context.PostReactions
+                    .Where(reaction => reaction.UserId == userId && fallbackPostIds.Contains(reaction.PostId))
+                    .ToListAsync(cancellationToken);
+
+                var fallbackReactionMap = fallbackReactions
+                    .ToDictionary(reaction => reaction.PostId, reaction => (ReactionType?)reaction.ReactionType);
+
+                var fallbackItems = fallbackPosts.Select(p => new FeedPostDto(
+                    0, // ID is 0 for fallback
+                    1.0f,
+                    Domain.Enums.UserFeedType.Public,
+                    false,
+                    p.CreatedAt,
+                    MapPost(p, fallbackReactionMap.TryGetValue(p.Id, out var reaction) ? reaction : null)
+                )).ToList();
+
+                return new PagedList<FeedPostDto>(fallbackItems, 1, 20, fallbackItems.Count);
+            }
+
+            var postIds = feeds.Items.Select(feed => feed.PostId).ToList();
+            var postReactions = await _context.PostReactions
+                .Where(reaction => reaction.UserId == userId && postIds.Contains(reaction.PostId))
+                .ToListAsync(cancellationToken);
+
+            var reactionMap = postReactions
+                .ToDictionary(reaction => reaction.PostId, reaction => (ReactionType?)reaction.ReactionType);
+
+            var items = feeds.Items.Select(feed => MapFeed(feed, reactionMap.TryGetValue(feed.PostId, out var reaction) ? reaction : null)).ToList();
+
+            return new PagedList<FeedPostDto>(items, feeds.PageNumber, feeds.PageSize, feeds.TotalCount);
+        }
+
+        private static FeedPostDto MapFeed(UserFeed feed, ReactionType? userReaction)
+        {
+            return new FeedPostDto(
+                feed.Id,
+                feed.Score,
+                feed.FeedType,
+                feed.IsSeen,
+                feed.CreatedAt,
+                MapPost(feed.Post, userReaction));
+        }
+
+        private static PostDto MapPost(Post post, ReactionType? userReaction)
+        {
+            return new PostDto(
+                post.Id,
+                post.AuthorId,
+                post.Author != null ? post.Author.FirstName + " " + post.Author.LastName : "Người dùng",
+                post.Author != null ? post.Author.AvatarUrl : null,
+                post.GroupId,
+                post.Content,
+                post.Visibility,
+                post.SharePostId,
+                post.LocationTag,
+                post.FeelingActivity,
+                post.CreatedAt,
+                post.UpdatedAt,
+                post.DeletedAt,
+                post.Media.Select(m => new PostMediaDto(
+                    m.Id,
+                    m.MediaType,
+                    m.MediaUrl,
+                    m.ThumbnailUrl,
+                    m.Metadata,
+                    m.UploadedAt
+                )).ToList(),
+                post.Reactions
+                    .GroupBy(reaction => reaction.ReactionType)
+                    .Select(group => new ReactionCountDto(group.Key, group.Count()))
+                    .ToList(),
+                post.Comments.Count,
+                post.Group == null
+                    ? null
+                    : new GroupDto(
+                        post.Group.Id,
+                        post.Group.OwnerUserId,
+                        post.Group.Name,
+                        post.Group.Description,
+                        post.Group.PrivacyType,
+                        post.Group.CoverPhotoUrl),
+                post.SharePost == null
+                    ? null
+                    : new PostDto(
+                        post.SharePost.Id,
+                        post.SharePost.AuthorId,
+                        post.SharePost.Author != null ? post.SharePost.Author.FirstName + " " + post.SharePost.Author.LastName : "Người dùng",
+                        post.SharePost.Author != null ? post.SharePost.Author.AvatarUrl : null,
+                        post.SharePost.GroupId,
+                        post.SharePost.Content,
+                        post.SharePost.Visibility,
+                        post.SharePost.SharePostId,
+                        post.SharePost.LocationTag,
+                        post.SharePost.FeelingActivity,
+                        post.SharePost.CreatedAt,
+                        post.SharePost.UpdatedAt,
+                        post.SharePost.DeletedAt,
+                        post.SharePost.Media.Select(m => new PostMediaDto(
                             m.Id,
                             m.MediaType,
                             m.MediaUrl,
@@ -56,77 +191,51 @@ namespace Infrastructure.Persistence.Repositories
                             m.Metadata,
                             m.UploadedAt
                         )).ToList(),
-                        feed.Post.Group == null
+                        post.SharePost.Reactions
+                            .GroupBy(reaction => reaction.ReactionType)
+                            .Select(group => new ReactionCountDto(group.Key, group.Count()))
+                            .ToList(),
+                        post.SharePost.Comments.Count,
+                        post.SharePost.Group == null
                             ? null
                             : new GroupDto(
-                                feed.Post.Group.Id,
-                                feed.Post.Group.OwnerUserId,
-                                feed.Post.Group.Name,
-                                feed.Post.Group.Description,
-                                feed.Post.Group.PrivacyType,
-                                feed.Post.Group.CoverPhotoUrl),
-                        feed.Post.SharePost == null
-                            ? null
-                            : new PostDto(
-                                feed.Post.SharePost.Id,
-                                feed.Post.SharePost.AuthorId,
-                                feed.Post.SharePost.Author != null ? feed.Post.SharePost.Author.FirstName + " " + feed.Post.SharePost.Author.LastName : "Người dùng",
-                                feed.Post.SharePost.Author != null ? feed.Post.SharePost.Author.AvatarUrl : null,
-                                feed.Post.SharePost.GroupId,
-                                feed.Post.SharePost.Content,
-                                feed.Post.SharePost.Visibility,
-                                feed.Post.SharePost.SharePostId,
-                                feed.Post.SharePost.LocationTag,
-                                feed.Post.SharePost.FeelingActivity,
-                                feed.Post.SharePost.CreatedAt,
-                                feed.Post.SharePost.UpdatedAt,
-                                feed.Post.SharePost.DeletedAt,
-                                feed.Post.SharePost.Media.Select(m => new PostMediaDto(
-                                    m.Id,
-                                    m.MediaType,
-                                    m.MediaUrl,
-                                    m.ThumbnailUrl,
-                                    m.Metadata,
-                                    m.UploadedAt
-                                )).ToList(),
-                                feed.Post.SharePost.Group == null
-                                    ? null
-                                    : new GroupDto(
-                                        feed.Post.SharePost.Group.Id,
-                                        feed.Post.SharePost.Group.OwnerUserId,
-                                        feed.Post.SharePost.Group.Name,
-                                        feed.Post.SharePost.Group.Description,
-                                        feed.Post.SharePost.Group.PrivacyType,
-                                        feed.Post.SharePost.Group.CoverPhotoUrl),
-                                null))));
-
-            return await PagedList<FeedPostDto>.CreateAsync(query, page, pageSize, cancellationToken);
+                                post.SharePost.Group.Id,
+                                post.SharePost.Group.OwnerUserId,
+                                post.SharePost.Group.Name,
+                                post.SharePost.Group.Description,
+                                post.SharePost.Group.PrivacyType,
+                                post.SharePost.Group.CoverPhotoUrl),
+                        null),
+                userReaction);
         }
 
-        public async Task<int> MarkLatestAsSeenAsync(
+        public async Task<int> MarkAsSeenAsync(
             Guid userId,
-            int count,
+            List<long> feedIds,
             CancellationToken cancellationToken = default)
         {
-            var latestFeedItems = await _context.UserFeeds
-                .Where(feed => feed.UserId == userId && !feed.IsSeen)
-                .OrderByDescending(feed => feed.CreatedAt)
-                .Take(count)
+            if (feedIds == null || feedIds.Count == 0)
+            {
+                return 0;
+            }
+
+            var feedItems = await _context.UserFeeds
+                .Where(feed => feed.UserId == userId && feedIds.Contains(feed.Id) && !feed.IsSeen)
                 .ToListAsync(cancellationToken);
 
-            foreach (var feedItem in latestFeedItems)
+            foreach (var feedItem in feedItems)
             {
                 feedItem.MarkAsSeen();
             }
 
-            if (latestFeedItems.Count == 0)
+            if (feedItems.Count == 0)
             {
                 return 0;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return latestFeedItems.Count;
+            return feedItems.Count;
         }
     }
 }

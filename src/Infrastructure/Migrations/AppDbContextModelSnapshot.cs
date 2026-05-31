@@ -49,6 +49,43 @@ namespace Infrastructure.Migrations
                     b.ToTable("BlockChats", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.CommentReaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ReactionId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CommentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte>("ReactionType")
+                        .HasColumnType("SMALLINT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("UserId", "CommentId")
+                        .IsUnique();
+
+                    b.ToTable("CommentReactions", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Conversation", b =>
                 {
                     b.Property<long>("Id")
@@ -241,6 +278,11 @@ namespace Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<bool>("AllowAnonymousPost")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("CoverPhotoUrl")
                         .HasColumnType("TEXT");
 
@@ -252,6 +294,21 @@ namespace Infrastructure.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsGroupJoinApprovalRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsHidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsPostApprovalRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -272,6 +329,42 @@ namespace Infrastructure.Migrations
                     b.HasIndex("OwnerUserId");
 
                     b.ToTable("Groups", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.GroupJoinRequest", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("GroupRequestId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("SMALLINT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "UserId", "Status");
+
+                    b.ToTable("GroupRequests", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.GroupMember", b =>
@@ -311,17 +404,21 @@ namespace Infrastructure.Migrations
                     b.ToTable("GroupMembers", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.GroupRequest", b =>
+            modelBuilder.Entity("Domain.Entities.GroupRule", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
-                        .HasColumnName("GroupRequestId");
+                        .HasColumnName("GroupRuleId");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("GroupId")
                         .HasColumnType("bigint");
@@ -329,104 +426,19 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("SMALLINT");
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("GroupId", "UserId", "Status");
-
-                    b.ToTable("GroupRequests", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.InterestGroupScore", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long>("GroupId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastInteractionAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<float>("Score")
-                        .HasColumnType("real");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("GroupId");
 
-                    b.HasIndex("UserId", "GroupId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "Score");
-
-                    b.ToTable("InterestGroupScores", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.InterestRelationshipScore", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastInteractionAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<float>("Score")
-                        .HasColumnType("real");
-
-                    b.Property<Guid>("TargetUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TargetUserId");
-
-                    b.HasIndex("UserId", "Score");
-
-                    b.HasIndex("UserId", "TargetUserId")
-                        .IsUnique();
-
-                    b.ToTable("InterestRelationshipScores", (string)null);
+                    b.ToTable("GroupRules", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.MemberMessage", b =>
@@ -636,6 +648,11 @@ namespace Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<byte>("ApprovalStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("SMALLINT")
+                        .HasDefaultValue((byte)0);
+
                     b.Property<Guid>("AuthorId")
                         .HasColumnType("uuid");
 
@@ -654,8 +671,20 @@ namespace Infrastructure.Migrations
                     b.Property<long?>("GroupId")
                         .HasColumnType("bigint");
 
+                    b.Property<DateTime?>("HiddenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HideReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHiddenFromGroup")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("LocationTag")
                         .HasMaxLength(255)
@@ -709,6 +738,9 @@ namespace Infrastructure.Migrations
                     b.Property<long>("PostId")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("RepliedUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -720,6 +752,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ParentCommentId");
 
                     b.HasIndex("PostId");
+
+                    b.HasIndex("RepliedUserId");
 
                     b.HasIndex("UserId");
 
@@ -772,6 +806,43 @@ namespace Infrastructure.Migrations
                     b.ToTable("PostMedia", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.PostReaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ReactionId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("ReactionType")
+                        .HasColumnType("SMALLINT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId", "PostId")
+                        .IsUnique();
+
+                    b.ToTable("PostReactions", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.PostTag", b =>
                 {
                     b.Property<long>("Id")
@@ -805,49 +876,67 @@ namespace Infrastructure.Migrations
                     b.ToTable("PostTags", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.Reaction", b =>
+            modelBuilder.Entity("Domain.Entities.ReportedGroupContent", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
-                        .HasColumnName("ReactionId");
+                        .HasColumnName("ReportedGroupContentId");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<long?>("CommentId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("AdditionalDetail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<long?>("PostId")
+                    b.Property<long>("PostId")
                         .HasColumnType("bigint");
 
-                    b.Property<byte>("ReactionType")
+                    b.Property<byte>("Reason")
                         .HasColumnType("SMALLINT");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("SMALLINT")
+                        .HasDefaultValue((byte)0);
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("CommentId");
 
                     b.HasIndex("PostId");
 
-                    b.HasIndex("UserId", "CommentId")
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("GroupId", "Status");
+
+                    b.HasIndex("ReporterId", "PostId")
                         .IsUnique();
 
-                    b.HasIndex("UserId", "PostId")
-                        .IsUnique();
-
-                    b.ToTable("Reactions", (string)null);
+                    b.ToTable("ReportedGroupContents", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.SavedPost", b =>
@@ -1268,6 +1357,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.CommentReaction", b =>
+                {
+                    b.HasOne("Domain.Entities.PostComment", "Comment")
+                        .WithMany("Reactions")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("CommentReactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.ConversationMember", b =>
                 {
                     b.HasOne("Domain.Entities.Conversation", "Conversation")
@@ -1355,6 +1463,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Domain.Entities.GroupJoinRequest", b =>
+                {
+                    b.HasOne("Domain.Entities.Group", "Group")
+                        .WithMany("Requests")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.GroupMember", b =>
                 {
                     b.HasOne("Domain.Entities.Group", "Group")
@@ -1374,61 +1501,15 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Domain.Entities.GroupRequest", b =>
+            modelBuilder.Entity("Domain.Entities.GroupRule", b =>
                 {
                     b.HasOne("Domain.Entities.Group", "Group")
-                        .WithMany("Requests")
+                        .WithMany("Rules")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Group");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Domain.Entities.InterestGroupScore", b =>
-                {
-                    b.HasOne("Domain.Entities.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.User", "User")
-                        .WithMany("GroupInterestScores")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Domain.Entities.InterestRelationshipScore", b =>
-                {
-                    b.HasOne("Domain.Entities.User", "TargetUser")
-                        .WithMany()
-                        .HasForeignKey("TargetUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.User", "User")
-                        .WithMany("InterestScores")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("TargetUser");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.MemberMessage", b =>
@@ -1550,6 +1631,11 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.User", "RepliedUser")
+                        .WithMany()
+                        .HasForeignKey("RepliedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.User", "User")
                         .WithMany("Comments")
                         .HasForeignKey("UserId")
@@ -1559,6 +1645,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("ParentComment");
 
                     b.Navigation("Post");
+
+                    b.Navigation("RepliedUser");
 
                     b.Navigation("User");
                 });
@@ -1574,6 +1662,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PostReaction", b =>
+                {
+                    b.HasOne("Domain.Entities.Post", "Post")
+                        .WithMany("Reactions")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.PostTag", b =>
                 {
                     b.HasOne("Domain.Entities.Post", "Post")
@@ -1585,29 +1692,38 @@ namespace Infrastructure.Migrations
                     b.Navigation("Post");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Reaction", b =>
+            modelBuilder.Entity("Domain.Entities.ReportedGroupContent", b =>
                 {
-                    b.HasOne("Domain.Entities.PostComment", "Comment")
-                        .WithMany("Reactions")
-                        .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                    b.HasOne("Domain.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Domain.Entities.Post", "Post")
-                        .WithMany("Reactions")
+                        .WithMany()
                         .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.HasOne("Domain.Entities.User", "User")
-                        .WithMany("Reactions")
-                        .HasForeignKey("UserId")
+                    b.HasOne("Domain.Entities.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Comment");
+                    b.HasOne("Domain.Entities.User", "ReviewedBy")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Group");
 
                     b.Navigation("Post");
 
-                    b.Navigation("User");
+                    b.Navigation("Reporter");
+
+                    b.Navigation("ReviewedBy");
                 });
 
             modelBuilder.Entity("Domain.Entities.SavedPost", b =>
@@ -1737,6 +1853,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("Posts");
 
                     b.Navigation("Requests");
+
+                    b.Navigation("Rules");
                 });
 
             modelBuilder.Entity("Domain.Entities.Message", b =>
@@ -1774,6 +1892,8 @@ namespace Infrastructure.Migrations
                 {
                     b.Navigation("BlockedUsers");
 
+                    b.Navigation("CommentReactions");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Conversations");
@@ -1784,17 +1904,11 @@ namespace Infrastructure.Migrations
 
                     b.Navigation("Friends");
 
-                    b.Navigation("GroupInterestScores");
-
                     b.Navigation("GroupMemberships");
-
-                    b.Navigation("InterestScores");
 
                     b.Navigation("OwnedGroups");
 
                     b.Navigation("Posts");
-
-                    b.Navigation("Reactions");
 
                     b.Navigation("ReceivedNotifications");
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Abstractions;
@@ -51,6 +52,28 @@ namespace Application.Posts.Commands.CreatePost
                     return Result.Failure<long>(new Error(
                         "Post.SharePostNotFound",
                         $"The shared post with Id {request.SharePostId.Value} was not found."));
+                }
+            }
+
+            Group? group = null;
+            if (request.GroupId.HasValue)
+            {
+                group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId.Value, cancellationToken);
+                if (group is null)
+                {
+                    return Result.Failure<long>(new Error(
+                        "Group.NotFound",
+                        $"Group with id {request.GroupId.Value} was not found."));
+                }
+
+                var authorIsMember = group.OwnerUserId == request.AuthorId
+                    || group.Members.Any(m => m.UserId == request.AuthorId);
+
+                if (!authorIsMember)
+                {
+                    return Result.Failure<long>(new Error(
+                        "Group.NotMember",
+                        "You must be a member of the group to create a post."));
                 }
             }
 
@@ -147,6 +170,16 @@ namespace Application.Posts.Commands.CreatePost
                     id: 0,
                     postId: 0,
                     tagName: taggedUserId.ToString()));
+            }
+
+            var authorCanBypassGroupPostApproval = group?.OwnerUserId == request.AuthorId
+                || group?.Members.Any(m =>
+                    m.UserId == request.AuthorId
+                    && (m.Role == GroupMemberRole.Admin || m.Role == GroupMemberRole.Moderator)) == true;
+
+            if (group?.IsPostApprovalRequired == true && !authorCanBypassGroupPostApproval)
+            {
+                post.SetPendingApproval();
             }
 
             _postRepository.Add(post);

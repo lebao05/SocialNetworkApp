@@ -128,14 +128,6 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_followers")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            builder.Navigation(u => u.InterestScores)
-                .HasField("_interestScores")
-                .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-            builder.Navigation(u => u.GroupInterestScores)
-                .HasField("_groupInterestScores")
-                .UsePropertyAccessMode(PropertyAccessMode.Field);
-
             // =============================
             // Newly added backing fields & relationships
             // =============================
@@ -160,14 +152,14 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_comments")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            // User -> Reactions
-            builder.HasMany(u => u.Reactions)
+            // User -> CommentReactions
+            builder.HasMany(u => u.CommentReactions)
                 .WithOne(r => r.User)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Navigation(u => u.Reactions)
-                .HasField("_reactions")
+            builder.Navigation(u => u.CommentReactions)
+                .HasField("_commentReactions")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
             // User -> SavedPosts

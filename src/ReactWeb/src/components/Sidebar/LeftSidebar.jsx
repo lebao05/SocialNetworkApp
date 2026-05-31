@@ -1,157 +1,163 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Bookmark,
+  BriefcaseBusiness,
+  ChevronDown,
+  ChevronUp,
+  Clapperboard,
+  Clock3,
+  FileText,
+  Gift,
+  MessageCircle,
+  Mountain,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { FaChessPawn, FaMotorcycle } from "react-icons/fa";
+import { GiEightBall, GiFinishLine, GiSchoolBag } from "react-icons/gi";
+import { IoPeople } from "react-icons/io5";
+import { MdGroups, MdOutlineComputer, MdOutlineDesignServices } from "react-icons/md";
 import { currentUser } from "../../data/mockData";
 
-// Individual row handler component with light theme values
-const MenuItem = ({ imgUrl, iconBg, iconLabel, label, active = false }) => (
-  <div
-    className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer select-none transition-colors ${
-      active ? "bg-[#E7F3FF] text-[#1877F2]" : "hover:bg-[#F2F2F2] text-[#050505]"
-    }`}
-  >
-    <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-      {imgUrl ? (
-        <img src={imgUrl} alt={label} className="w-9 h-9 object-cover rounded-full" />
-      ) : (
-        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xl shadow-sm ${iconBg || "bg-gray-100"}`}>
-          {iconLabel}
-        </div>
-      )}
+const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => {
+  const content = (
+    <>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+        {imgUrl ? (
+          <img src={imgUrl} alt={label} className="h-9 w-9 rounded-full object-cover" />
+        ) : (
+          <div className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm ${iconBg}`}>
+            <Icon size={20} className="text-white" />
+          </div>
+        )}
+      </div>
+      <span className={`truncate text-[15px] ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+    </>
+  );
+  const className = `flex items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
+    active ? "bg-[#E7F3FF] text-[#1877F2]" : "text-[#050505] hover:bg-[#F2F2F2]"
+  }`;
+
+  if (to) {
+    return (
+      <Link to={to} className={`${className} no-underline`}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
+};
+
+const ShortcutItem = ({ icon: Icon, name }) => (
+  <div className="flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-gradient-to-tr from-gray-200 to-gray-300 shadow-sm">
+      <Icon size={19} className="text-[#374151]" />
     </div>
-    <span className={`text-[15px] ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+    <span className="truncate text-[14.5px] font-medium leading-tight">{name}</span>
   </div>
 );
 
 export default function LeftSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Main menu primary structural data
   const primaryMenu = [
-    { id: "friends", label: "Friends", iconLabel: "👥", iconBg: "bg-gradient-to-r from-blue-400 to-blue-600 text-white", active: true },
-    { id: "memories", label: "Memories", iconLabel: "🕐", iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500 text-white" },
-    { id: "saved", label: "Saved", iconLabel: "🔖", iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white" },
-    { id: "groups", label: "Groups", iconLabel: "👥", iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500 text-white" },
-    { id: "reels", label: "Reels", iconLabel: "🎬", iconBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white" },
-    { id: "marketplace", label: "Marketplace", iconLabel: "🛒", iconBg: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white" },
-    { id: "feeds", label: "Feed", iconLabel: "📋", iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white" },
+    { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", active: true },
+    { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500" },
+    { id: "saved", label: "Saved", icon: Bookmark, iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600" },
+    { id: "groups", label: "Groups", icon: MdGroups, iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500" },
+    { id: "reels", label: "Reels", icon: Clapperboard, iconBg: "bg-gradient-to-r from-pink-500 to-rose-500", to: "/watch" },
+    { id: "feeds", label: "Feed", icon: FileText, iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600" },
   ];
 
-  // Secondary sub-level lists data
   const extendedMenu = [
-    { id: "meta-ai", label: "Meta AI", iconLabel: "🔮", iconBg: "bg-gradient-to-tr from-purple-600 via-pink-500 to-blue-500 text-white" },
-    { id: "chat-ai", label: "Chat with AI", iconLabel: "✨", iconBg: "bg-gradient-to-r from-sky-400 to-blue-500 text-white" },
-    { id: "gaming", label: "Gaming", iconLabel: "🎮", iconBg: "bg-gradient-to-r from-blue-500 to-indigo-500 text-white" },
-    { id: "orders", label: "Orders & Payments", iconLabel: "💳", iconBg: "bg-gradient-to-r from-slate-600 to-slate-800 text-white" },
-    { id: "dating", label: "Dating", iconLabel: "❤️", iconBg: "bg-gradient-to-r from-pink-500 to-red-500 text-white" },
-    { id: "messenger", label: "Messenger", iconLabel: "💬", iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500 text-white" },
-    { id: "birthdays", label: "Birthdays", iconLabel: "🎁", iconBg: "bg-gradient-to-r from-pink-400 to-purple-500 text-white" },
-    { id: "events", label: "Events", iconLabel: "📅", iconBg: "bg-gradient-to-r from-red-500 to-orange-500 text-white" },
+    { id: "chat-ai", label: "Chat with AI", icon: Sparkles, iconBg: "bg-gradient-to-r from-sky-400 to-blue-500" },
+    { id: "messenger", label: "Messenger", icon: MessageCircle, iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500" },
+    { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500" },
   ];
 
-  // Realistic Shortcut Group Data array constructed from image_7b5ac.png
   const userShortcuts = [
-    { id: "group-1", name: "Diễn Đàn Kết Nối Đam Mê Phân Khối Lớn Trên Cung Đàn S.", short: "🏍️" },
-    { id: "group-2", name: "Cung Đường Phượt Bụi ( Biker Việt Nam )", short: "⛰️" },
-    { id: "group-3", name: "EC-23HTTT", short: "💻" },
-    { id: "group-4", name: "Cờ vua", short: "♟️" },
-    { id: "group-5", name: "Thiết kế phần mềm 23KTPM1", short: "🛠️" },
-    { id: "group-6", name: "Tuyển dụng NodeJS/ReactJS VietNam", short: "💼" },
-    { id: "group-7", name: "Tài liệu - HCMUS", short: "📚" },
-    { id: "group-8", name: "TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN - ĐHQG TP. HCM", short: "🏫" },
-    { id: "group-9", name: "Chợ PKL Việt Nam", short: "🏁" },
-    { id: "group-10", name: "Đi phượt bằng xe máy", short: "🛵" },
-    { id: "group-11", name: "The Forum IELTS Community", short: "📝" },
-    { id: "group-12", name: "8 Ball Pool", short: "🎱" },
+    { id: "group-1", name: "Diễn Đàn Kết Nối Đam Mê Phân Khối Lớn Trên Cung Đàn S.", icon: FaMotorcycle },
+    { id: "group-2", name: "Cung Đường Phượt Bụi ( Biker Việt Nam )", icon: Mountain },
+    { id: "group-3", name: "EC-23HTTT", icon: MdOutlineComputer },
+    { id: "group-4", name: "Cờ vua", icon: FaChessPawn },
+    { id: "group-5", name: "Thiết kế phần mềm 23KTPM1", icon: MdOutlineDesignServices },
+    { id: "group-6", name: "Tuyển dụng NodeJS/ReactJS VietNam", icon: BriefcaseBusiness },
+    { id: "group-7", name: "Tài liệu - HCMUS", icon: GiSchoolBag },
+    { id: "group-8", name: "TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN - ĐHQG TP. HCM", icon: IoPeople },
+    { id: "group-9", name: "Chợ PKL Việt Nam", icon: GiFinishLine },
+    { id: "group-10", name: "Đi phượt bằng xe máy", icon: FaMotorcycle },
+    { id: "group-11", name: "The Forum IELTS Community", icon: FileText },
+    { id: "group-12", name: "8 Ball Pool", icon: GiEightBall },
   ];
 
   return (
-    <aside className="hidden lg:flex fixed top-14 left-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-2 bg-white flex-col border-r border-[#ced0d4] select-none z-10 scrollbar-thin">
-      
-      {/* Profile Header Block link */}
-      <Link 
-        to="/profile" 
-        className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-[#F2F2F2] mb-1 text-inherit no-underline"
-      >
-        <img 
-          src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"} 
-          alt="avatar" 
-          className="w-9 h-9 rounded-full object-cover border border-black/10 shadow-sm" 
+    <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
+      <Link to="/profile" className="mb-1 flex items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]">
+        <img
+          src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+          alt="avatar"
+          className="h-9 w-9 rounded-full border border-black/10 object-cover shadow-sm"
         />
-        <span className="text-[15px] font-semibold text-[#050505] truncate">{currentUser?.name || "Lê Bảo"}</span>
+        <span className="truncate text-[15px] font-semibold text-[#050505]">{currentUser?.name || "Lê Bảo"}</span>
       </Link>
 
-      {/* Main Structural Navigation Links */}
       {primaryMenu.map((item) => (
-        <MenuItem key={item.id} iconLabel={item.iconLabel} iconBg={item.iconBg} label={item.label} active={item.active} />
+        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} active={item.active} to={item.to} />
       ))}
 
-      {/* Expand Drawer Container Block */}
-      {isExpanded && extendedMenu.map((item) => (
-        <MenuItem key={item.id} iconLabel={item.iconLabel} iconBg={item.iconBg} label={item.label} />
-      ))}
+      {isExpanded &&
+        extendedMenu.map((item) => (
+          <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} />
+        ))}
 
-      {/* Trigger Button component control */}
-      <div 
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-[#F2F2F2] text-[#050505] transition-colors"
+      <button
+        type="button"
+        onClick={() => setIsExpanded((value) => !value)}
+        className="flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]"
       >
-        <div className="w-9 h-9 bg-[#E4E6EB] rounded-full flex items-center justify-center text-black border border-gray-300/40 shadow-sm">
-          {isExpanded ? <ChevronUp size={20} className="stroke-[2.5]" /> : <ChevronDown size={20} className="stroke-[2.5]" />}
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300/40 bg-[#E4E6EB] text-black shadow-sm">
+          {isExpanded ? <ChevronUp size={20} strokeWidth={2.5} /> : <ChevronDown size={20} strokeWidth={2.5} />}
         </div>
         <span className="text-[15px] font-medium">{isExpanded ? "See less" : "See more"}</span>
-      </div>
+      </button>
 
       <hr className="my-2 border-[#ced0d4]" />
 
-      {/* ========================================== */}
-      {/* SHORTCUTS ROW LIST (image_72b5ac.png) */}
-      {/* ========================================== */}
-      <div className="flex items-center justify-between px-2 mb-1.5">
-        <p className="text-[#65676B] font-semibold text-[15px]">Your Shortcuts</p>
-        <button type="button" className="text-[#1877F2] hover:bg-[#F2F2F2] px-2 py-0.5 rounded-md text-[14px] transition">
+      <div className="mb-1.5 flex items-center justify-between px-2">
+        <p className="text-[15px] font-semibold text-[#65676B]">Your Shortcuts</p>
+        <button type="button" className="rounded-md px-2 py-0.5 text-[14px] text-[#1877F2] transition hover:bg-[#F2F2F2]">
           Edit
         </button>
       </div>
 
-      <div className="space-y-0.5 flex-1">
+      <div className="flex-1 space-y-0.5">
         {userShortcuts.map((shortcut) => (
-          <div 
-            key={shortcut.id}
-            className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-[#F2F2F2] text-[#050505] transition-colors"
-          >
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center text-lg flex-shrink-0 shadow-sm border border-black/5">
-              {shortcut.short}
-            </div>
-            <span className="text-[14.5px] font-medium truncate leading-tight">{shortcut.name}</span>
-          </div>
+          <ShortcutItem key={shortcut.id} icon={shortcut.icon} name={shortcut.name} />
         ))}
       </div>
 
-      {/* Bottom toggle close button item helper */}
-      <div 
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-[#F2F2F2] text-[#050505] mt-1"
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="mt-1 flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] hover:bg-[#F2F2F2]"
       >
-        <div className="w-9 h-9 bg-[#E4E6EB] rounded-full flex items-center justify-center text-black shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E4E6EB] text-black shadow-sm">
           <ChevronUp size={18} />
         </div>
         <span className="text-[14.5px] font-medium">Ẩn bớt</span>
-      </div>
+      </button>
 
-      {/* ========================================== */}
-      {/* LEGAL FOOTER PARAGRAPH (image_72b5ac.png) */}
-      {/* ========================================== */}
-      <div className="px-2 py-4 text-[12px] text-[#65676B] leading-normal tracking-wide border-t border-[#ced0d4]/60 mt-2">
-        <p className="hover:underline cursor-pointer inline">Privacy</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Terms</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Ads</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Ad Choices</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">Cookies</p> {" · "}
-        <p className="hover:underline cursor-pointer inline">See more</p>
-        <p className="mt-1 text-gray-400 select-none">Meta © 2026</p>
+      <div className="mt-2 border-t border-[#ced0d4]/60 px-2 py-4 text-[12px] leading-normal tracking-wide text-[#65676B]">
+        <p className="inline cursor-pointer hover:underline">Privacy</p> {" · "}
+        <p className="inline cursor-pointer hover:underline">Terms</p> {" · "}
+        <p className="inline cursor-pointer hover:underline">Ads</p> {" · "}
+        <p className="inline cursor-pointer hover:underline">Ad Choices</p> {" · "}
+        <p className="inline cursor-pointer hover:underline">Cookies</p> {" · "}
+        <p className="inline cursor-pointer hover:underline">See more</p>
+        <p className="mt-1 select-none text-gray-400">Meta © 2026</p>
       </div>
-
     </aside>
   );
 }

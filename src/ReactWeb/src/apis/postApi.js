@@ -60,11 +60,35 @@ export async function getUserPostsApi(userId, page = 1, pageSize = 10) {
 }
 
 /**
- * Get posts by group: GET /api/posts/group/{groupId}?page=&pageSize=
+ * Get posts by group: GET /api/posts/group/{groupId}?page=&pageSize=&onlyMine=
  */
-export async function getPostsByGroupApi(groupId, page = 1, pageSize = 10) {
+export async function getPostsByGroupApi(groupId, page = 1, pageSize = 10, onlyMine = false) {
   const response = await axios.get(`/posts/group/${groupId}`, {
-    params: { page, pageSize },
+    params: { page, pageSize, onlyMine },
+  });
+
+  return response.data;
+}
+
+/**
+ * Get paginated media from posts in a group:
+ * GET /api/posts/group/{groupId}/medias?page=&pageSize=&type=image|video
+ */
+export async function getPostMediasByGroupApi(groupId, type, page = 1, pageSize = 20) {
+  const response = await axios.get(`/posts/group/${groupId}/medias`, {
+    params: { page, pageSize, type },
+  });
+
+  return response.data;
+}
+
+/**
+ * Get paginated media from posts by user:
+ * GET /api/posts/user/{userId}/medias?page=&pageSize=&type=image|video
+ */
+export async function getPostMediasByUserApi(userId, type, page = 1, pageSize = 20) {
+  const response = await axios.get(`/posts/user/${userId}/medias`, {
+    params: { page, pageSize, type },
   });
 
   return response.data;
@@ -183,5 +207,32 @@ export async function getPossibleTagsApi(searchQuery = null, groupId = null, pag
     params: { searchQuery, groupId, page, pageSize },
   });
 
+  return response.data;
+}
+
+/**
+ * Trigger feed generation (admin/dev): POST /api/posts/feed/generate
+ */
+export async function generateFeedApi() {
+  const response = await axios.post("/posts/feed/generate");
+  return response.data;
+}
+
+/**
+ * Get paginated feed posts: GET /api/posts/feed/posts?page=..&pageSize=..
+ */
+export async function getFeedPostsApi(page = 1, pageSize = 20, isRefresh = false) {
+  const response = await axios.get("/posts/feed/posts", {
+    params: { page, pageSize, isRefresh },
+  });
+
+  return response.data;
+}
+
+/**
+ * Mark feed items as seen: POST /api/posts/feed/seen
+ */
+export async function markLatestAsSeenApi(feedIds = []) {
+  const response = await axios.post("/posts/feed/seen", feedIds);
   return response.data;
 }

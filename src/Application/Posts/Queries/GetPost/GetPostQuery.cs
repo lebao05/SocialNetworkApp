@@ -3,5 +3,5 @@ using Application.DTOs.Posts;
 
 namespace Application.Posts.Queries.GetPost
 {
-    public sealed record GetPostQuery(long PostId) : IQuery<PostDto>;
+    public sealed record GetPostQuery(long PostId, Guid? UserId = null) : IQuery<PostDto>;
 }

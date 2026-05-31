@@ -7,14 +7,16 @@ import {
   Grid3X3,
   ChevronDown,
   Home,
-  Users,
   Tv2,
-  Store,
+  UsersRound,
+  Users,
   Gamepad2,
   Edit,
   Maximize2,
   MoreHorizontal,
 } from "lucide-react";
+import { GrGroup } from "react-icons/gr";
+
 import { currentUser, conversations } from "../../data/mockData";
 
 // ── Messenger Dropdown Panel ───────────────────────────────────────────────────
@@ -180,6 +182,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [showMessenger, setShowMessenger] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchValue, setSearchValue] = useState("suối tiên - núi dinh ( hương quán )");
   const messengerRef = useRef(null);
 
   const isMessengerPage = location.pathname.startsWith("/messenger");
@@ -199,9 +202,15 @@ export default function Navbar() {
     { icon: Home, path: "/" },
     { icon: Users, path: "/friends" },
     { icon: Tv2, path: "/watch" },
-    { icon: Store, path: "/marketplace" },
+    { icon: GrGroup, path: "/groups" },
     { icon: Gamepad2, path: "/gaming" },
   ];
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = searchValue.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+  };
 
   return (
     <nav
@@ -215,7 +224,8 @@ export default function Navbar() {
             <path d="M36 18C36 8.059 27.941 0 18 0S0 8.059 0 18c0 8.988 6.584 16.436 15.188 17.79V23.25h-4.57V18h4.57v-3.956c0-4.513 2.686-7.006 6.797-7.006 1.97 0 4.03.352 4.03.352v4.43h-2.27c-2.236 0-2.932 1.387-2.932 2.81V18h4.992l-.798 5.25h-4.194V35.79C29.416 34.437 36 26.988 36 18z" />
           </svg>
         </Link>
-        <div
+        <form
+          onSubmit={handleSearchSubmit}
           className={`flex items-center bg-[#F0F2F5] rounded-full px-3 py-2 gap-2 transition-all
             ${searchFocused ? "ring-2 ring-fb-blue" : ""}`}
         >
@@ -223,10 +233,12 @@ export default function Navbar() {
           <input
             className="bg-transparent outline-none text-sm w-44 placeholder-fb-subtext"
             placeholder="Tìm kiếm trên Facebook"
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
-        </div>
+        </form>
       </div>
 
       {/* ── Center Tabs ── */}

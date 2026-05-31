@@ -30,13 +30,6 @@ namespace Application.Groups.Commands.AssignGroupRole
                     $"Group with id {request.GroupId} was not found."));
             }
 
-            if (group.OwnerUserId != request.RequesterUserId)
-            {
-                return Result.Failure(new Error(
-                    "Group.Authorization",
-                    "Only the group owner can assign roles to group members."));
-            }
-
             if (group.OwnerUserId == request.TargetUserId)
             {
                 return Result.Failure(new Error(
@@ -52,13 +45,61 @@ namespace Application.Groups.Commands.AssignGroupRole
                     "The specified user is not a member of the group."));
             }
 
+            var requesterIsOwner = group.OwnerUserId == request.RequesterUserId;
+            var requesterMember = group.Members.FirstOrDefault(m => m.UserId == request.RequesterUserId);
+            var requesterIsAdmin = requesterMember?.Role == GroupMemberRole.Admin;
+
+            if (!requesterIsOwner && !requesterIsAdmin)
+            {
+                return Result.Failure(new Error(
+                    "Group.Authorization",
+                    "Only the group owner or an admin can assign roles to group members."));
+            }
+
             if (member.Role == request.NewRole)
             {
                 return Result.Success();
             }
 
+            if (!requesterIsOwner)
+            {
+                var authorizationResult = AuthorizeAdminRoleChange(member.Role, request.NewRole);
+                if (authorizationResult.IsFailure)
+                {
+                    return authorizationResult;
+                }
+            }
+
             member.UpdateRole(request.NewRole);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Success();
+        }
+
+        private static Result AuthorizeAdminRoleChange(
+            GroupMemberRole currentRole,
+            GroupMemberRole newRole)
+        {
+            if (currentRole == GroupMemberRole.Admin)
+            {
+                return Result.Failure(new Error(
+                    "Group.RoleAssignment",
+                    "Admins cannot change another admin's role."));
+            }
+
+            if (newRole == GroupMemberRole.Admin)
+            {
+                return Result.Failure(new Error(
+                    "Group.RoleAssignment",
+                    "Admins cannot assign the admin role."));
+            }
+
+            if (newRole != GroupMemberRole.Member && newRole != GroupMemberRole.Moderator)
+            {
+                return Result.Failure(new Error(
+                    "Group.RoleAssignment",
+                    "Admins can only assign member or moderator roles."));
+            }
 
             return Result.Success();
         }

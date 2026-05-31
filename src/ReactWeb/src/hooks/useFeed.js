@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { getFeedPostsApi, generateFeedApi, markLatestAsSeenApi } from "../apis/feedApi";
-import { createPostApi } from "../apis/postApi";
+import { getFeedPostsApi, generateFeedApi, markLatestAsSeenApi, createPostApi, getPostApi } from "../apis/postApi";
 
-export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
+export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(initialPage);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const normalizeResponse = (data) => {
     // Accept either array or { items, totalCount }
@@ -17,10 +17,10 @@ export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
     return { items: [], totalCount: 0 };
   };
 
-  const loadPage = useCallback(async (p = 1) => {
+  const loadPage = useCallback(async (p = 1, isRefresh = false) => {
     setIsLoading(true);
     try {
-      const data = await getFeedPostsApi(p, pageSize);
+      const data = await getFeedPostsApi(p, pageSize, isRefresh);
       const { items } = normalizeResponse(data);
 
       if (p === 1) {
@@ -29,8 +29,11 @@ export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
         setPosts((prev) => [...prev, ...items]);
       }
 
-      if (items.length < pageSize) setHasMore(false);
-      else setHasMore(true);
+      if (items.length < pageSize || items.some((item) => item.isSeen)) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
 
       setPage(p);
     } catch (err) {
@@ -52,7 +55,7 @@ export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
   const refresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadPage(1);
+      await loadPage(1, true);
     } finally {
       setIsRefreshing(false);
     }
@@ -61,21 +64,34 @@ export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
   const createPost = async (postPayload) => {
     try {
       // postPayload should match createPostApi signature
-      const result = await createPostApi(postPayload);
+      const postId = await createPostApi(postPayload);
 
-      // After creating, refresh the feed (reload first page)
-      await refresh();
+      // Fetch the full post object from the server
+      const newPost = await getPostApi(postId);
 
-      return result;
+      // Optimistically prepend to the feed
+      setPosts((prev) => [
+        {
+          id: newPost.id, // FeedItem's ID
+          score: 1.0,
+          feedType: 0,
+          isSeen: false,
+          feedCreatedAt: newPost.createdAt,
+          post: newPost
+        },
+        ...prev
+      ]);
+
+      return postId;
     } catch (err) {
       console.error("Create post failed:", err);
       throw err;
     }
   };
 
-  const generateFeed = async (candidateLimit = 500, feedItemLimit = 100) => {
+  const generateFeed = async () => {
     try {
-      const data = await generateFeedApi(candidateLimit, feedItemLimit);
+      const data = await generateFeedApi();
       return data;
     } catch (err) {
       console.error("Generate feed failed:", err);
@@ -83,15 +99,43 @@ export function useFeed({ initialPage = 1, pageSize = 20 } = {}) {
     }
   };
 
-  const markLatestAsSeen = async () => {
+  const markLatestAsSeen = useCallback(async (feedIds = []) => {
     try {
-      const data = await markLatestAsSeenApi();
+      const data = await markLatestAsSeenApi(feedIds);
+      setPosts((prev) =>
+        prev.map((item) =>
+          feedIds.includes(item.feedId)
+            ? { ...item, isSeen: true }
+            : item
+        )
+      );
       return data;
     } catch (err) {
-      console.error("Mark latest feed as seen failed:", err);
+      console.error("Mark feed as seen failed:", err);
       throw err;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+
+    if (hasMore === false && !isGenerating && !isLoading) {
+      const timer = setTimeout(async () => {
+        setIsGenerating(true);
+        try {
+          await generateFeed();
+          setHasMore(true);
+          setPage(1);
+          await loadPage(1);
+        } catch (err) {
+          console.error("Auto pre-generation of feed failed:", err);
+        } finally {
+          setIsGenerating(false);
+        }
+      }, 2000); // delay in ms
+
+      return () => clearTimeout(timer);
+    }
+  }, [posts, isGenerating, isLoading]);
 
   return {
     posts,

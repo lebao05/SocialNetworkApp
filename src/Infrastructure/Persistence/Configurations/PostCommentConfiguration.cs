@@ -29,6 +29,15 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(pc => pc.DeletedAt)
                 .IsRequired(false);
 
+            // Optional replied user for threaded comments
+            builder.Property(pc => pc.RepliedUserId)
+                .IsRequired(false);
+
+            builder.HasOne(pc => pc.RepliedUser)
+                .WithMany()
+                .HasForeignKey(pc => pc.RepliedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Self-referencing Relationship: PostComment -> ParentComment (Replies)
             builder.HasOne(pc => pc.ParentComment)
                 .WithMany(pc => pc.Replies)

@@ -5,6 +5,7 @@ using Application.DTOs.Groups;
 using Application.DTOs.Posts;
 using Application.Shared;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Shared;
 
 namespace Application.Posts.Queries.GetPostsByPerson
@@ -24,7 +25,12 @@ namespace Application.Posts.Queries.GetPostsByPerson
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
             var posts = await _postRepository.GetByAuthorIdPagedAsync(request.AuthorId, page, pageSize, cancellationToken);
 
-            var items = posts.Items.Select(Map).ToList();
+            var reactionMap = request.UserId.HasValue
+                ? (await _postRepository.GetPostReactionsAsync(posts.Items.Select(p => p.Id), request.UserId.Value, cancellationToken))
+                    .ToDictionary(reaction => reaction.PostId, reaction => (ReactionType?)reaction.ReactionType)
+                : new Dictionary<long, ReactionType?>();
+
+            var items = posts.Items.Select(post => Map(post, reactionMap.TryGetValue(post.Id, out var reaction) ? reaction : null)).ToList();
 
             return Result.Success(new PagedList<PostDto>(
                 items,
@@ -33,7 +39,7 @@ namespace Application.Posts.Queries.GetPostsByPerson
                 posts.TotalCount));
         }
 
-        private static PostDto Map(Post post)
+        private static PostDto Map(Post post, ReactionType? userReaction)
         {
             return new PostDto(
                 post.Id,
@@ -57,8 +63,11 @@ namespace Application.Posts.Queries.GetPostsByPerson
                     m.Metadata,
                     m.UploadedAt
                 )).ToList(),
+                MapReactionCounts(post),
+                post.Comments.Count,
                 MapGroup(post.Group),
-                post.SharePost is null ? null : MapSharedPost(post.SharePost));
+                post.SharePost is null ? null : MapSharedPost(post.SharePost),
+                userReaction);
         }
 
         private static PostDto MapSharedPost(Post post)
@@ -85,8 +94,18 @@ namespace Application.Posts.Queries.GetPostsByPerson
                     m.Metadata,
                     m.UploadedAt
                 )).ToList(),
+                MapReactionCounts(post),
+                post.Comments.Count,
                 MapGroup(post.Group),
                 null);
+        }
+
+        private static IReadOnlyCollection<ReactionCountDto> MapReactionCounts(Post post)
+        {
+            return post.Reactions
+                .GroupBy(reaction => reaction.ReactionType)
+                .Select(group => new ReactionCountDto(group.Key, group.Count()))
+                .ToList();
         }
 
         private static GroupDto? MapGroup(Group? group)

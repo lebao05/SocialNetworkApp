@@ -202,7 +202,7 @@ export default function PostCard({ post }) {
   const [replyToCommentId, setReplyToCommentId] = useState(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState("");
-  
+
   const [reactionHover, setReactionHover] = useState(false);
   const [reaction, setReaction] = useState(getReactionIcon(post.userReaction));
   const reactionOptions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -324,10 +324,10 @@ export default function PostCard({ post }) {
       prev.map((c) =>
         c.id === commentId
           ? {
-              ...c,
-              likes: isLiked ? oldLikes - 1 : oldLikes + 1,
-              userReaction: isLiked ? "" : "Like",
-            }
+            ...c,
+            likes: isLiked ? oldLikes - 1 : oldLikes + 1,
+            userReaction: isLiked ? "" : "Like",
+          }
           : c
       )
     );
@@ -339,10 +339,10 @@ export default function PostCard({ post }) {
         prev.map((c) =>
           c.id === commentId
             ? {
-                ...c,
-                likes: oldLikes,
-                userReaction: oldReaction,
-              }
+              ...c,
+              likes: oldLikes,
+              userReaction: oldReaction,
+            }
             : c
         )
       );
@@ -455,7 +455,7 @@ export default function PostCard({ post }) {
 
     setCommentError("");
     setIsSubmittingComment(true);
-    setComments((prev) => [optimisticComment, ...prev]);
+    setComments((prev) => [...prev, optimisticComment]);
     if (topLevelParentId) {
       setComments((prev) =>
         prev.map((comment) =>
@@ -562,7 +562,7 @@ export default function PostCard({ post }) {
       <div className="flex items-center justify-between px-4 py-2 text-gray-500 text-sm">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 cursor-pointer hover:underline">
-            <span>{likes.toLocaleString()}</span>
+            <span className="font-semibold">{likes.toLocaleString()} likes</span>
           </div>
           <span className="text-gray-300 select-none">|</span>
           <span className="cursor-pointer hover:underline" onClick={openCommentsModal}>
@@ -595,9 +595,9 @@ export default function PostCard({ post }) {
               active={liked}
             />
             {reactionHover && (
-              <div 
+              <div
                 className="absolute left-0 bottom-full mb-2 flex items-center gap-2 rounded-full bg-white p-2 shadow-lg ring-1 ring-black/5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200"
-                onMouseEnter={handleMouseEnter} 
+                onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
               >
                 {reactionOptions.map((icon) => (

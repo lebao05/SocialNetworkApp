@@ -34,6 +34,23 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(g => g.CoverPhotoUrl)
                 .HasColumnType("TEXT");
 
+            // ── Settings columns ─────────────────────────────────────────
+            builder.Property(g => g.IsHidden)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(g => g.IsPostApprovalRequired)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(g => g.IsGroupJoinApprovalRequired)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(g => g.AllowAnonymousPost)
+                .IsRequired()
+                .HasDefaultValue(false);
+
             // ===================================
             // Navigation Backing Fields & relationships
             // ===================================
@@ -48,7 +65,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_members")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            // Group -> Requests
+            // Group -> JoinRequests
             builder.HasMany(g => g.Requests)
                 .WithOne(gr => gr.Group)
                 .HasForeignKey(gr => gr.GroupId)
@@ -56,6 +73,16 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Navigation(g => g.Requests)
                 .HasField("_requests")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // Group -> Rules
+            builder.HasMany(g => g.Rules)
+                .WithOne(gr => gr.Group)
+                .HasForeignKey(gr => gr.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Navigation(g => g.Rules)
+                .HasField("_rules")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
         }
     }

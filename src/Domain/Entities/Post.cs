@@ -17,6 +17,13 @@ namespace Domain.Entities
         // Soft delete
         public DateTime? DeletedAt { get; private set; }
 
+        // Post approval (for group posts where IsPostApprovalRequired = true)
+        public PostApprovalStatus ApprovalStatus { get; private set; }
+
+        public bool IsHiddenFromGroup { get; private set; }
+        public DateTime? HiddenAt { get; private set; }
+        public string? HideReason { get; private set; }
+
         // Navigation
         public User Author { get; private set; } = null!;
         public Group? Group { get; private set; } = null!;
@@ -26,7 +33,7 @@ namespace Domain.Entities
         private readonly List<PostComment> _comments = new();
         private readonly List<SavedPost> _savedPosts = new();
         private readonly List<UserFeed> _userFeeds = new();
-        private readonly List<Reaction> _reactions = new();
+        private readonly List<PostReaction> _reactions = new();
         private readonly List<PostTag> _tags = new();
 
         // Navigation Collections
@@ -34,7 +41,7 @@ namespace Domain.Entities
         public virtual IReadOnlyCollection<PostComment> Comments => _comments;
         public virtual IReadOnlyCollection<SavedPost> SavedPosts => _savedPosts;
         public virtual IReadOnlyCollection<UserFeed> UserFeeds => _userFeeds;
-        public virtual IReadOnlyCollection<Reaction> Reactions => _reactions;
+        public virtual IReadOnlyCollection<PostReaction> Reactions => _reactions;
         public virtual IReadOnlyCollection<PostTag> Tags => _tags;
 
         private Post(long id) : base(id) { }
@@ -56,6 +63,7 @@ namespace Domain.Entities
             SharePostId = sharePostId;
             LocationTag = locationTag;
             FeelingActivity = feelingActivity;
+            ApprovalStatus = PostApprovalStatus.NotRequired;
             CreatedAt = DateTime.UtcNow;
         }
 
@@ -82,6 +90,37 @@ namespace Domain.Entities
         {
             IsDeleted = false;
             DeletedAt = null;
+        }
+
+        // Approval flow (group posts)
+        /// <summary>Mark this post as pending approval. Call when posting to a group with IsPostApprovalRequired=true.</summary>
+        public void SetPendingApproval()
+        {
+            ApprovalStatus = PostApprovalStatus.Pending;
+        }
+
+        public void Approve()
+        {
+            ApprovalStatus = PostApprovalStatus.Approved;
+        }
+
+        public void Reject()
+        {
+            ApprovalStatus = PostApprovalStatus.Rejected;
+        }
+
+        public void HideFromGroup(string? reason)
+        {
+            IsHiddenFromGroup = true;
+            HiddenAt = DateTime.UtcNow;
+            HideReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        }
+
+        public void UnhideFromGroup()
+        {
+            IsHiddenFromGroup = false;
+            HiddenAt = null;
+            HideReason = null;
         }
 
         // Tag management
