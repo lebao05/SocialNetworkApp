@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar/Navbar";
 import { useAuth } from "../contexts/authContext";
+import { useGroup } from "../hooks/useGroup";
 
 const privacyOptions = [
   {
@@ -43,6 +44,7 @@ function PreviewTab({ children, active = false }) {
 export default function GroupsCreatePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { createGroup, loading, error } = useGroup(null, { autoFetch: false });
   const [groupName, setGroupName] = useState("");
   const [privacy, setPrivacy] = useState("public");
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
@@ -58,8 +60,17 @@ export default function GroupsCreatePage() {
   const SelectedPrivacyIcon = selectedPrivacy.icon;
   const previewName = groupName.trim() || "Ten nhom";
 
-  const handleCreate = () => {
-    navigate("/groups");
+  const handleCreate = async () => {
+    const name = groupName.trim();
+    if (!name || loading) return;
+
+    const data = await createGroup({
+      name,
+      isPrivate: privacy === "private",
+    });
+    const createdGroupId = data?.id ?? data?.Id ?? data;
+
+    navigate(createdGroupId ? `/groups/${createdGroupId}` : "/groups");
   };
 
   return (
@@ -149,16 +160,18 @@ export default function GroupsCreatePage() {
             </button>
             .
           </p>
+
+          {error && <p className="mt-3 text-[13px] font-semibold text-red-600">{error}</p>}
         </div>
 
         <div className="border-t border-[#dddfe2] p-4">
           <button
             type="button"
             onClick={handleCreate}
-            disabled={!groupName.trim()}
+            disabled={!groupName.trim() || loading}
             className="h-10 w-full rounded-md bg-[#0866ff] text-[14px] font-semibold text-white hover:bg-[#075ce5] disabled:cursor-not-allowed disabled:bg-[#e4e6eb] disabled:text-[#bcc0c4]"
           >
-            Tao
+            {loading ? "Dang tao..." : "Tao"}
           </button>
         </div>
       </aside>

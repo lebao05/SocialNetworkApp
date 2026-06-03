@@ -52,7 +52,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(p => p.ApprovalStatus)
                 .IsRequired()
                 .HasColumnType("SMALLINT")
-                .HasDefaultValue(Domain.Enums.PostApprovalStatus.NotRequired);
+                .HasDefaultValue(Domain.Enums.PostApprovalStatus.Approved);
 
             builder.Property(p => p.IsHiddenFromGroup)
                 .IsRequired()

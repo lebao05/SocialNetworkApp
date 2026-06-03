@@ -9,5 +9,7 @@ namespace Application.Groups.Queries.GetGroupJoinRequests
         long GroupId,
         int Page = 1,
         int PageSize = 20,
-        string? SearchTerm = null) : IQuery<PagedList<GroupJoinRequestDto>>;
+        string? SearchTerm = null,
+        DateTime? FromDate = null,
+        bool? HaveAvatar = null) : IQuery<PagedList<GroupJoinRequestDto>>;
 }

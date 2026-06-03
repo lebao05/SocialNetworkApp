@@ -13,8 +13,6 @@ namespace Domain.Entities
         public string? CoverPhotoUrl { get; private set; }
 
         // ── Group Settings ────────────────────────────────────────────────
-        /// <summary>When true the group is invisible to public search results.</summary>
-        public bool IsHidden { get; private set; }
         /// <summary>When true every new post must be approved before it becomes visible.</summary>
         public bool IsPostApprovalRequired { get; private set; }
         /// <summary>When true joining the group requires approval.</summary>
@@ -45,7 +43,6 @@ namespace Domain.Entities
             string? description,
             GroupPrivacyType privacyType,
             string? coverPhotoUrl,
-            bool isHidden = false,
             bool isPostApprovalRequired = false,
             bool isGroupJoinApprovalRequired = false,
             bool allowAnonymousPost = false) : base(id)
@@ -55,17 +52,17 @@ namespace Domain.Entities
             Description = description;
             PrivacyType = privacyType;
             CoverPhotoUrl = coverPhotoUrl;
-            IsHidden = isHidden;
             IsPostApprovalRequired = isPostApprovalRequired;
             IsGroupJoinApprovalRequired = isGroupJoinApprovalRequired;
             AllowAnonymousPost = allowAnonymousPost;
+            if (privacyType == GroupPrivacyType.Private)
+                IsGroupJoinApprovalRequired = true;
         }
 
         public void Update(
             string name,
             string? description,
             GroupPrivacyType privacyType,
-            bool isHidden,
             bool isPostApprovalRequired,
             bool isGroupJoinApprovalRequired,
             bool allowAnonymousPost)
@@ -73,7 +70,6 @@ namespace Domain.Entities
             Name = name.Trim();
             Description = description;
             PrivacyType = privacyType;
-            IsHidden = isHidden;
             IsPostApprovalRequired = isPostApprovalRequired;
             IsGroupJoinApprovalRequired = isGroupJoinApprovalRequired;
             AllowAnonymousPost = allowAnonymousPost;

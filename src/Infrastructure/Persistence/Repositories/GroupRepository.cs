@@ -64,7 +64,12 @@ namespace Infrastructure.Persistence.Repositories
                 .ThenBy(member => member.User.FirstName)
                 .ThenBy(member => member.User.LastName);
 
-            return await PagedList<GroupMember>.CreateAsync(query, page, pageSize, cancellationToken);
+            // If filtering by Moderator or Admin role, fetch all without pagination
+            var effectivePageSize = (role == GroupMemberRole.Moderator || role == GroupMemberRole.Admin)
+                ? 10000 // Fetch all
+                : pageSize;
+
+            return await PagedList<GroupMember>.CreateAsync(query, page, effectivePageSize, cancellationToken);
         }
 
         public async Task<PagedList<GroupJoinRequest>> GetJoinRequestsPagedAsync(
@@ -72,6 +77,8 @@ namespace Infrastructure.Persistence.Repositories
             int page,
             int pageSize,
             string? searchTerm = null,
+            DateTime? fromDate = null,
+            bool? haveAvatar = null,
             GroupRequestStatus status = GroupRequestStatus.Pending,
             CancellationToken cancellationToken = default)
         {
@@ -87,6 +94,23 @@ namespace Infrastructure.Persistence.Repositories
                     request.User.FirstName.ToLower().Contains(normalizedSearch)
                     || request.User.LastName.ToLower().Contains(normalizedSearch)
                     || (request.User.FirstName + " " + request.User.LastName).ToLower().Contains(normalizedSearch));
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(request => request.CreatedAt >= fromDate.Value);
+            }
+
+            if (haveAvatar.HasValue)
+            {
+                if (haveAvatar.Value)
+                {
+                    query = query.Where(request => request.User.AvatarUrl != null && request.User.AvatarUrl != string.Empty);
+                }
+                else
+                {
+                    query = query.Where(request => request.User.AvatarUrl == null || request.User.AvatarUrl == string.Empty);
+                }
             }
 
             query = query

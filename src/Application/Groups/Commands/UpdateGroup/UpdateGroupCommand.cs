@@ -9,7 +9,6 @@ namespace Application.Groups.Commands.UpdateGroup
         string Name,
         string? Description,
         GroupPrivacyType PrivacyType,
-        bool IsHidden,
         bool IsPostApprovalRequired,
         bool IsGroupJoinApprovalRequired,
         bool AllowAnonymousPost) : ICommand;

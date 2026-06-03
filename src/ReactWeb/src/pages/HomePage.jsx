@@ -96,7 +96,7 @@ export default function HomePage() {
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-[280px] xl:px-[280px]">
           <main className="mx-auto w-full max-w-[680px] py-4 flex flex-col gap-4">
             <StoryBar />
-            
+
             <CreatePost
               displayUser={displayUser}
               setIsCreateModalOpen={setIsCreateModalOpen}

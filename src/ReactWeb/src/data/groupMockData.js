@@ -12,7 +12,7 @@ export const groupInfo = {
 
 export const mockGroupRole = "admin";
 
-export const groupTabs = ["Gioi thieu", "Thao luan", "Dang chu y", "Moi nguoi", "File phuong tien"];
+export const groupTabs = ["About", "Discussion", "Featured", "People", "Media"];
 
 export const groupAvatarSeeds = [
   "rider-1",
@@ -74,44 +74,41 @@ export const groupMediaImages = [
 
 export const adminSidebarSections = [
   {
-    title: "Quan ly",
+    title: "Manage",
     items: [
-      { label: "Trang chu cua cong dong", view: "home", icon: "Home" },
+      { label: "Community Home", view: "home", icon: "Home" },
     ],
   },
   {
-    title: "Cong cu quan tri",
+    title: "Admin Tools",
     items: [
-      { label: "Yeu cau lam thanh vien", sub: "0 muc moi hom nay", view: "member-requests", icon: "UserPlus" },
-      { label: "Bai viet dang cho", sub: "0 muc moi hom nay", view: "pending-posts", icon: "Newspaper" },
-      { label: "Nhat ky hoat dong", view: "activity-log", icon: "Clock" },
-      { label: "Quy tac nhom", view: "group-rules", icon: "BookOpen" },
-      { label: "Noi dung bi thanh vien bao cao", sub: "0 muc moi hom nay", view: "reported-content", icon: "Flag" },
-      { label: "Thong bao kiem duyet", sub: "0 muc moi hom nay", view: "moderation-alerts", icon: "MessageSquareWarning" },
-      { label: "Vai tro trong cong dong", view: "community-roles", icon: "Badge" },
+      { label: "Member Requests", sub: "0 new today", view: "member-requests", icon: "UserPlus" },
+      { label: "Pending Posts", sub: "0 new today", view: "pending-posts", icon: "Newspaper" },
+      { label: "Reported Content", sub: "0 new today", view: "reported-content", icon: "Flag" },
+      { label: "Community Roles", view: "community-roles", icon: "Badge" },
     ],
   },
   {
-    title: "Cai dat",
+    title: "Settings",
     items: [
-      { label: "Cai dat nhom", sub: "Quan ly cuoc thao luan, quyen va vai tro", view: "group-settings", icon: "Settings" },
+      { label: "Group Settings", sub: "Manage discussions, permissions and roles", view: "group-settings", icon: "Settings" },
     ],
   },
   {
-    title: "Thong tin chi tiet",
+    title: "Insights",
     items: [
-      { label: "Muc do tang truong", view: "growth", icon: "ChartNoAxesCombined" },
-      { label: "Luot tuong tac", view: "engagement", icon: "ThumbsUp" },
-      { label: "Thanh vien", view: "members", icon: "Users" },
+      { label: "Growth", view: "growth", icon: "ChartNoAxesCombined" },
+      { label: "Engagement", view: "engagement", icon: "ThumbsUp" },
+      { label: "Members", view: "members", icon: "Users" },
     ],
   },
 ];
 
 export const adminActivityLog = [
-  { id: 1, day: "Hom nay", actor: "Le Bao", action: "da thay doi mau cua nhom.", time: "19:06 30 Thang 5, 2026", seed: "activity-1" },
-  { id: 2, day: "29 Thang 5, 2026", actor: "Le Bao", action: "da tao nhom.", time: "20:48 29 Thang 5, 2026", seed: "activity-2" },
-  { id: 3, day: "29 Thang 5, 2026", actor: "Le Bao", action: "da them Dong gop vao nhom.", time: "20:48 29 Thang 5, 2026", seed: "activity-3" },
-  { id: 4, day: "29 Thang 5, 2026", actor: "Le Bao", action: "da thay doi phan cai dat de bat tinh nang tham gia an danh trong nhom nay.", time: "20:48 29 Thang 5, 2026", seed: "activity-4" },
+  { id: 1, day: "Today", actor: "Le Bao", action: "changed the group color.", time: "19:06 May 30, 2026", seed: "activity-1" },
+  { id: 2, day: "May 29, 2026", actor: "Le Bao", action: "created the group.", time: "20:48 May 29, 2026", seed: "activity-2" },
+  { id: 3, day: "May 29, 2026", actor: "Le Bao", action: "added Member as a contributor.", time: "20:48 May 29, 2026", seed: "activity-3" },
+  { id: 4, day: "May 29, 2026", actor: "Le Bao", action: "changed the setting to enable anonymous posting in this group.", time: "20:48 May 29, 2026", seed: "activity-4" },
 ];
 
 export const settingsSections = [
@@ -162,11 +159,12 @@ export const insightSummary = {
     reviewed: 0,
     approved: 0,
     declined: 0,
-    blocked: 0,
   },
   engagement: {
     posts: 0,
     activeMembers: 0,
+    comments: 0,
+    reactions: 0,
     topDays: [],
   },
   admins: [

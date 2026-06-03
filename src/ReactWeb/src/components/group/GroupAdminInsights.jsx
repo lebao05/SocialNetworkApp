@@ -1,17 +1,31 @@
+import { useState } from "react";
 import { Download, Info, Shield, Users } from "lucide-react";
-import { insightSummary } from "../../data/groupMockData";
+import { useGroupInsights } from "../../hooks/useGroupInsights";
 
-function TopBar() {
+function TopBar({ fromDate, toDate, onDateRangeChange, onExport }) {
   return (
     <div className="border-b border-[#d8dadf] bg-white">
       <div className="mx-auto flex max-w-[760px] items-center justify-between px-4 py-4">
-        <button type="button" className="flex h-9 items-center gap-2 rounded-md bg-[#e4e6eb] px-3 text-[13px] font-semibold hover:bg-[#d8dadf]">
-          28 ngay qua
-          <span className="text-[10px]">▼</span>
-        </button>
-        <button type="button" className="flex h-9 items-center gap-2 rounded-md bg-[#e4e6eb] px-3 text-[13px] font-semibold hover:bg-[#d8dadf]">
+        <input
+          type="date"
+          value={fromDate || ""}
+          onChange={(e) => onDateRangeChange(e.target.value || null, toDate)}
+          className="h-9 cursor-pointer rounded-md border border-[#d8dadf] bg-white px-3 text-[13px] font-semibold"
+        />
+        <span className="text-[13px] text-[#65676b]">to</span>
+        <input
+          type="date"
+          value={toDate || ""}
+          onChange={(e) => onDateRangeChange(fromDate, e.target.value || null)}
+          className="h-9 cursor-pointer rounded-md border border-[#d8dadf] bg-white px-3 text-[13px] font-semibold"
+        />
+        <button
+          type="button"
+          onClick={onExport}
+          className="flex h-9 items-center gap-2 rounded-md bg-[#e4e6eb] px-3 text-[13px] font-semibold hover:bg-[#d8dadf]"
+        >
           <Download size={15} />
-          Tai xuong
+          Export
         </button>
       </div>
     </div>
@@ -56,28 +70,43 @@ function ChartCard({ title, subtitle, spike = true, children }) {
   );
 }
 
-function GrowthView() {
+function GrowthView({ insights }) {
+  const { totalMembers, requests, reviewed, approved, declined } = insights;
+  const pending = Math.max(0, requests - reviewed);
+
   return (
     <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
-      <TopBar />
       <div className="mx-auto max-w-[760px] space-y-3 px-4 py-4">
-        <ChartCard title={`Tong so thanh vien: ${insightSummary.growth.totalMembers}`} subtitle="29 Thang 5, 2026" />
-        <ChartCard title={`${insightSummary.growth.requests} yeu cau lam thanh vien`} subtitle="2 Thang 5, 2026 - 29 Thang 5, 2026" spike={false}>
-          <button type="button" className="mt-3 h-9 w-full rounded-md bg-[#e4e6eb] text-[13px] font-semibold hover:bg-[#d8dadf]">
-            Xem tat ca yeu cau lam thanh vien
+        <ChartCard
+          title={`Total members: ${totalMembers.toLocaleString()}`}
+          subtitle="29 May 2026"
+        />
+        <ChartCard
+          title={`${pending} pending membership requests`}
+          subtitle="2 May 2026 - 29 May 2026"
+          spike={false}
+        >
+          <button
+            type="button"
+            className="mt-3 h-9 w-full cursor-pointer rounded-md bg-[#e4e6eb] text-[13px] font-semibold hover:bg-[#d8dadf]"
+          >
+            View all requests
           </button>
         </ChartCard>
         <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-          <h2 className="text-[15px] font-bold">Da xem xet 0 yeu cau <Info size={14} className="inline text-[#65676b]" /></h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <h2 className="text-[15px] font-bold">
+            Reviewed: {reviewed} requests <Info size={14} className="inline text-[#65676b]" />
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {[
-              ["Da phe duyet", insightSummary.growth.approved],
-              ["Bi tu choi", insightSummary.growth.declined],
-              ["Da chan", insightSummary.growth.blocked],
+              ["Approved", approved],
+              ["Declined", declined],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg bg-[#f0f2f5] p-4">
-                <div className="text-[18px] font-bold">{label}</div>
-                <div className="mt-2 text-[34px] leading-none text-[#65676b]">{value}</div>
+                <div className="text-[13px] text-[#65676b]">{label}</div>
+                <div className="mt-1 text-[34px] font-bold leading-none text-[#1c1e21]">
+                  {value?.toLocaleString?.() ?? value}
+                </div>
               </div>
             ))}
           </div>
@@ -87,20 +116,33 @@ function GrowthView() {
   );
 }
 
-function EngagementView() {
+function EngagementView({ insights }) {
+  const { posts, comments, reactions, activeMembers, topDays, peakHours } = insights;
+  const [activeMetric, setActiveMetric] = useState("Posts");
+  const metricButtons = ["Posts", "Comments", "Reactions", "All"];
+  const metricValues = { Posts: posts, Comments: comments, Reactions: reactions, All: null };
+
   return (
     <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
-      <TopBar />
       <div className="mx-auto max-w-[760px] space-y-3 px-4 py-4">
         <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-[15px] font-bold">0 bai viet <Info size={14} className="inline text-[#65676b]" /></h2>
-              <p className="text-[12px] text-[#65676b]">2 Thang 5, 2026 - 29 Thang 5, 2026</p>
+              <h2 className="text-[15px] font-bold">
+                {posts.toLocaleString()} posts <Info size={14} className="inline text-[#65676b]" />
+              </h2>
+              <p className="text-[12px] text-[#65676b]">2 May 2026 - 29 May 2026</p>
             </div>
             <div className="flex gap-2">
-              {["Bai viet", "Binh luan", "Cam xuc", "Tat ca"].map((item, index) => (
-                <button key={item} type="button" className={`h-8 rounded-full px-3 text-[12px] font-semibold ${index === 0 ? "bg-[#e7f3ff] text-[#0866ff]" : "bg-[#e4e6eb]"}`}>
+              {metricButtons.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setActiveMetric(item)}
+                  className={`h-8 cursor-pointer rounded-full px-3 text-[12px] font-semibold ${
+                    activeMetric === item ? "bg-[#e7f3ff] text-[#0866ff]" : "bg-[#e4e6eb]"
+                  }`}
+                >
                   {item}
                 </button>
               ))}
@@ -108,20 +150,56 @@ function EngagementView() {
           </div>
           <LineChart spike={false} />
         </section>
-        <ChartCard title="0 thanh vien dang hoat dong" subtitle="2 Thang 5, 2026 - 29 Thang 5, 2026" />
+
+        <ChartCard
+          title={`${activeMembers.toLocaleString()} active members`}
+          subtitle="2 May 2026 - 29 May 2026"
+        />
+
         <div className="grid gap-3 md:grid-cols-2">
           <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-            <h2 className="text-[15px] font-bold">Ngay cao diem <Info size={14} className="inline text-[#65676b]" /></h2>
-            <div className="mt-24 border-t border-[#ced0d4] pt-2 text-[12px] text-[#65676b]">T2 T3 T4 T5 T6 T7 CN</div>
+            <h2 className="text-[15px] font-bold">
+              Top activity days <Info size={14} className="inline text-[#65676b]" />
+            </h2>
+            {topDays.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                {topDays.map((day) => (
+                  <div
+                    key={day.label}
+                    className="flex items-center justify-between rounded-md bg-[#f0f2f5] p-3"
+                  >
+                    <span className="text-[13px] font-semibold">{day.label}</span>
+                    <span className="text-[13px] font-bold">
+                      {day.count?.toLocaleString?.() ?? day.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-[13px] font-semibold text-[#65676b]">No data to display</p>
+            )}
           </section>
           <section className="rounded-lg border border-[#dddfe2] bg-white p-4 text-center shadow-sm">
-            <h2 className="text-left text-[15px] font-bold">Gio cao diem <Info size={14} className="inline text-[#65676b]" /></h2>
-            <div className="mt-4 flex justify-center gap-2">
-              {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day, index) => (
-                <span key={day} className={`rounded-full px-3 py-2 text-[12px] font-semibold ${index === 0 ? "bg-[#e7f3ff] text-[#0866ff]" : "bg-[#e4e6eb]"}`}>{day}</span>
-              ))}
-            </div>
-            <p className="mt-24 text-[13px] font-semibold text-[#65676b]">Khong co du lieu de hien thi</p>
+            <h2 className="text-left text-[15px] font-bold">
+              Peak hours <Info size={14} className="inline text-[#65676b]" />
+            </h2>
+            {peakHours.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                {peakHours.map((hour) => (
+                  <div
+                    key={hour.label}
+                    className="flex items-center justify-between rounded-md bg-[#f0f2f5] p-3"
+                  >
+                    <span className="text-[13px] font-semibold">{hour.label}</span>
+                    <span className="text-[13px] font-bold">
+                      {hour.count?.toLocaleString?.() ?? hour.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-16 text-[13px] font-semibold text-[#65676b]">No data to display</p>
+            )}
           </section>
         </div>
       </div>
@@ -129,14 +207,16 @@ function EngagementView() {
   );
 }
 
-function PeopleMetricView({ type }) {
+function PeopleMetricView({ type, insights }) {
   const isAdmins = type === "admins";
-  const title = isAdmins ? "Quan tri vien va nguoi kiem duyet" : "Thanh vien";
-  const rows = isAdmins ? insightSummary.admins : [
-    { label: "Tong thanh vien", value: insightSummary.members.total },
-    { label: "Thanh vien hoat dong", value: insightSummary.members.active },
-    { label: "Thanh vien moi tuan nay", value: insightSummary.members.newThisWeek },
-  ];
+  const title = isAdmins ? "Admins & Moderators" : "Members";
+  const rows = isAdmins
+    ? insights.admins ?? []
+    : [
+        { label: "Total members", value: insights.totalMembers },
+        { label: "Active members", value: insights.activeMembers },
+        { label: "New members this week", value: insights.newMembersThisWeek ?? 0 },
+      ];
 
   return (
     <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
@@ -154,7 +234,9 @@ function PeopleMetricView({ type }) {
                   {isAdmins ? <Shield size={17} /> : <Users size={17} />}
                 </span>
                 <span className="flex-1 text-[14px] font-bold">{row.label}</span>
-                <span className="text-[15px] font-bold">{row.value}</span>
+                <span className="text-[15px] font-bold">
+                  {row.value?.toLocaleString?.() ?? row.value ?? 0}
+                </span>
               </div>
             ))}
           </div>
@@ -164,8 +246,81 @@ function PeopleMetricView({ type }) {
   );
 }
 
-export default function GroupAdminInsights({ view }) {
-  if (view === "engagement") return <EngagementView />;
-  if (view === "admins" || view === "members") return <PeopleMetricView type={view} />;
-  return <GrowthView />;
+export default function GroupAdminInsights({ view, groupId }) {
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const { insights, loading, error, fetchInsights } = useGroupInsights(groupId, {
+    fromDate,
+    toDate,
+  });
+
+  const handleDateRangeChange = (newFrom, newTo) => {
+    setFromDate(newFrom);
+    setToDate(newTo);
+  };
+
+  const handleExport = () => {
+    const csv = [
+      ["Metric", "Value"],
+      ["Total Members", insights.totalMembers],
+      ["Requests", insights.requests],
+      ["Reviewed", insights.reviewed],
+      ["Approved", insights.approved],
+      ["Declined", insights.declined],
+      ["Posts", insights.posts],
+      ["Comments", insights.comments],
+      ["Reactions", insights.reactions],
+      ["Active Members", insights.activeMembers],
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `group-insights-${groupId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
+        <div className="flex items-center justify-center pt-20 text-[14px] text-[#65676b]">
+          Loading insights...
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
+        <div className="mx-auto max-w-[760px] px-4 py-4">
+          <p className="text-[14px] text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={fetchInsights}
+            className="mt-2 h-9 cursor-pointer rounded-md bg-[#0866ff] px-4 text-[13px] font-semibold text-white hover:bg-[#0056d4]"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <>
+      <TopBar
+        fromDate={fromDate}
+        toDate={toDate}
+        onDateRangeChange={handleDateRangeChange}
+        onExport={handleExport}
+      />
+      {view === "engagement" && <EngagementView insights={insights} />}
+      {(view === "admins" || view === "members") && <PeopleMetricView type={view} insights={insights} />}
+      {(view === "growth" || view === undefined) && <GrowthView insights={insights} />}
+    </>
+  );
 }

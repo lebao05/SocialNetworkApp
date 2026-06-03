@@ -11,6 +11,7 @@ using Application.Groups.Commands.UpdateGroup;
 using Application.Groups.Commands.CreateGroupRule;
 using Application.Groups.Commands.UpdateGroupRule;
 using Application.Groups.Commands.DeleteGroupRule;
+using Application.Groups.Queries.GetGroupDetail;
 using Application.Groups.Queries.GetGroupJoinRequests;
 using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
@@ -52,6 +53,23 @@ namespace Presentation.Controllers
             return result.IsSuccess
                 ? Ok(new { Id = result.Value })
                 : HandleFailure(result);
+        }
+
+        [HttpGet("{groupId:long}")]
+        public async Task<IActionResult> GetGroupDetail(
+            long groupId,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetGroupDetailQuery(groupId, userId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
 
         [HttpPut("{groupId:long}/members/{userId:guid}/role")]
@@ -97,7 +115,6 @@ namespace Presentation.Controllers
                 request.Name,
                 request.Description,
                 groupPrivacy,
-                request.IsHidden,
                 request.IsPostApprovalRequired,
                 request.IsGroupJoinApprovalRequired,
                 request.AllowAnonymousPost);
@@ -190,6 +207,8 @@ namespace Presentation.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             [FromQuery] string? searchTerm = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] bool? haveAvatar = null,
             CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -198,7 +217,7 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var query = new GetGroupJoinRequestsQuery(requesterUserId, groupId, page, pageSize, searchTerm);
+            var query = new GetGroupJoinRequestsQuery(requesterUserId, groupId, page, pageSize, searchTerm, fromDate, haveAvatar);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

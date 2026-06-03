@@ -35,10 +35,6 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnType("TEXT");
 
             // ── Settings columns ─────────────────────────────────────────
-            builder.Property(g => g.IsHidden)
-                .IsRequired()
-                .HasDefaultValue(false);
-
             builder.Property(g => g.IsPostApprovalRequired)
                 .IsRequired()
                 .HasDefaultValue(false);

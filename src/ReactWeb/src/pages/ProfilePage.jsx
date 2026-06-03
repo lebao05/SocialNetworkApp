@@ -547,40 +547,40 @@ export default function ProfilePage() {
 
             {/* Header Action Buttons */}
             {isOwnProfile ? (
-            <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
-              <button className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
-                <Plus size={16} />
-                Add to Story
-              </button>
-              <button
-                onClick={handleOpenEditDetails}
-                className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}
-              >
-                <Edit2 size={16} />
-                Edit Profile
-              </button>
-              <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
-                <ChevronDown size={18} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
-              <button
-                onClick={() => navigate('/messenger')}
-                className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-              >
-                <MessageCircle size={16} />
-                Message
-              </button>
-              <button className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}>
-                <Plus size={16} />
-                Add Friend
-              </button>
-              <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
-                <ChevronDown size={18} />
-              </button>
-            </div>
-          )}
+              <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
+                <button className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                  <Plus size={16} />
+                  Add to Story
+                </button>
+                <button
+                  onClick={handleOpenEditDetails}
+                  className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}
+                >
+                  <Edit2 size={16} />
+                  Edit Profile
+                </button>
+                <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
+                  <ChevronDown size={18} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
+                <button
+                  onClick={() => navigate('/messenger')}
+                  className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                >
+                  <MessageCircle size={16} />
+                  Message
+                </button>
+                <button className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}>
+                  <Plus size={16} />
+                  Add Friend
+                </button>
+                <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
+                  <ChevronDown size={18} />
+                </button>
+              </div>
+            )}
 
           </div>
 
@@ -876,7 +876,7 @@ export default function ProfilePage() {
                         onClick={() => setIsCreateModalOpen(true)}
                         className="mt-5 px-5 py-2.5 bg-[#1877f2] hover:bg-blue-600 text-white font-bold rounded-lg text-sm shadow-md transition-all cursor-pointer"
                       >
-                          Create a new post
+                        Create a new post
                       </button>
                     )}
                   </div>
@@ -909,7 +909,7 @@ export default function ProfilePage() {
               <PhotosTab theme={theme} mockPhotos={mockPhotos} />
             )}
             {activeTab === "following" && (
-              <FollowingTab theme={theme}  />
+              <FollowingTab theme={theme} />
             )}
             {/* ========================================================
           3. DIALOGS & OVERLAYS (Post Creator, Details Editor)

@@ -63,7 +63,7 @@ namespace Domain.Entities
             SharePostId = sharePostId;
             LocationTag = locationTag;
             FeelingActivity = feelingActivity;
-            ApprovalStatus = PostApprovalStatus.NotRequired;
+            ApprovalStatus = PostApprovalStatus.Approved;
             CreatedAt = DateTime.UtcNow;
         }
 

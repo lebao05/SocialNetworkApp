@@ -46,7 +46,6 @@ namespace Application.Groups.Commands.UpdateGroup
                 request.Name,
                 request.Description,
                 request.PrivacyType,
-                request.IsHidden,
                 request.IsPostApprovalRequired,
                 request.IsGroupJoinApprovalRequired,
                 request.AllowAnonymousPost);

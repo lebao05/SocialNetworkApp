@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, ChevronDown, Smile, Search, ArrowLeft } from "lucide-react";
+import { useTag } from "../../hooks/useTag";
+import { createPostApi } from "../../apis/postApi";
 
 // Translated Mock Lists to English matching screenshots
 const TAG_FRIENDS_SUGGESTIONS = [
@@ -57,7 +59,7 @@ const LOCATIONS_LIST = [
   "Long Mach Mang Pool"
 ];
 
-export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" }, onSubmit }) {
+export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" }, onSubmit, groupId = null }) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
   const [newPostFiles, setNewPostFiles] = useState([]);
@@ -74,6 +76,22 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [feelingSearchQuery, setFeelingSearchQuery] = useState("");
   const [locationSearchQuery, setLocationSearchQuery] = useState("");
+
+  const { suggestions: tagSuggestions, loading: tagLoading, searchTags } = useTag({ groupId });
+
+  // Load suggestions when tag view opens
+  useEffect(() => {
+    if (createPostModalView === "tag_friends") {
+      searchTags("");
+    }
+  }, [createPostModalView]);
+
+  // Debounced search as user types
+  useEffect(() => {
+    if (createPostModalView !== "tag_friends") return;
+    const timer = setTimeout(() => searchTags(tagSearchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [tagSearchQuery]);
 
   if (!isOpen) return null;
 
@@ -94,7 +112,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
     if (!newPostContent.trim() && !newPostImage && newPostFiles.length === 0 && !selectedFeeling && !selectedLocation && taggedFriends.length === 0) return;
 
     const payload = {
-      groupId: null,
+      groupId: groupId ?? null,
       content: newPostContent || null,
       visibility: visibility,
       sharePostId: null,
@@ -105,10 +123,11 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
     };
 
     try {
-      await onSubmit(payload);
+      const postId = await createPostApi(payload);
+      if (onSubmit) await onSubmit({ ...payload, id: postId });
       handleResetAndClose();
     } catch (err) {
-      console.error("Failed to submit post inside modal:", err);
+      console.error("Failed to create post:", err);
     }
   };
 
@@ -164,13 +183,19 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                       </span>
                     )}
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setCreatePostModalView("audience")}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2.5 py-1.5 rounded-md flex items-center gap-1.5 font-bold mt-1.5 transition-colors cursor-pointer"
-                  >
-                    <span className="text-sm">{getVisibilityInfo().icon}</span> {getVisibilityInfo().label} <ChevronDown size={14} className="text-gray-500" />
-                  </button>
+                  {groupId ? (
+                    <div className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1.5 rounded-md flex items-center gap-1.5 font-bold mt-1.5 border border-blue-200">
+                      Group post
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setCreatePostModalView("audience")}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2.5 py-1.5 rounded-md flex items-center gap-1.5 font-bold mt-1.5 transition-colors cursor-pointer"
+                    >
+                      <span className="text-sm">{getVisibilityInfo().icon}</span> {getVisibilityInfo().label} <ChevronDown size={14} className="text-gray-500" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -412,7 +437,10 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
               </div>
 
               <div className="overflow-y-auto flex-1 max-h-[350px]">
-                {TAG_FRIENDS_SUGGESTIONS.filter(f =>
+                {tagLoading && (
+                  <div className="px-4 py-3 text-sm text-gray-400">Loading...</div>
+                )}
+                {!tagLoading && tagSuggestions.filter(f =>
                   f.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
                 ).map((friend) => {
                   const isTagged = taggedFriends.some(f => f.id === friend.id);
@@ -429,7 +457,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                       className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <img src={friend.avatar} alt={friend.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                        <img src={friend.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=random`} alt={friend.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
                         <div className="flex flex-col">
                           <span className="text-[15px] font-semibold text-gray-900">{friend.name}</span>
                           <span className="text-xs text-gray-500">{friend.status}</span>
@@ -589,10 +617,10 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                     }}
                   />
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="6" width="14" height="13" rx="2" fill="#E7F3E8" stroke="#45BD62" strokeWidth="2"/>
-                    <rect x="7" y="4" width="14" height="13" rx="2" fill="#45BD62"/>
-                    <circle cx="11" cy="8" r="1.5" fill="white"/>
-                    <path d="M7 14L11.5 9.5L15 13L17 11L21 15V15.5C21 16.3284 20.3284 17 19.5 17H8.5C7.67157 17 7 16.3284 7 15.5V14Z" fill="white"/>
+                    <rect x="3" y="6" width="14" height="13" rx="2" fill="#E7F3E8" stroke="#45BD62" strokeWidth="2" />
+                    <rect x="7" y="4" width="14" height="13" rx="2" fill="#45BD62" />
+                    <circle cx="11" cy="8" r="1.5" fill="white" />
+                    <path d="M7 14L11.5 9.5L15 13L17 11L21 15V15.5C21 16.3284 20.3284 17 19.5 17H8.5C7.67157 17 7 16.3284 7 15.5V14Z" fill="white" />
                   </svg>
                   <span className="text-[15px] font-semibold text-gray-800">Photo/video</span>
                   {newPostFiles.length > 0 && (
@@ -609,9 +637,9 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-left w-full cursor-pointer hover:border-blue-400 relative"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12C9.23858 12 7 14.2386 7 17C7 17.5523 7.44772 18 8 18H16C16.5523 18 17 17.5523 17 17C17 14.2386 14.7614 12 12 12Z" fill="#1877F2"/>
-                    <circle cx="12" cy="7.5" r="3" fill="#1877F2"/>
-                    <path d="M16 6.5L19.5 10L16.5 13L13 9.5L16 6.5ZM18 7.5C18.2761 7.5 18.5 7.27614 18.5 7C18.5 6.72386 18.2761 6.5 18 6.5C17.7239 6.5 17.5 6.72386 17.5 7C17.5 7.27614 17.7239 7.5 18 7.5Z" fill="#1877F2"/>
+                    <path d="M12 12C9.23858 12 7 14.2386 7 17C7 17.5523 7.44772 18 8 18H16C16.5523 18 17 17.5523 17 17C17 14.2386 14.7614 12 12 12Z" fill="#1877F2" />
+                    <circle cx="12" cy="7.5" r="3" fill="#1877F2" />
+                    <path d="M16 6.5L19.5 10L16.5 13L13 9.5L16 6.5ZM18 7.5C18.2761 7.5 18.5 7.27614 18.5 7C18.5 6.72386 18.2761 6.5 18 6.5C17.7239 6.5 17.5 6.72386 17.5 7C17.5 7.27614 17.7239 7.5 18 7.5Z" fill="#1877F2" />
                   </svg>
                   <span className="text-[15px] font-semibold text-gray-800">Tag friends</span>
                   {taggedFriends.length > 0 && (
@@ -628,10 +656,10 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-left w-full cursor-pointer hover:border-blue-400 relative"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="#F7B928" strokeWidth="2.5"/>
-                    <circle cx="9" cy="10" r="1.25" fill="#F7B928"/>
-                    <circle cx="15" cy="10" r="1.25" fill="#F7B928"/>
-                    <path d="M8 14C8 16.2091 9.79086 18 12 18C14.2091 18 16 16.2091 16 14H8Z" fill="#F7B928"/>
+                    <circle cx="12" cy="12" r="10" stroke="#F7B928" strokeWidth="2.5" />
+                    <circle cx="9" cy="10" r="1.25" fill="#F7B928" />
+                    <circle cx="15" cy="10" r="1.25" fill="#F7B928" />
+                    <path d="M8 14C8 16.2091 9.79086 18 12 18C14.2091 18 16 16.2091 16 14H8Z" fill="#F7B928" />
                   </svg>
                   <span className="text-[15px] font-semibold text-gray-800">Feeling/activity</span>
                   {selectedFeeling && (
@@ -648,8 +676,8 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-left w-full cursor-pointer hover:border-blue-400 relative"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C7.58 2 4 5.58 4 10C4 15.25 12 22 12 22C12 22 20 15.25 20 10C20 5.58 16.42 2 12 2Z" fill="#F5533D"/>
-                    <circle cx="12" cy="10" r="3" fill="white"/>
+                    <path d="M12 2C7.58 2 4 5.58 4 10C4 15.25 12 22 12 22C12 22 20 15.25 20 10C20 5.58 16.42 2 12 2Z" fill="#F5533D" />
+                    <circle cx="12" cy="10" r="3" fill="white" />
                   </svg>
                   <span className="text-[15px] font-semibold text-gray-800">Check in</span>
                   {selectedLocation && (
@@ -708,16 +736,16 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   type="button"
                   onClick={() => setVisibility(0)}
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left cursor-pointer
-                    ${visibility === 0 
-                      ? "border-blue-500 bg-blue-50/20" 
+                    ${visibility === 0
+                      ? "border-blue-500 bg-blue-50/20"
                       : "border-gray-200 hover:bg-gray-50"}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M2 12h20" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" stroke="currentColor" strokeWidth="2" />
+                        <path d="M2 12h20" stroke="currentColor" strokeWidth="2" />
                       </svg>
                     </div>
                     <div>
@@ -737,17 +765,17 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   type="button"
                   onClick={() => setVisibility(1)}
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left cursor-pointer
-                    ${visibility === 1 
-                      ? "border-blue-500 bg-blue-50/20" 
+                    ${visibility === 1
+                      ? "border-blue-500 bg-blue-50/20"
                       : "border-gray-200 hover:bg-gray-50"}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M23 21v-2a4 4 0 00-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M23 21v-2a4 4 0 00-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </div>
                     <div>
@@ -767,15 +795,15 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                   type="button"
                   onClick={() => setVisibility(2)}
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left cursor-pointer
-                    ${visibility === 2 
-                      ? "border-blue-500 bg-blue-50/20" 
+                    ${visibility === 2
+                      ? "border-blue-500 bg-blue-50/20"
                       : "border-gray-200 hover:bg-gray-50"}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2"/>
+                        <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                        <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" />
                       </svg>
                     </div>
                     <div>

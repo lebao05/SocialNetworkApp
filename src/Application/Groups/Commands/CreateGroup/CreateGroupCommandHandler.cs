@@ -50,6 +50,9 @@ namespace Application.Groups.Commands.CreateGroup
                     privacyType: request.PrivacyType,
                     coverPhotoUrl: null);
 
+                // Add the creator as an Admin member
+                group.AddMember(request.OwnerUserId, GroupMemberRole.Admin);
+
                 _groupRepository.Add(group);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -40,6 +40,8 @@ namespace Application.Groups.Queries.GetGroupJoinRequests
                 page,
                 pageSize,
                 request.SearchTerm,
+                request.FromDate,
+                request.HaveAvatar,
                 cancellationToken: cancellationToken);
 
             return Result.Success(new PagedList<GroupJoinRequestDto>(
