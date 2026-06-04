@@ -238,3 +238,31 @@ export async function getGroupInsightsApi(groupId, { fromDate = null, toDate = n
   });
   return response.data;
 }
+
+/**
+ * Gets paginated groups filtered by the user's membership status.
+ * Maps to GET /api/groups?isJoining=&page=&pageSize=&searchTerm=
+ *
+ * @param {{ isJoining: boolean, page?: number, pageSize?: number, searchTerm?: string }} options
+ * @returns {Promise<{
+ *   items: Array<{
+ *     id: number,
+ *     name: string,
+ *     coverPhotoUrl: string|null,
+ *     privacyType: string,
+ *     memberCount: number,
+ *     avgPostsLast30Days: number,
+ *     friendPreview: Array<{ userId: string, fullName: string, avatarUrl: string|null }>,
+ *     friendCount: number,
+ *   }>,
+ *   pageNumber: number,
+ *   pageSize: number,
+ *   totalCount: number,
+ * }>}
+ */
+export async function getGroupsApi({ isJoining, page = 1, pageSize = 12, searchTerm = null } = {}) {
+  const response = await axios.get("/groups", {
+    params: { isJoining, page, pageSize, searchTerm },
+  });
+  return response.data;
+}

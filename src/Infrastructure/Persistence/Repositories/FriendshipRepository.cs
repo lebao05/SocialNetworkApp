@@ -63,12 +63,21 @@ namespace Infrastructure.Persistence.Repositories
             Guid userId,
             int page,
             int pageSize,
-            CancellationToken cancellationToken)
+            string? searchTerm = null,
+            CancellationToken cancellationToken = default)
         {
             var query = _context.Friendships
                 .Where(f => f.User1Id == userId || f.User2Id == userId)
                 .Select(f => f.User1Id == userId ? f.User2 : f.User1)
                 .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(u =>
+                    (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
+                    (u.LastName != null && u.LastName.ToLower().Contains(term)));
+            }
 
             return await PagedList<User>.CreateAsync(query, page, pageSize, cancellationToken);
         }
@@ -113,5 +122,14 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
-    }
+
+        public async Task<List<User>> GetFolloweesAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return await _context.Followings
+                .Where(f => f.FollowerId == userId)
+                .Select(f => f.Followee)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
 }

@@ -4,4 +4,5 @@ using Application.Shared;
 
 namespace Application.Friend.Queries.GetFriends;
 
-public sealed record GetFriendsQuery(Guid UserId, int Page = 1) : IQuery<PagedList<FriendResponse>>;
+public sealed record GetFriendsQuery(Guid UserId, int Page = 1, string? SearchTerm = null)
+    : IQuery<PagedList<FriendResponse>>;

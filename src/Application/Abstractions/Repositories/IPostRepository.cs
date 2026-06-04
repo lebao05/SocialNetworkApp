@@ -31,6 +31,7 @@ namespace Application.Abstractions.Repositories
         Task<Dictionary<long, int>> GetReplyCountsAsync(IEnumerable<long> commentIds, CancellationToken cancellationToken = default);
         Task<int> GetCommentCountByPostIdsAsync(IEnumerable<long> postIds, CancellationToken cancellationToken = default);
         Task<int> GetReactionCountByPostIdsAsync(IEnumerable<long> postIds, CancellationToken cancellationToken = default);
+        Task<Dictionary<long, int>> GetPostCountsByGroupIdsAsync(IEnumerable<long> groupIds, DateTime? fromDate = null, CancellationToken cancellationToken = default);
         void AddComment(PostComment comment);
         Task<SavedPost?> GetSavedPostAsync(long postId, Guid userId, CancellationToken cancellationToken = default);
         void AddSavedPost(SavedPost savedPost);

@@ -12,7 +12,7 @@ namespace Application.Abstractions.Repositories
         Task AddFollowingAsync(Following following);
         Task RemoveFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken);
         Task<List<User>> GetFriendsAsync(Guid userId, CancellationToken cancellationToken);
-        Task<PagedList<User>> GetFriendsPagedAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
+        Task<PagedList<User>> GetFriendsPagedAsync(Guid userId, int page, int pageSize, string? searchTerm = null, CancellationToken cancellationToken = default);
         Task<List<Friendship>> GetAllFriendshipsAsync(CancellationToken cancellationToken = default);
         Task<List<User>> SearchFriendsToChatAsync(
             Guid userId,
@@ -20,5 +20,6 @@ namespace Application.Abstractions.Repositories
             int pageNumber,
             int pageSize,
             CancellationToken cancellationToken);
+        Task<List<User>> GetFolloweesAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

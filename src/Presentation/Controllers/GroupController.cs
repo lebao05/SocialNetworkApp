@@ -17,6 +17,7 @@ using Application.Groups.Queries.GetGroupJoinRequests;
 using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
 using Application.Groups.Queries.GetReportedContents;
+using Application.Groups.Queries.GetGroups;
 using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -380,6 +381,26 @@ namespace Presentation.Controllers
             CancellationToken cancellationToken)
         {
             var query = new GetGroupRulesQuery(groupId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetGroups(
+            [FromQuery] bool isJoining,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12,
+            [FromQuery] string? searchTerm = null,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetGroupsQuery(userId, isJoining, page, pageSize, searchTerm);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

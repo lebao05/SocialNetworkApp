@@ -144,8 +144,10 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     return data;
   };
 
-  const uploadCoverPhoto = (file) =>
-    runAction(() => uploadGroupCoverPhotoApi(groupId, file), "Unable to upload group cover photo");
+  const uploadCoverPhoto = async (file) => {
+    await runAction(() => uploadGroupCoverPhotoApi(groupId, file), "Unable to upload group cover photo");
+    await fetchGroupDetail();
+  };
 
   const joinGroup = (targetGroupId = groupId) =>
     runAction(() => joinGroupApi(targetGroupId), "Unable to join group");

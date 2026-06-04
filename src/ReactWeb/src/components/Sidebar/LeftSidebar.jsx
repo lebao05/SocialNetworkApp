@@ -96,7 +96,7 @@ export default function LeftSidebar() {
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
       <Link to="/profile" className="mb-1 flex items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]">
         <img
-          src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+          src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
           alt="avatar"
           className="h-9 w-9 rounded-full border border-black/10 object-cover shadow-sm"
         />

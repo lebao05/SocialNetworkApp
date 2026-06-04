@@ -4,12 +4,13 @@ import Navbar from "../components/Navbar/Navbar";
 import { useAuth } from "../contexts/authContext";
 import { usePersonalInfo } from "../hooks/usePersonalInfo";
 import { useUserPosts } from "../hooks/useUserPosts";
+import { useUserMedias } from "../hooks/useUserMedias";
 import { useSchools } from "../hooks/useSchools";
 import { updateUserInfoApi, uploadAvatarApi, uploadCoverPhotoApi } from "../apis/userApi";
 import AboutTab from "../components/Profile/AboutTab";
 import FriendsTab from "../components/Profile/FriendsTab";
-import PhotosTab from "../components/Profile/PhotosTab";
 import FollowingTab from "../components/Profile/FollowingTab";
+import MediaTab from "../components/Profile/MediaTab";
 import CreatePostModal from "../components/Profile/CreatePostModal";
 import {
   Camera,
@@ -96,6 +97,8 @@ export default function ProfilePage() {
   const isOwnProfile = !userId || String(authUser?.id) === String(userId);
   const { personalInfo, loading: infoLoading, error: infoError, setPersonalInfo } = usePersonalInfo(viewUserId);
   const { schools, loading: schoolsLoading, fetchSchools } = useSchools(viewUserId);
+  const { medias: userPhotos, isLoading: photosLoading, error: photosError, loadMore: loadMorePhotos } = useUserMedias({ userId: viewUserId, mediaType: "image", pageSize: 9 });
+  const { medias: userVideos, isLoading: videosLoading, error: videosError, loadMore: loadMoreVideos } = useUserMedias({ userId: viewUserId, mediaType: "video", pageSize: 12 });
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -485,10 +488,6 @@ export default function ProfilePage() {
                   {displayUser.name}
                 </h1>
 
-                <p className={`text-[15px] font-semibold mt-1 flex items-center justify-center md:justify-start gap-1 cursor-pointer hover:underline ${theme.textSub}`}>
-                  {displayUser.friendsCount} người bạn
-                </p>
-
                 {/* Overlapping Mutual Friends Avatars */}
                 <div className="flex items-center justify-center md:justify-start -space-x-2 mt-2 overflow-hidden">
                   {mockFriends.slice(0, 8).map((friend, i) => (
@@ -592,9 +591,8 @@ export default function ProfilePage() {
               { id: "all", label: "All" },
               { id: "about", label: "About" },
               { id: "friends", label: "Friends" },
-              { id: "photos", label: "Photos" },
+              { id: "media", label: "Media" },
               { id: "following", label: "Following" },
-              { id: "more", label: "More" }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -714,7 +712,10 @@ export default function ProfilePage() {
                 {/* Tin nổi bật section */}
                 <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
                   <h3 className={`text-sm font-semibold mb-3 ${theme.text}`}>Featured Stories</h3>
-                  <button className={`w-full py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}>
+                  <button
+                    onClick={() => navigate("/stories/create")}
+                    className={`w-full py-2 font-semibold text-sm rounded-lg transition-all cursor-pointer ${theme.btnGray}`}
+                  >
                     Add Featured Story
                   </button>
                 </div>
@@ -727,20 +728,26 @@ export default function ProfilePage() {
                     <h2 className={`text-xl font-bold ${theme.text}`}>Photos</h2>
                   </div>
                   <button
-                    onClick={() => setActiveTab("photos")}
+                    onClick={() => setActiveTab("media")}
                     className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
                   >
-                    View all photos
+                    See all photos
                   </button>
                 </div>
 
-                {/* 3x3 Photo Grid */}
-                <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
-                  {mockPhotos.map((url, i) => (
-                    <div key={i} className="aspect-square bg-gray-700 hover:brightness-90 transition-all cursor-pointer">
-                      <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
+                {/* 4-column Photo Grid */}
+                <div className="grid grid-cols-4 gap-1 rounded-lg overflow-hidden">
+                  {photosLoading && userPhotos.length === 0 ? (
+                    <div className="col-span-4 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading photos...</div>
+                  ) : userPhotos.length === 0 ? (
+                    <div className="col-span-4 flex items-center justify-center py-8 text-sm text-[#65676b]">No photos yet.</div>
+                  ) : (
+                    userPhotos.slice(0, 8).map((photo) => (
+                      <div key={photo.id} className="aspect-square bg-gray-700 hover:brightness-90 transition-all cursor-pointer">
+                        <img src={photo.mediaUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -749,37 +756,31 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between mb-1">
                   <div>
                     <h2 className={`text-xl font-bold ${theme.text}`}>Friends</h2>
-                    <p className={`text-sm ${theme.textSub}`}>{displayUser.friendsCount} friends</p>
                   </div>
                   <button
                     onClick={() => setActiveTab("friends")}
                     className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
                   >
-                    View all friends
+                    See all friends
                   </button>
                 </div>
 
-                {/* 3x3 Friends Grid */}
-                <div className="grid grid-cols-3 gap-x-3 gap-y-4 mt-3">
+                {/* 4-column Friends Grid */}
+                <div className="grid grid-cols-4 gap-1">
                   {mockFriends.map((friend) => (
                     <div key={friend.id} className="cursor-pointer group flex flex-col">
-                      <div className="aspect-square bg-gray-700 rounded-lg overflow-hidden relative hover:brightness-95 transition-all">
+                      <div className="h-28 bg-gray-200 dark:bg-[#3a3b3c] rounded-md overflow-hidden relative hover:opacity-90 transition-opacity">
                         {friend.avatar ? (
                           <img src={friend.avatar} alt={friend.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full bg-[#3a3b3c] dark:bg-[#4e4f50] flex items-center justify-center text-white text-3xl font-semibold">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-[#3a3b3c] text-[#65676B] text-base font-medium uppercase">
                             {friend.name.charAt(0)}
                           </div>
                         )}
                       </div>
-                      <span className={`text-xs font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
+                      <span className={`text-sm font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
                         {friend.name}
                       </span>
-                      {friend.mutual > 0 && (
-                        <span className={`text-[10px] ${theme.textSub}`}>
-                          {friend.mutual} bạn chung
-                        </span>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -902,11 +903,21 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "friends" && (
-              <FriendsTab theme={theme} displayUser={displayUser} mockFriends={mockFriends} />
+              <FriendsTab userId={viewUserId} theme={theme} />
             )}
 
-            {activeTab === "photos" && (
-              <PhotosTab theme={theme} mockPhotos={mockPhotos} />
+            {activeTab === "media" && (
+              <MediaTab
+                theme={theme}
+                userPhotos={userPhotos}
+                userVideos={userVideos}
+                photosLoading={photosLoading}
+                videosLoading={videosLoading}
+                photosError={photosError}
+                videosError={videosError}
+                loadMorePhotos={loadMorePhotos}
+                loadMoreVideos={loadMoreVideos}
+              />
             )}
             {activeTab === "following" && (
               <FollowingTab theme={theme} />

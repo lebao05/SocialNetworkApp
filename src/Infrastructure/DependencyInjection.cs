@@ -21,6 +21,7 @@ namespace Infrastructure
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();
             services.AddScoped<IGroupReportRepository, GroupReportRepository>();
+            services.AddScoped<IGroupListingRepository, GroupListingRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
             services.AddScoped<IFriendshipRepository, FriendshipRepository>();

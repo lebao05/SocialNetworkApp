@@ -32,39 +32,121 @@ function TopBar({ fromDate, toDate, onDateRangeChange, onExport }) {
   );
 }
 
-function LineChart({ spike = true }) {
-  return (
-    <div className="relative mt-4 h-[230px]">
-      <div className="absolute inset-x-0 top-0 border-t border-[#ced0d4]" />
-      <div className="absolute inset-x-0 bottom-9 border-t border-[#ced0d4]" />
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 560 230" preserveAspectRatio="none">
-        <polyline
-          points={spike ? "16,186 150,186 280,186 420,186 520,186 544,46" : "16,186 150,186 280,186 420,186 544,186"}
-          fill="none"
-          stroke="#0866ff"
-          strokeWidth="3"
-        />
-      </svg>
-      <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-[12px] text-[#65676b]">
-        <span>3 Thang 5</span>
-        <span>10 Thang 5</span>
-        <span>17 Thang 5</span>
-        <span>24 Thang 5</span>
+function DailyChart({ data = [], metric = "Posts" }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[230px] items-center justify-center text-[13px] text-[#65676b]">
+        No data to display
       </div>
-      <span className="absolute right-0 top-[-6px] text-[12px] text-[#65676b]">1</span>
-      <span className="absolute bottom-9 right-0 text-[12px] text-[#65676b]">0</span>
+    );
+  }
+
+  const maxValue = Math.max(...data.map((d) => d.posts + d.comments + d.reactions), 1);
+
+  const width = 560;
+  const height = 230;
+  const padding = { top: 10, right: 20, bottom: 36, left: 10 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  const xScale = (i) => padding.left + (i / (data.length - 1 || 1)) * chartWidth;
+  const yScale = (v) => padding.top + chartHeight - (v / maxValue) * chartHeight;
+
+  const postsPoints = data.map((d, i) => `${xScale(i)},${yScale(d.posts)}`).join(" ");
+  const commentsPoints = data.map((d, i) => `${xScale(i)},${yScale(d.comments)}`).join(" ");
+  const reactionsPoints = data.map((d, i) => `${xScale(i)},${yScale(d.reactions)}`).join(" ");
+  const allPoints = data.map((d, i) => `${xScale(i)},${yScale(d.posts + d.comments + d.reactions)}`).join(" ");
+
+  const metricConfig = {
+    Posts:     { key: "posts",     color: "#0866ff", label: "Posts" },
+    Comments:  { key: "comments",  color: "#42b72a", label: "Comments" },
+    Reactions: { key: "reactions", color: "#f33e58", label: "Reactions" },
+    All:       { key: "all",       color: "#0866ff", label: "All" },
+  };
+  const cfg = metricConfig[metric] || metricConfig.Posts;
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("vi-VN", { day: "numeric", month: "short" });
+  };
+
+  return (
+    <div className="relative mt-4">
+      {/* Legend */}
+      <div className="mb-2 flex items-center gap-4 text-[11px]">
+        {["Posts", "Comments", "Reactions"].map((m) => (
+          <span key={m} className="flex items-center gap-1">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: metricConfig[m].color }}
+            />
+            {m}
+          </span>
+        ))}
+      </div>
+
+      <svg className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+          const y = padding.top + chartHeight * (1 - t);
+          return (
+            <line
+              key={t}
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={y}
+              y2={y}
+              stroke="#e4e6eb"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Lines */}
+        {metric === "All" ? (
+          <>
+            <polyline points={postsPoints} fill="none" stroke="#0866ff" strokeWidth="2" />
+            <polyline points={commentsPoints} fill="none" stroke="#42b72a" strokeWidth="2" />
+            <polyline points={reactionsPoints} fill="none" stroke="#f33e58" strokeWidth="2" />
+          </>
+        ) : (
+          <polyline
+            points={cfg.key === "all" ? allPoints : data.map((d, i) => `${xScale(i)},${yScale(d[cfg.key])}`).join(" ")}
+            fill="none"
+            stroke={cfg.color}
+            strokeWidth="2.5"
+          />
+        )}
+      </svg>
+
+      {/* X-axis labels */}
+      <div className="mt-1 flex justify-between px-1 text-[11px] text-[#65676b]">
+        {data
+          .filter((_, i) => {
+            if (data.length <= 4) return true;
+            return i === 0 || i === data.length - 1 || i === Math.floor(data.length / 2);
+          })
+          .map((d) => {
+            const origIndex = data.findIndex((x) => x === d);
+            return (
+              <span key={origIndex} className={origIndex === 0 ? "text-left" : origIndex === data.length - 1 ? "text-right" : "text-center"}>
+                {formatDate(d.date)}
+              </span>
+            );
+          })}
+      </div>
     </div>
   );
 }
 
-function ChartCard({ title, subtitle, spike = true, children }) {
+function ChartCard({ title, subtitle, chartData = [], activeMetric = "Posts", children }) {
   return (
     <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
       <h2 className="text-[15px] font-bold">
         {title} <Info size={14} className="inline text-[#65676b]" fill="currentColor" />
       </h2>
       {subtitle && <p className="text-[12px] text-[#65676b]">{subtitle}</p>}
-      <LineChart spike={spike} />
+      <DailyChart data={chartData} metric={activeMetric} />
       {children}
     </section>
   );
@@ -79,12 +161,11 @@ function GrowthView({ insights }) {
       <div className="mx-auto max-w-[760px] space-y-3 px-4 py-4">
         <ChartCard
           title={`Total members: ${totalMembers.toLocaleString()}`}
-          subtitle="29 May 2026"
+          subtitle="Members in the selected period"
         />
         <ChartCard
           title={`${pending} pending membership requests`}
-          subtitle="2 May 2026 - 29 May 2026"
-          spike={false}
+          subtitle="Requests awaiting review"
         >
           <button
             type="button"
@@ -117,10 +198,9 @@ function GrowthView({ insights }) {
 }
 
 function EngagementView({ insights }) {
-  const { posts, comments, reactions, activeMembers, topDays, peakHours } = insights;
+  const { posts, comments, reactions, activeMembers, topDays, peakHours, engagementChart } = insights;
   const [activeMetric, setActiveMetric] = useState("Posts");
   const metricButtons = ["Posts", "Comments", "Reactions", "All"];
-  const metricValues = { Posts: posts, Comments: comments, Reactions: reactions, All: null };
 
   return (
     <main className="min-h-[calc(100vh-56px)] bg-[#f0f2f5] pt-14 lg:pl-[292px]">
@@ -129,9 +209,8 @@ function EngagementView({ insights }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-[15px] font-bold">
-                {posts.toLocaleString()} posts <Info size={14} className="inline text-[#65676b]" />
+                {posts.toLocaleString()} posts &middot; {comments.toLocaleString()} comments &middot; {reactions.toLocaleString()} reactions <Info size={14} className="inline text-[#65676b]" />
               </h2>
-              <p className="text-[12px] text-[#65676b]">2 May 2026 - 29 May 2026</p>
             </div>
             <div className="flex gap-2">
               {metricButtons.map((item) => (
@@ -148,12 +227,12 @@ function EngagementView({ insights }) {
               ))}
             </div>
           </div>
-          <LineChart spike={false} />
+          <DailyChart data={engagementChart} metric={activeMetric} />
         </section>
 
         <ChartCard
           title={`${activeMembers.toLocaleString()} active members`}
-          subtitle="2 May 2026 - 29 May 2026"
+          subtitle="Members who interacted in the selected period"
         />
 
         <div className="grid gap-3 md:grid-cols-2">

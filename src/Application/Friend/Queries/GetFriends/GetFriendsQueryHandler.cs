@@ -1,4 +1,3 @@
-using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Friends;
@@ -13,14 +12,10 @@ internal sealed class GetFriendsQueryHandler
     private const int PageSize = 10;
 
     private readonly IFriendshipRepository _friendshipRepository;
-    private readonly IFriendGraphService _friendGraphService;
 
-    public GetFriendsQueryHandler(
-        IFriendshipRepository friendshipRepository,
-        IFriendGraphService friendGraphService)
+    public GetFriendsQueryHandler(IFriendshipRepository friendshipRepository)
     {
         _friendshipRepository = friendshipRepository;
-        _friendGraphService = friendGraphService;
     }
 
     public async Task<Result<PagedList<FriendResponse>>> Handle(
@@ -33,24 +28,18 @@ internal sealed class GetFriendsQueryHandler
             request.UserId,
             page,
             PageSize,
+            request.SearchTerm,
             cancellationToken);
 
-        var items = await Task.WhenAll(pagedFriends.Items.Select(async friend =>
-        {
-            var mutualFriendCount = await _friendGraphService.GetMutualFriendCountAsync(
-                request.UserId,
-                friend.Id);
-
-            return new FriendResponse(
-                friend.Id,
-                friend.UserName ?? string.Empty,
-                $"{friend.FirstName} {friend.LastName}".Trim(),
-                friend.AvatarUrl,
-                mutualFriendCount);
-        }));
+        var items = pagedFriends.Items.Select(friend => new FriendResponse(
+            friend.Id,
+            friend.UserName ?? string.Empty,
+            $"{friend.FirstName} {friend.LastName}".Trim(),
+            friend.AvatarUrl,
+            0)).ToList();
 
         return Result.Success(new PagedList<FriendResponse>(
-            items.ToList(),
+            items,
             pagedFriends.PageNumber,
             pagedFriends.PageSize,
             pagedFriends.TotalCount));

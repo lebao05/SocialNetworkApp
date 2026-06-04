@@ -50,3 +50,25 @@ export async function getFriendRecommendationsApi(limit = 10) {
     });
     return response.data;
 }
+
+/**
+ * Fetches the current user's followees (people they follow).
+ * Maps to GET /api/friend/followees.
+ * Returns: { id, fullName, avatarUrl, mutualFriendsCount, isFriend }[]
+ */
+export async function getFolloweesApi() {
+    const response = await axios.get("/friend/followees");
+    return response.data;
+}
+
+/**
+ * Fetches a given user's friends, optionally filtered by a search term.
+ * Maps to GET /api/friend/{userId}/friends?searchTerm=...
+ * Returns: { id, userName, fullName, avatarUrl, mutualFriendsCount }[]
+ */
+export async function getProfileFriendsApi(userId, searchTerm = null) {
+    const response = await axios.get(`/friend/${userId}/friends`, {
+        params: { searchTerm: searchTerm || undefined },
+    });
+    return response.data;
+}

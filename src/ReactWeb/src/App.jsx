@@ -12,6 +12,7 @@ import GroupsCreatePage from "./pages/GroupsCreatePage";
 import SearchPage from "./pages/SearchPage";
 import ReelsPage from "./pages/ReelsPage";
 import StoryViewer from "./components/Story/StoryViewer";
+import CreateStoryPage from "./pages/CreateStoryPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/stories" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />
+      <Route path="/stories/create" element={<ProtectedRoute><CreateStoryPage /></ProtectedRoute>} />
       <Route path="/messenger" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/messenger/:convId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

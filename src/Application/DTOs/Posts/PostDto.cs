@@ -6,8 +6,8 @@ namespace Application.DTOs.Posts
 {
     public sealed record PostDto(
         long Id,
-        Guid AuthorId,
-        string AuthorName,
+        Guid? AuthorId,
+        string? AuthorName,
         string? AuthorAvatarUrl,
         long? GroupId,
         string? Content,

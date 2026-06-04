@@ -345,5 +345,26 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.PostReactions
                 .CountAsync(r => idList.Contains(r.PostId), cancellationToken);
         }
+
+        public async Task<Dictionary<long, int>> GetPostCountsByGroupIdsAsync(
+            IEnumerable<long> groupIds,
+            DateTime? fromDate = null,
+            CancellationToken cancellationToken = default)
+        {
+            var idList = groupIds.ToList();
+            if (idList.Count == 0)
+                return new Dictionary<long, int>();
+
+            var query = _context.Posts.AsNoTracking()
+                .Where(p => idList.Contains(p.GroupId ?? 0) && p.GroupId != null);
+
+            if (fromDate.HasValue)
+                query = query.Where(p => p.CreatedAt >= fromDate.Value);
+
+            return await query
+                .GroupBy(p => p.GroupId!.Value)
+                .Select(g => new { GroupId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.GroupId, x => x.Count, cancellationToken);
+        }
     }
 }

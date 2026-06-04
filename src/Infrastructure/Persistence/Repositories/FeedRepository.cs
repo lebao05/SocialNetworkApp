@@ -221,6 +221,7 @@ namespace Infrastructure.Persistence.Repositories
                 post.ApprovalStatus == PostApprovalStatus.Pending,
                 post.IsAnonymous
             );
+        }
 
         public async Task<int> MarkAsSeenAsync(
             Guid userId,

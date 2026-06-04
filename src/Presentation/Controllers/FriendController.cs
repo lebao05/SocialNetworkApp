@@ -3,6 +3,7 @@ using Application.Friend.Commands.SendFriendRequest;
 using Application.Friend.Commands.SyncAllFriends;
 using Application.Friend.Queries.GetFriends;
 using Application.Friend.Queries.GetFriendRecommendations;
+using Application.Friend.Queries.GetFollowees;
 using Application.Friend.Queries.GetIncomingFriendRequests;
 using Application.Friend.Queries.GetMutualFriends;
 using Application.Friend.Queries.GetShortestPath;
@@ -59,11 +60,12 @@ namespace Presentation.Controllers
         [HttpGet]
         public async Task<IActionResult> GetFriends(
             [FromQuery] int page = 1,
+            [FromQuery] string? searchTerm = null,
             CancellationToken ct = default)
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
-            var query = new GetFriendsQuery(userId, page);
+            var query = new GetFriendsQuery(userId, page, searchTerm);
 
             var result = await _sender.Send(query, ct);
 
@@ -90,6 +92,15 @@ namespace Presentation.Controllers
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
             var query = new GetFriendRecommendationsQuery(userId, limit);
+            var result = await _sender.Send(query, ct);
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("followees")]
+        public async Task<IActionResult> GetFollowees(CancellationToken ct = default)
+        {
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+            var query = new GetFolloweesQuery(userId);
             var result = await _sender.Send(query, ct);
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }

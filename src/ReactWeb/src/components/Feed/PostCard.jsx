@@ -1,12 +1,21 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { GrLike } from "react-icons/gr";
 import { FaRegComment } from "react-icons/fa6";
 import { PiShareFatLight } from "react-icons/pi";
-import { createCommentApi, getCommentsApi, reactToCommentApi, reactToPostApi } from "../../apis/postApi";
+import {
+  createCommentApi,
+  getCommentsApi,
+  reactToCommentApi,
+  reactToPostApi,
+  savePostApi,
+  unsavePostApi,
+} from "../../apis/postApi";
+import { reportGroupPostApi } from "../../apis/groupApi";
 import { useAuth } from "../../contexts/authContext";
 import PostComment from "./PostComment";
 import MediaGallery from "./MediaGallery";
 import PostModal from "./PostModal";
+import { Bookmark, Flag, MoreHorizontal, X, Check, AlertTriangle } from "lucide-react";
 
 // ─── Feeling map (matches Domain.Enums.Feeling) ───
 const FEELING_MAP = {
@@ -67,7 +76,7 @@ const REACTION_ICON_FROM_NAME = Object.fromEntries(
   Object.entries(REACTION_TYPE_MAP).map(([icon, name]) => [name, icon])
 );
 
-const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150";
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 function getReactionIcon(reaction) {
   if (reaction == null) return "";
@@ -207,6 +216,17 @@ export default function PostCard({ post }) {
   const [reaction, setReaction] = useState(getReactionIcon(post.userReaction));
   const reactionOptions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
+  // More-options dropdown state
+  const [showOptions, setShowOptions] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetail, setReportDetail] = useState("");
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const dropdownRef = useRef(null);
+
   const REACTION_VALUE_FROM_NAME = Object.fromEntries(
     Object.entries(REACTION_NAME_FROM_VALUE).map(([value, name]) => [name, Number(value)])
   );
@@ -248,6 +268,18 @@ export default function PostCard({ post }) {
   // Refs to hold active timer references
   const hoverTimerRef = useRef(null);
   const leaveTimerRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showOptions) return;
+    const handleClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showOptions]);
 
   const handleMouseEnter = () => {
     if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
@@ -347,6 +379,63 @@ export default function PostCard({ post }) {
         )
       );
       console.error("Failed to react to comment", error);
+    }
+  };
+
+  // ─── Save / Unsave ─────────────────────────────────────────────────────────
+  const handleSaveToggle = async () => {
+    if (isSaving) return;
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved);
+    setShowOptions(false);
+    setIsSaving(true);
+    try {
+      if (wasSaved) {
+        await unsavePostApi(post.id);
+      } else {
+        await savePostApi(post.id);
+      }
+    } catch {
+      setIsSaved(wasSaved); // revert on failure
+      console.error("Failed to toggle save:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ─── Report to Admin ────────────────────────────────────────────────────────
+  const REPORT_REASONS = [
+    { value: "Spam", label: "Spam" },
+    { value: "Harassment", label: "Harassment" },
+    { value: "HateSpeech", label: "Hate speech" },
+    { value: "Violence", label: "Violence" },
+    { value: "Misinformation", label: "Misinformation" },
+    { value: "NudityOrSexual", label: "Nudity or sexual content" },
+    { value: "IntellectualProperty", label: "Intellectual property violation" },
+    { value: "Other", label: "Other" },
+  ];
+
+  const handleOpenReport = () => {
+    setShowOptions(false);
+    setShowReportModal(true);
+    setReportReason("");
+    setReportDetail("");
+    setReportSubmitted(false);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason || isReporting) return;
+    setIsReporting(true);
+    try {
+      await reportGroupPostApi(post.groupId ?? post.GroupId, post.id, {
+        reason: reportReason,
+        additionalDetail: reportDetail || null,
+      });
+      setReportSubmitted(true);
+    } catch {
+      console.error("Failed to submit report");
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -504,8 +593,11 @@ export default function PostCard({ post }) {
     }
   };
 
-  const authorName = post.authorName || post.user || "User";
-  const authorAvatar = post.authorAvatarUrl || post.avatar || DEFAULT_AVATAR;
+  const isAnonymous = post.isAnonymous ?? post.IsAnonymous ?? false;
+  const authorId   = post.authorId ?? post.AuthorId ?? null;
+  const authorName = post.authorName ?? post.user ?? null;
+  const authorAvatar = post.authorAvatarUrl ?? post.avatar ?? null;
+  const showAnonymous = isAnonymous && authorId === null;
   const feeling = post.feelingActivity != null ? FEELING_MAP[post.feelingActivity] : null;
   const displayTime = post.createdAt ? timeAgo(post.createdAt) : (post.time || "");
   const visIcon = VISIBILITY_ICON[post.visibility] ?? VISIBILITY_ICON[0];
@@ -516,33 +608,78 @@ export default function PostCard({ post }) {
       {/* Header */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-2">
-          <img src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full object-cover border" />
-          <div>
-            <p className="text-[15px] font-semibold text-gray-800 leading-tight flex items-center flex-wrap gap-1">
-              <span className="font-bold hover:underline cursor-pointer">{authorName}</span>
-              {feeling && (
-                <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
-                  đang cảm thấy {feeling.emoji} <span className="font-semibold text-[#050505]">{feeling.label}</span>
-                </span>
-              )}
-              {post.locationTag && (
-                <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
-                  ở <span className="font-semibold text-[#050505]">{post.locationTag}</span>
-                </span>
-              )}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {displayTime} · {visIcon}
-            </p>
-          </div>
+          {showAnonymous ? (
+            <>
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-[18px] font-bold border border-gray-300">
+                ?
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-gray-500 leading-tight flex items-center flex-wrap gap-1">
+                  <span className="font-bold">Anonymous</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-300 px-2 py-0.5 text-[11px] font-semibold text-gray-500">
+                    Anonymous post
+                  </span>
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {displayTime} · Hidden author
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <img src={authorAvatar || DEFAULT_AVATAR} alt={authorName || "User"} className="w-10 h-10 rounded-full object-cover border" />
+              <div>
+                <p className="text-[15px] font-semibold text-gray-800 leading-tight flex items-center flex-wrap gap-1">
+                  <span className="font-bold hover:underline cursor-pointer">{authorName}</span>
+                  {feeling && (
+                    <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
+                      đang cảm thấy {feeling.emoji} <span className="font-semibold text-[#050505]">{feeling.label}</span>
+                    </span>
+                  )}
+                  {post.locationTag && (
+                    <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
+                      ở <span className="font-semibold text-[#050505]">{post.locationTag}</span>
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {displayTime} · {visIcon}
+                </p>
+              </div>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          <button className="w-9 h-9 rounded-full hover:bg-[#F2F4F7] flex items-center justify-center text-gray-500 font-bold text-lg">
-            ···
+        <div className="flex items-center gap-1 relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowOptions((v) => !v)}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer"
+            aria-label="More options"
+          >
+            <MoreHorizontal size={25} />
           </button>
-          <button className="w-9 h-9 rounded-full hover:bg-[#F2F4F7] flex items-center justify-center text-gray-500">
-            ✕
-          </button>
+
+          {showOptions && (
+            <div className="absolute right-0 top-full mt-1 z-30 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={handleSaveToggle}
+                disabled={isSaving}
+                className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-60"
+              >
+                <Bookmark size={18} className={isSaved ? "text-blue-600 fill-blue-600" : "text-gray-600"} />
+                {isSaving ? "..." : isSaved ? "Unsave post" : "Save post"}
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenReport}
+                className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                <Flag size={18} className="text-gray-600" />
+                Report post to admin
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -654,6 +791,110 @@ export default function PostCard({ post }) {
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
       />
+
+      {/* Report to Admin Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900">Report post</h2>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {reportSubmitted ? (
+              <div className="p-6 flex flex-col items-center gap-3 text-center">
+                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check size={28} className="text-green-600" />
+                </div>
+                <p className="text-[15px] font-bold text-gray-900">Report submitted</p>
+                <p className="text-[13px] text-gray-500">
+                  Thank you. Group admins will review this post.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="mt-2 px-6 py-2 bg-[#1877F2] text-white text-[15px] font-bold rounded-md hover:bg-blue-600 transition-colors cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 flex flex-col gap-4">
+                {/* Reason selector */}
+                <div>
+                  <label className="block text-[13px] font-bold text-gray-700 mb-2">
+                    Reason for reporting
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {REPORT_REASONS.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setReportReason(r.value)}
+                        className={`px-3 py-2 rounded-lg text-[13px] font-semibold border transition-colors cursor-pointer text-left ${
+                          reportReason === r.value
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Optional detail */}
+                <div>
+                  <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
+                    Additional details <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <textarea
+                    value={reportDetail}
+                    onChange={(e) => setReportDetail(e.target.value)}
+                    placeholder="Provide more context..."
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[14px] text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                {/* Warning */}
+                <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
+                  <AlertTriangle size={15} className="text-red-500 mt-0.5 shrink-0" />
+                  <p className="text-[12px] text-red-700 leading-relaxed">
+                    Only submit a report if you believe this content violates community standards. False reports may result in action against your account.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(false)}
+                    className="px-4 py-2 text-[14px] font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitReport}
+                    disabled={!reportReason || isReporting}
+                    className="px-4 py-2 text-[14px] font-bold text-white bg-[#dc3545] rounded-lg hover:bg-[#c82333] transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isReporting ? "Submitting..." : "Submit report"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

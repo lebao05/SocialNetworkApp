@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   Bell,
+  Camera,
   ChevronDown,
   ChevronUp,
   Earth,
@@ -245,7 +246,7 @@ function PeopleTab({ contentOffsetClass, groupId }) {
                       <img
                         src={
                           member.avatarUrl ||
-                          `https://api.dicebear.com/9.x/avataaars/svg?seed=${member.userId}`
+                          import.meta.env.VITE_DEFAULT_AVATAR
                         }
                         alt=""
                         className="h-12 w-12 rounded-full bg-[#e4e6eb] object-cover"
@@ -377,7 +378,24 @@ function MediaTab({ contentOffsetClass, groupId }) {
   );
 }
 
-function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter }) {
+function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, isAdmin, uploadCoverPhoto, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter }) {
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  const handleUploadCover = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingCover(true);
+    try {
+      await uploadCoverPhoto(file);
+    } catch (err) {
+      console.error("Failed to upload cover photo:", err);
+    } finally {
+      setIsUploadingCover(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const theme = {
     card: "bg-white text-[#050505]",
     textSub: "text-[#65676b]",
@@ -387,7 +405,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
   const memberCount = groupDetail?.memberCount ?? groupDetail?.MemberCount ?? 0;
   const groupName = groupDetail?.name ?? groupDetail?.Name ?? groupInfo.name;
   const description = groupDetail?.description ?? groupDetail?.Description ?? "No description available for this group.";
-  const coverPhotoUrl = groupDetail?.coverPhotoUrl ?? groupDetail?.CoverPhotoUrl ?? groupInfo.cover;
+  const coverPhotoUrl = groupDetail?.coverPhotoUrl ?? groupDetail?.CoverPhotoUrl ?? groupInfo.cover ?? import.meta.env.VITE_DEFAULT_GROUP_COVER;
 
   useEffect(() => {
     if (activeTab === "About" && fetchRules) {
@@ -410,9 +428,26 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
           <div className="relative h-[280px] overflow-hidden rounded-b-lg bg-[#d8dadf] sm:h-[320px]">
             <img src={coverPhotoUrl} alt="" className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 bg-[#007c9b] px-4 py-2 text-[13px] font-semibold text-white">
-              {groupName}
-            </div>
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingCover}
+                  className="absolute bottom-3 right-3 flex h-9 cursor-pointer items-center gap-2 rounded-md bg-white/90 px-3 text-[13px] font-semibold text-[#050505] hover:bg-white disabled:opacity-60"
+                >
+                  <Camera size={15} />
+                  {isUploadingCover ? "Uploading..." : "Upload cover"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadCover}
+                  className="hidden"
+                />
+              </>
+            )}
           </div>
 
           <div className="px-4 py-5">
@@ -614,7 +649,7 @@ export default function GroupPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const numericGroupId = Number(groupId);
   const { user: currentUser } = useAuth();
-  const { groupDetail, loading, error, rules, fetchRules } = useGroup(numericGroupId);
+  const { groupDetail, loading, error, rules, fetchRules, uploadCoverPhoto } = useGroup(numericGroupId);
   const [activeTab, setActiveTab] = useState("Discussion");
   const [isMineFilter, setIsMineFilter] = useState(false);
   const [fromDateFilter, setFromDateFilter] = useState(null);
@@ -641,7 +676,7 @@ export default function GroupPage() {
   const contentOffsetClass = isAdmin ? "lg:pl-[292px]" : "";
   const displayUser = {
     name: currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || "You" : "You",
-    avatar: currentUser?.avatarUrl || currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+    avatar: currentUser?.avatarUrl || currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR,
   };
 
   const handleCreatePost = async (payload) => {
@@ -675,6 +710,8 @@ export default function GroupPage() {
           displayUser={displayUser}
           groupDetail={groupDetail}
           groupId={numericGroupId}
+          isAdmin={isAdmin}
+          uploadCoverPhoto={uploadCoverPhoto}
           posts={posts}
           setIsCreateModalOpen={setIsCreateModalOpen}
           rules={rules}

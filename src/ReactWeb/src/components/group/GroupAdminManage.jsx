@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   Badge,
   ChevronDown,
   Clock,
@@ -10,6 +11,7 @@ import {
   Search,
   Settings,
   Shield,
+  User,
   UserPlus,
   Users,
   X,
@@ -17,6 +19,8 @@ import {
 import { useGroup } from "../../hooks/useGroup";
 import { useAuth } from "../../contexts/authContext";
 import { usePendingPosts } from "../../hooks/usePendingPosts";
+import { useReportedContent } from "../../hooks/useReportedContent";
+import MediaGallery from "../Feed/MediaGallery";
 
 function AdminShell({ title, filters, children, actions }) {
   return (
@@ -491,7 +495,7 @@ function PendingPostsView({ groupId, type }) {
                     src={
                       authorAvatar
                         ? authorAvatar
-                        : `https://api.dicebear.com/9.x/avataaars/svg?seed=${postId}`
+                        : import.meta.env.VITE_DEFAULT_AVATAR
                     }
                     alt={authorName}
                     className="h-10 w-10 shrink-0 rounded-full bg-[#e4e6eb] object-cover"
@@ -562,52 +566,8 @@ function PendingPostsView({ groupId, type }) {
                     )}
 
                     {hasMedia && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {mediaList.slice(0, 4).map((m, i) => {
-                          const url = m.mediaUrl ?? m.MediaUrl ?? m.url ?? "";
-                          const isVideo =
-                            (m.mediaType ?? m.MediaType ?? "").toLowerCase().includes("video");
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => navigate(`/posts/${postId}`)}
-                              className="relative h-20 w-20 overflow-hidden rounded-md bg-[#e4e6eb] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
-                              title="View post"
-                            >
-                              {isVideo ? (
-                                <div className="flex h-full w-full items-center justify-center bg-[#d8dadf]">
-                                  <Play size={24} className="text-[#65676b]" />
-                                </div>
-                              ) : (
-                                <img
-                                  src={url}
-                                  alt=""
-                                  className="h-full w-full object-cover hover:opacity-90"
-                                  onError={(e) => { e.target.style.display = "none"; }}
-                                />
-                              )}
-                            </button>
-                          );
-                        })}
-                        {mediaList.length > 4 && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/posts/${postId}`)}
-                            className="flex h-20 w-20 items-center justify-center rounded-md bg-[#d8dadf] text-[13px] font-semibold text-[#65676b] hover:bg-[#ced0d4] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
-                            title="View post"
-                          >
-                            +{mediaList.length - 4}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/posts/${postId}`)}
-                          className="flex h-20 items-center gap-1.5 rounded-md bg-[#e7f3ff] px-3 text-[12px] font-semibold text-[#0866ff] hover:bg-[#dbeeff] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
-                        >
-                          <FileText size={14} />
-                          View post
-                        </button>
+                      <div className="mt-2">
+                        <MediaGallery media={mediaList} />
                       </div>
                     )}
 
@@ -1019,6 +979,224 @@ function RolesView({ groupId }) {
   );
 }
 
+function ReportedContentView({ groupId }) {
+  const navigate = useNavigate();
+  const {
+    reports,
+    isLoading,
+    hasNextPage,
+    totalCount,
+    error,
+    actionLoading,
+    loadMore,
+    hideReport,
+    dismissReport,
+  } = useReportedContent(groupId);
+
+  const handleAction = async (reportId, actionFn) => {
+    try {
+      await actionFn(reportId);
+    } catch {
+      // error is logged in the hook
+    }
+  };
+
+  const REASON_LABELS = {
+    // Numeric keys (from backend enum)
+    0: "Spam",
+    1: "Harassment",
+    2: "Hate speech",
+    3: "Violence",
+    4: "Misinformation",
+    5: "Nudity / Sexual",
+    6: "IP violation",
+    7: "Other",
+    // String keys (backward compat)
+    Spam: "Spam",
+    Harassment: "Harassment",
+    HateSpeech: "Hate speech",
+    Violence: "Violence",
+    Misinformation: "Misinformation",
+    NudityOrSexual: "Nudity / Sexual",
+    IntellectualProperty: "IP violation",
+    Other: "Other",
+  };
+
+  return (
+    <AdminShell
+      title="Reported content"
+      filters={
+        <span className="text-[13px] text-[#65676b]">
+          {isLoading && reports.length === 0
+            ? "Loading..."
+            : `${totalCount} report${totalCount !== 1 ? "s" : ""} awaiting review`}
+        </span>
+      }
+    >
+      {reports.length === 0 ? (
+        <EmptyState
+          icon="file"
+          title="No reported content"
+          description="Review content that members reported to group admins."
+        />
+      ) : (
+        <div className="space-y-3">
+          {reports.map((report) => {
+            const reportId = report.id ?? report.Id;
+            const status = report.status ?? report.Status ?? "Pending";
+            const isReviewed = status === "Reviewed" || status === "Dismissed";
+            const isPending = !isReviewed;
+
+            const reporterAvatar =
+              report.reporterAvatarUrl ?? report.ReporterAvatarUrl ?? null;
+            const reporterName =
+              report.reporterName ?? report.ReporterName ?? "Someone";
+            const postAuthorName =
+              report.postAuthorName ?? report.PostAuthorName ?? "User";
+            const postContent =
+              report.postContent ?? report.PostContent ?? "";
+            const reason = report.reason ?? report.Reason;
+            const reasonLabel =
+              REASON_LABELS[reason] ?? REASON_LABELS[reason?.toString()] ?? String(reason ?? "Unknown");
+            const detail =
+              report.additionalDetail ?? report.AdditionalDetail ?? null;
+            const createdAt = report.createdAt ?? report.CreatedAt
+              ? new Date(report.createdAt ?? report.CreatedAt)
+              : null;
+
+            return (
+              <div
+                key={reportId}
+                className={`rounded-lg border p-4 shadow-sm transition-colors ${
+                  status === "Reviewed"
+                    ? "border-[#a8d5ba] bg-[#f0faf4]"
+                    : status === "Dismissed"
+                    ? "border-[#f5c6cb] bg-[#fff8f8]"
+                    : "border-[#dddfe2] bg-white"
+                }`}
+              >
+                {/* Reason banner */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#dc3545] bg-[#fff0f0] border border-[#f5c6cb] rounded-md px-2.5 py-1">
+                    <AlertTriangle size={13} />
+                    {reasonLabel}
+                  </div>
+                  {detail && (
+                    <span className="text-[12px] text-[#65676b] italic line-clamp-1">
+                      "{detail}"
+                    </span>
+                  )}
+                </div>
+
+                {/* Reporter row */}
+                <div className="flex items-center gap-2 mb-3">
+                  <img
+                    src={
+                      reporterAvatar
+                        ? reporterAvatar
+                        : `https://api.dicebear.com/9.x/avataaars/svg?seed=${reportId}-reporter`
+                    }
+                    alt={reporterName}
+                    className="h-8 w-8 rounded-full bg-[#e4e6eb] object-cover"
+                  />
+                  <div className="text-[13px]">
+                    <span className="font-semibold text-[#050505]">{reporterName}</span>
+                    <span className="text-[#65676b]"> reported this post</span>
+                    {createdAt && (
+                      <span className="ml-2 text-[#65676b]">· {createdAt.toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Post content preview */}
+                <div className="rounded-md border border-[#e4e6eb] bg-[#f8f9fa] p-3 mb-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[12px] font-semibold text-[#65676b]">Post by:</span>
+                    <span className="text-[12px] font-semibold text-[#050505]">{postAuthorName}</span>
+                  </div>
+                  {postContent ? (
+                    <p className="text-[13px] text-[#050505] line-clamp-2">{postContent}</p>
+                  ) : (
+                    <p className="text-[12px] text-[#65676b] italic">No text content</p>
+                  )}
+                </div>
+
+                {/* Status badge + actions */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[12px]">
+                    {status === "Reviewed" ? (
+                      <span className="text-[#155724] font-semibold flex items-center gap-1">
+                        <span>✓</span> Post hidden
+                      </span>
+                    ) : status === "Dismissed" ? (
+                      <span className="text-[#721c24] font-semibold flex items-center gap-1">
+                        <span>✕</span> Dismissed
+                      </span>
+                    ) : (
+                      <span className="text-[#856404] font-semibold flex items-center gap-1">
+                        <Clock size={11} />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 gap-2">
+                    {isPending ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={actionLoading === reportId}
+                          onClick={() => handleAction(reportId, hideReport)}
+                          className="h-8 cursor-pointer rounded-md bg-[#dc3545] px-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#c82333] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {actionLoading === reportId ? "..." : "Hide post"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionLoading === reportId}
+                          onClick={() => handleAction(reportId, dismissReport)}
+                          className="h-8 cursor-pointer rounded-md bg-[#e4e6eb] px-3 text-[12px] font-semibold text-[#050505] transition-colors hover:bg-[#d8dadf] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {actionLoading === reportId ? "..." : "Dismiss"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/posts/${report.postId ?? report.PostId}`)}
+                        className="h-8 cursor-pointer rounded-md bg-[#e7f3ff] px-3 text-[12px] font-semibold text-[#0866ff] transition-colors hover:bg-[#dbeeff]"
+                      >
+                        View post
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {error && actionLoading === reportId && (
+                  <p className="mt-2 text-[12px] font-semibold text-red-600">{error}</p>
+                )}
+              </div>
+            );
+          })}
+
+          {hasNextPage && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={isLoading}
+                className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[13px] font-semibold text-[#050505] hover:bg-[#d8dadf] disabled:opacity-60"
+              >
+                {isLoading ? "Loading..." : "See more"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </AdminShell>
+  );
+}
+
 function GenericManageView({ title }) {
   return (
     <AdminShell title={title}>
@@ -1030,7 +1208,8 @@ function GenericManageView({ title }) {
 export default function GroupAdminManage({ view, groupId }) {
   if (view === "overview") return <OverviewView />;
   if (view === "member-requests") return <MemberRequestsView groupId={groupId} />;
-  if (["pending-posts", "spam", "reported-content"].includes(view))
+  if (view === "reported-content") return <ReportedContentView groupId={groupId} />;
+  if (["pending-posts", "spam"].includes(view))
     return <PendingPostsView type={view} groupId={groupId} />;
   if (view === "group-rules") return <RulesView groupId={groupId} />;
   if (view === "community-roles") return <RolesView groupId={groupId} />;
