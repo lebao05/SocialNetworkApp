@@ -11,6 +11,7 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupsCreatePage from "./pages/GroupsCreatePage";
 import SearchPage from "./pages/SearchPage";
 import ReelsPage from "./pages/ReelsPage";
+import StoryViewer from "./components/Story/StoryViewer";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
       <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
+      <Route path="/stories" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />
       <Route path="/messenger" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/messenger/:convId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

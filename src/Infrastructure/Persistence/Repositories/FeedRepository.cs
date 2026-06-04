@@ -205,9 +205,22 @@ namespace Infrastructure.Persistence.Repositories
                                 post.SharePost.Group.Description,
                                 post.SharePost.Group.PrivacyType,
                                 post.SharePost.Group.CoverPhotoUrl),
-                        null),
-                userReaction);
-        }
+                        null,   // SharePost
+                        null,   // UserReaction
+                        post.SharePost.IsHiddenFromGroup,
+                        post.SharePost.HiddenAt,
+                        post.SharePost.HideReason,
+                        post.SharePost.ApprovalStatus,
+                        post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
+                        post.SharePost.IsAnonymous),
+                userReaction,
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous
+            );
 
         public async Task<int> MarkAsSeenAsync(
             Guid userId,

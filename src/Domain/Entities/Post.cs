@@ -23,6 +23,7 @@ namespace Domain.Entities
         public bool IsHiddenFromGroup { get; private set; }
         public DateTime? HiddenAt { get; private set; }
         public string? HideReason { get; private set; }
+        public bool IsAnonymous { get; private set; }
 
         // Navigation
         public User Author { get; private set; } = null!;
@@ -54,7 +55,8 @@ namespace Domain.Entities
             PostVisibility visibility,
             long? sharePostId = null,
             string? locationTag = null,
-            Feeling? feelingActivity = null) : base(id)
+            Feeling? feelingActivity = null,
+            bool isAnonymous = false) : base(id)
         {
             AuthorId = authorId;
             GroupId = groupId;
@@ -64,6 +66,7 @@ namespace Domain.Entities
             LocationTag = locationTag;
             FeelingActivity = feelingActivity;
             ApprovalStatus = PostApprovalStatus.Approved;
+            IsAnonymous = isAnonymous;
             CreatedAt = DateTime.UtcNow;
         }
 

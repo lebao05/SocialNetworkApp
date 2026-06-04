@@ -618,7 +618,7 @@ export default function GroupPage() {
   const [activeTab, setActiveTab] = useState("Discussion");
   const [isMineFilter, setIsMineFilter] = useState(false);
   const [fromDateFilter, setFromDateFilter] = useState(null);
-  const adminView = searchParams.get("tab") || "overview";
+  const adminView = searchParams.get("tab") || "home";
 
   const setAdminView = (view) => {
     setSearchParams({ tab: view }, { replace: true });
@@ -633,16 +633,11 @@ export default function GroupPage() {
     refresh: refreshPosts,
   } = useGroupPosts(numericGroupId, {
     isMine: isMineFilter,
-    fromDate: fromDateFilter,
     pageSize: 20,
     autoFetch: true,
   });
   const currentUserRole = groupDetail?.role ?? groupDetail?.Role;
-  const isAdmin = ["admin", "moderator"].includes(normalizeRole(currentUserRole))
-    || mockGroupRole === "admin"
-    || hasAdminRole(currentUser)
-    || currentUser?.isAdmin === true
-    || currentUser?.IsAdmin === true;
+  const isAdmin = ["admin", "moderator"].includes(normalizeRole(currentUserRole));
   const contentOffsetClass = isAdmin ? "lg:pl-[292px]" : "";
   const displayUser = {
     name: currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || "You" : "You",
@@ -700,6 +695,7 @@ export default function GroupPage() {
         displayUser={displayUser}
         onSubmit={handleCreatePost}
         groupId={numericGroupId}
+        allowAnonymousPost={groupDetail?.allowAnonymousPost ?? groupDetail?.AllowAnonymousPost ?? false}
       />
 
       <button

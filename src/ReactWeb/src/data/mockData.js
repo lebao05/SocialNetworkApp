@@ -7,50 +7,68 @@ export const currentUser = {
 };
 
 // ─── Stories ─────────────────────────────────────────────────────────────────
-export const stories = [
+// Each user can have multiple story items
+export const storyGroups = [
   {
     id: 1,
     user: "Bảo Châu",
     avatar: "https://i.pravatar.cc/150?img=47",
-    bg: "https://picsum.photos/seed/st01/200/350",
-    label: "Đi Đà Lạt 🌸",
+    stories: [
+      { id: 101, bg: "https://picsum.photos/seed/st11/200/350", label: "Đi Đà Lạt 🌸", timestamp: "2 giờ trước" },
+      { id: 102, bg: "https://picsum.photos/seed/st12/200/350", label: "Cafe Mê Ly", timestamp: "2 giờ trước" },
+    ],
   },
   {
     id: 2,
     user: "Tuấn Kiệt",
     avatar: "https://i.pravatar.cc/150?img=11",
-    bg: "https://picsum.photos/seed/st02/200/350",
-    label: "Rank mùa mới 🎮",
+    stories: [
+      { id: 201, bg: "https://picsum.photos/seed/st21/200/350", label: "Rank mùa mới 🎮", timestamp: "30 phút trước" },
+    ],
   },
   {
     id: 3,
     user: "Hà Linh",
     avatar: "https://i.pravatar.cc/150?img=44",
-    bg: "https://picsum.photos/seed/st03/200/350",
-    label: "Cà phê sáng ☕",
+    stories: [
+      { id: 301, bg: "https://picsum.photos/seed/st31/200/350", label: "Cà phê sáng ☕", timestamp: "1 giờ trước" },
+      { id: 302, bg: "https://picsum.photos/seed/st32/200/350", label: "Thiết kế mới ✨", timestamp: "1 giờ trước" },
+      { id: 303, bg: "https://picsum.photos/seed/st33/200/350", label: "Dạo phố chiều 🌆", timestamp: "1 giờ trước" },
+    ],
   },
   {
     id: 4,
     user: "Quốc Bảo",
     avatar: "https://i.pravatar.cc/150?img=15",
-    bg: "https://picsum.photos/seed/st04/200/350",
-    label: "Gym ngày 30 🏋️",
+    stories: [
+      { id: 401, bg: "https://picsum.photos/seed/st41/200/350", label: "Gym ngày 30 🏋️", timestamp: "3 giờ trước" },
+      { id: 402, bg: "https://picsum.photos/seed/st42/200/350", label: "Meal prep 🥗", timestamp: "3 giờ trước" },
+    ],
   },
   {
     id: 5,
     user: "Ngọc Hân",
     avatar: "https://i.pravatar.cc/150?img=49",
-    bg: "https://picsum.photos/seed/st05/200/350",
-    label: "Tốt nghiệp rồi 🎓",
+    stories: [
+      { id: 501, bg: "https://picsum.photos/seed/st51/200/350", label: "Tốt nghiệp rồi 🎓", timestamp: "5 giờ trước" },
+    ],
   },
   {
     id: 6,
     user: "Duy Anh",
     avatar: "https://i.pravatar.cc/150?img=12",
-    bg: "https://picsum.photos/seed/st06/200/350",
-    label: "Road trip 🚗",
+    stories: [
+      { id: 601, bg: "https://picsum.photos/seed/st61/200/350", label: "Road trip 🚗", timestamp: "6 giờ trước" },
+      { id: 602, bg: "https://picsum.photos/seed/st62/200/350", label: "Biển Nha Trang 🌊", timestamp: "6 giờ trước" },
+      { id: 603, bg: "https://picsum.photos/seed/st63/200/350", label: "Homestay view đẹp quá", timestamp: "6 giờ trước" },
+    ],
   },
 ];
+
+// Flat list for backward compat
+export const stories = storyGroups.flatMap((g) =>
+  g.stories.map((s) => ({ ...s, user: g.user, avatar: g.avatar, groupId: g.id }))
+);
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 export const posts = [

@@ -66,7 +66,10 @@ namespace Application.Posts.Queries.GetPost
                 userReaction,
                 post.IsHiddenFromGroup,
                 post.HiddenAt,
-                post.HideReason);
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous);
         }
 
         private static PostDto MapSharedPost(Post post)
@@ -96,7 +99,14 @@ namespace Application.Posts.Queries.GetPost
                 MapReactionCounts(post),
                 post.Comments.Count,
                 MapGroup(post.Group),
-                null);
+                null,
+                null,
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous);
         }
 
         private static IReadOnlyCollection<ReactionCountDto> MapReactionCounts(Post post)

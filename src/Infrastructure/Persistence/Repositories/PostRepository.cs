@@ -1,6 +1,7 @@
 using Application.Abstractions.Repositories;
 using Application.Shared;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -86,12 +87,38 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
-                .Where(post => post.GroupId == groupId && !post.IsHiddenFromGroup);
+                .Where(post => post.GroupId == groupId && !post.IsHiddenFromGroup && post.ApprovalStatus == PostApprovalStatus.Approved);
 
             if (authorId.HasValue)
             {
                 query = query.Where(post => post.AuthorId == authorId.Value);
             }
+
+            query = query.OrderByDescending(post => post.CreatedAt);
+
+            return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);
+        }
+
+        public async Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, PostApprovalStatus approvalStatus, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Posts
+                .AsNoTracking()
+                .Include(post => post.Author)
+                .Include(post => post.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Reactions)
+                .Include(post => post.SharePost)
+                    .ThenInclude(sharedPost => sharedPost!.Comments)
+                .Include(post => post.Media)
+                .Include(post => post.Reactions)
+                .Include(post => post.Comments)
+                .Where(post => post.GroupId == groupId && post.ApprovalStatus == approvalStatus);
 
             query = query.OrderByDescending(post => post.CreatedAt);
 
@@ -297,6 +324,26 @@ namespace Infrastructure.Persistence.Repositories
         public void AddComment(PostComment comment)
         {
             _context.PostComments.Add(comment);
+        }
+
+        public async Task<int> GetCommentCountByPostIdsAsync(IEnumerable<long> postIds, CancellationToken cancellationToken = default)
+        {
+            var idList = postIds.ToList();
+            if (idList.Count == 0)
+                return 0;
+
+            return await _context.PostComments
+                .CountAsync(c => idList.Contains(c.PostId), cancellationToken);
+        }
+
+        public async Task<int> GetReactionCountByPostIdsAsync(IEnumerable<long> postIds, CancellationToken cancellationToken = default)
+        {
+            var idList = postIds.ToList();
+            if (idList.Count == 0)
+                return 0;
+
+            return await _context.PostReactions
+                .CountAsync(r => idList.Contains(r.PostId), cancellationToken);
         }
     }
 }

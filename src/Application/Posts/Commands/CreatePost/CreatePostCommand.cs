@@ -18,6 +18,7 @@ namespace Application.Posts.Commands.CreatePost
         string? LocationTag = null,
         Feeling? FeelingActivity = null,
         IReadOnlyCollection<Guid>? TaggedUserIds = null,
-        IReadOnlyCollection<PostAttachment>? Attachments = null
+        IReadOnlyCollection<PostAttachment>? Attachments = null,
+        bool IsAnonymous = false
     ) : ICommand<long>;
 }

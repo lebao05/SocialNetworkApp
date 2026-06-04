@@ -1,6 +1,7 @@
 using Application.Abstractions.Messaging;
 using Application.DTOs.Posts;
 using Application.Shared;
+using Domain.Enums;
 
 namespace Application.Posts.Queries.GetPostsByGroup
 {
@@ -9,6 +10,7 @@ namespace Application.Posts.Queries.GetPostsByGroup
         int Page = 1,
         int PageSize = 10,
         Guid? UserId = null,
-        bool OnlyMine = false
+        bool OnlyMine = false,
+        PostApprovalStatus? ApprovalStatus = null
     ) : IQuery<PagedList<PostDto>>;
 }

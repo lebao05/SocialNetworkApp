@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getPostsByGroupApi } from "../apis/postApi";
+import { reviewGroupPostApi } from "../apis/groupApi";
 
 const normalizePaged = (data, pageSize) => {
   if (!data) return { items: [], hasNextPage: false, totalCount: 0, pageNumber: 1 };
@@ -24,16 +25,14 @@ const normalizePaged = (data, pageSize) => {
 };
 
 /**
- * Loads group posts with pagination, owner filtering, and date filtering.
+ * Fetches pending posts for a group and provides approve/reject actions.
  *
  * @param {number} groupId
- * @param {{ pageSize?: number, isMine?: boolean, fromDate?: string | null, autoFetch?: boolean }} options
- *   - isMine:   when true, returns only posts authored by the current user.
- *   - fromDate: ISO date string (e.g. "2026-01-01") — returns posts created on or after this date.
+ * @param {{ pageSize?: number, autoFetch?: boolean }} options
  */
-export function useGroupPosts(
+export function usePendingPosts(
   groupId,
-  { pageSize = 20, isMine = false, fromDate = null, autoFetch = true } = {}
+  { pageSize = 20, autoFetch = true } = {}
 ) {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
@@ -42,12 +41,11 @@ export function useGroupPosts(
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null); // postId currently being acted on
 
   const loadPage = useCallback(
-    async (p = 1, currentOptions = {}) => {
+    async (p = 1) => {
       if (!groupId) return;
-
-      const { isMine: mine = false, fromDate: date = null } = currentOptions;
 
       setIsLoading(true);
       setError(null);
@@ -56,8 +54,7 @@ export function useGroupPosts(
         const data = await getPostsByGroupApi(groupId, {
           page: p,
           pageSize,
-          isMine: mine,
-          approvalStatus: "Approved",
+          approvalStatus: "Pending",
         });
 
         const { items, hasNextPage: next, totalCount: total } = normalizePaged(data, pageSize);
@@ -67,12 +64,12 @@ export function useGroupPosts(
         setTotalCount(total);
         setPage(p);
       } catch (err) {
-        console.error("Failed to load group posts:", err);
+        console.error("Failed to load pending posts:", err);
         setError(
           err?.response?.data?.message ||
             err?.response?.data ||
             err?.message ||
-            "Failed to load group posts"
+            "Failed to load pending posts"
         );
         if (p === 1) {
           setPosts([]);
@@ -91,23 +88,65 @@ export function useGroupPosts(
     setPosts([]);
     setPage(1);
     setHasNextPage(true);
-    loadPage(1, { isMine, fromDate });
+    loadPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, isMine, fromDate, autoFetch]);
+  }, [groupId, autoFetch]);
 
   const loadMore = () => {
     if (!hasNextPage || isLoading) return;
-    loadPage(page + 1, { isMine, fromDate });
+    loadPage(page + 1);
   };
 
   const refresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadPage(1, { isMine, fromDate });
+      await loadPage(1);
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  /**
+   * Approve or reject a pending post.
+   * Updates the post's approvalStatus in the local list instead of removing it.
+   */
+  const moderatePost = useCallback(
+    async (postId, approve) => {
+      setActionLoading(postId);
+      try {
+        await reviewGroupPostApi(groupId, postId, approve);
+        const newStatus = approve ? "Approved" : "Rejected";
+        setPosts((prev) =>
+          prev.map((p) =>
+            (p.id ?? p.Id) === postId
+              ? {
+                  ...p,
+                  approvalStatus: newStatus,
+                  ApprovalStatus: newStatus,
+                }
+              : p
+          )
+        );
+        setTotalCount((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error("Failed to moderate post:", err);
+        throw err;
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [groupId]
+  );
+
+  const approvePost = useCallback(
+    (postId) => moderatePost(postId, true),
+    [moderatePost]
+  );
+
+  const rejectPost = useCallback(
+    (postId) => moderatePost(postId, false),
+    [moderatePost]
+  );
 
   return {
     posts,
@@ -117,7 +156,10 @@ export function useGroupPosts(
     totalCount,
     page,
     error,
+    actionLoading,
     loadMore,
     refresh,
+    approvePost,
+    rejectPost,
   };
 }

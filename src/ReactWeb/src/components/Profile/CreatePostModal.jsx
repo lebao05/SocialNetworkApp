@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ChevronDown, Smile, Search, ArrowLeft } from "lucide-react";
+import { X, ChevronDown, Smile, Search, ArrowLeft, Loader2, User } from "lucide-react";
 import { useTag } from "../../hooks/useTag";
 import { createPostApi } from "../../apis/postApi";
 
@@ -59,10 +59,11 @@ const LOCATIONS_LIST = [
   "Long Mach Mang Pool"
 ];
 
-export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" }, onSubmit, groupId = null }) {
+export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" }, onSubmit, groupId = null, allowAnonymousPost = false }) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
   const [newPostFiles, setNewPostFiles] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Visibility state: 0 = Public, 1 = Friends, 2 = Only me
   const [visibility, setVisibility] = useState(0);
@@ -72,6 +73,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
   const [selectedFeeling, setSelectedFeeling] = useState(null); // { emoji, label }
   const [selectedLocation, setSelectedLocation] = useState(null); // string
   const [taggedFriends, setTaggedFriends] = useState([]); // Array of user objects
+  const [isAnonymous, setIsAnonymous] = useState(false); // anonymous post toggle
 
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [feelingSearchQuery, setFeelingSearchQuery] = useState("");
@@ -104,6 +106,8 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
     setTaggedFriends([]);
     setCreatePostModalView("main");
     setVisibility(0);
+    setIsSubmitting(false);
+    setIsAnonymous(false);
     onClose();
   };
 
@@ -120,14 +124,18 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
       feelingActivity: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : null,
       taggedUserIds: taggedFriends.map(friend => friend.id) || [],
       attachments: newPostFiles,
+      isAnonymous: groupId ? isAnonymous : false,
     };
 
     try {
+      setIsSubmitting(true);
       const postId = await createPostApi(payload);
       if (onSubmit) await onSubmit({ ...payload, id: postId });
       handleResetAndClose();
     } catch (err) {
       console.error("Failed to create post:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -184,8 +192,24 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                     )}
                   </div>
                   {groupId ? (
-                    <div className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1.5 rounded-md flex items-center gap-1.5 font-bold mt-1.5 border border-blue-200">
-                      Group post
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <div className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1.5 rounded-md flex items-center gap-1.5 font-bold border border-blue-200">
+                        Group post
+                      </div>
+                      {allowAnonymousPost && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAnonymous((v) => !v)}
+                          className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md font-bold border transition-colors cursor-pointer ${
+                            isAnonymous
+                              ? "bg-green-600 text-white border-green-900"
+                              : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                          }`}
+                        >
+                          <User size={13} />
+                          Anonymous
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <button
@@ -386,13 +410,18 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
               {/* Submit Post button */}
               <button
                 type="submit"
-                disabled={!newPostContent.trim() && !newPostImage && newPostFiles.length === 0 && !selectedFeeling && !selectedLocation && taggedFriends.length === 0}
-                className={`w-full py-2.5 font-bold rounded-md text-[15px] transition-all text-center mt-2
-                  ${(!newPostContent.trim() && !newPostImage && newPostFiles.length === 0 && !selectedFeeling && !selectedLocation && taggedFriends.length === 0)
+                disabled={isSubmitting || (!newPostContent.trim() && !newPostImage && newPostFiles.length === 0 && !selectedFeeling && !selectedLocation && taggedFriends.length === 0)}
+                className={`w-full py-2.5 font-bold rounded-md text-[15px] transition-all text-center mt-2 flex items-center justify-center gap-2
+                  ${(isSubmitting || (!newPostContent.trim() && !newPostImage && newPostFiles.length === 0 && !selectedFeeling && !selectedLocation && taggedFriends.length === 0))
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-[#1877F2] text-white hover:bg-blue-600 shadow-sm cursor-pointer"}`}
               >
-                Post
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Posting...
+                  </>
+                ) : "Post"}
               </button>
             </form>
           </>

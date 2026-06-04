@@ -23,9 +23,12 @@ namespace Application.DTOs.Posts
         int CommentCount,
         GroupDto? Group,
         PostDto? SharePost,
-        ReactionType? UserReaction = null,
-        bool IsHiddenFromGroup = false,
-        DateTime? HiddenAt = null,
-        string? HideReason = null
+        ReactionType? UserReaction,
+        bool IsHiddenFromGroup,
+        DateTime? HiddenAt,
+        string? HideReason,
+        PostApprovalStatus ApprovalStatus,
+        bool IsPending,
+        bool IsAnonymous
     );
 }

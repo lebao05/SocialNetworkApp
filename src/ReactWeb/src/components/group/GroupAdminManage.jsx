@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Badge,
   ChevronDown,
+  Clock,
   FileText,
   Filter,
   MoreHorizontal,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useGroup } from "../../hooks/useGroup";
 import { useAuth } from "../../contexts/authContext";
+import { usePendingPosts } from "../../hooks/usePendingPosts";
 
 function AdminShell({ title, filters, children, actions }) {
   return (
@@ -392,28 +394,246 @@ function MemberRequestsView({ groupId }) {
   );
 }
 
-function PendingPostsView({ type }) {
+function PendingPostsView({ groupId, type }) {
+  const navigate = useNavigate();
+  const {
+    posts,
+    isLoading,
+    hasNextPage,
+    totalCount,
+    error,
+    actionLoading,
+    loadMore,
+    approvePost,
+    rejectPost,
+  } = usePendingPosts(groupId);
+
   const copy = {
     "pending-posts": {
       title: "Pending posts",
-      empty: "No posts to review",
-      description: "Posts do not need admin approval before publishing. You can change this in group settings.",
-      button: "Go to settings",
+      emptyTitle: "No posts to review",
+      emptyDesc: "All posts have been reviewed. New posts will appear here for approval.",
     },
     spam: {
       title: "Possible spam",
-      empty: "No possible spam",
+      emptyTitle: "No possible spam",
+      emptyDesc: null,
     },
     "reported-content": {
       title: "Reported content",
-      empty: "No reported content",
-      description: "Review content that members reported to group admins.",
+      emptyTitle: "No reported content",
+      emptyDesc: "Review content that members reported to group admins.",
     },
-  }[type];
+  }[type] ?? { title: "Posts", emptyTitle: "No posts", emptyDesc: null };
+
+  const handleModerate = async (postId, approve) => {
+    try {
+      await (approve ? approvePost(postId) : rejectPost(postId));
+    } catch {
+      // error is logged in the hook
+    }
+  };
+
+  const isLive = type === "pending-posts";
 
   return (
-    <AdminShell title={copy.title} filters={<><FilterButton>Newest first</FilterButton><FilterButton>All</FilterButton></>}>
-      <EmptyState icon="file" title={copy.empty} description={copy.description} buttonLabel={copy.button} />
+    <AdminShell
+      title={copy.title}
+      filters={
+        isLive ? (
+          <span className="text-[13px] text-[#65676b]">
+            {isLoading && posts.length === 0
+              ? "Loading..."
+              : `${totalCount} pending ${totalCount === 1 ? "post" : "posts"} awaiting review`}
+          </span>
+        ) : null
+      }
+    >
+      {!isLive || posts.length === 0 ? (
+        <EmptyState
+          icon="file"
+          title={copy.emptyTitle}
+          description={copy.emptyDesc}
+        />
+      ) : (
+        <div className="space-y-3">
+          {posts.map((post) => {
+            const postId = post.id ?? post.Id;
+            const status = post.approvalStatus ?? post.ApprovalStatus ?? "Pending";
+            const isApproved = status === "Approved";
+            const isRejected = status === "Rejected";
+            const isPending = !isApproved && !isRejected;
+
+            const authorAvatar =
+              post.authorAvatarUrl ?? post.authorAvatar ?? post.AuthorAvatarUrl ?? null;
+            const authorName =
+              post.authorName ?? post.authorName ?? post.AuthorName ?? "Người dùng";
+            const content = post.content ?? post.Content ?? "";
+            const createdAt = post.createdAt ?? post.CreatedAt
+              ? new Date(post.createdAt ?? post.CreatedAt)
+              : null;
+            const mediaList = post.media ?? post.Media ?? [];
+            const hasMedia = mediaList.length > 0;
+
+            return (
+              <div
+                key={postId}
+                className={`rounded-lg border p-4 shadow-sm transition-colors ${
+                  isApproved
+                    ? "border-[#a8d5ba] bg-[#f0faf4]"
+                    : isRejected
+                    ? "border-[#f5c6cb] bg-[#fff8f8]"
+                    : "border-[#dddfe2] bg-white"
+                }`}
+              >
+                <div className="flex gap-3">
+                  <img
+                    src={
+                      authorAvatar
+                        ? authorAvatar
+                        : `https://api.dicebear.com/9.x/avataaars/svg?seed=${postId}`
+                    }
+                    alt={authorName}
+                    className="h-10 w-10 shrink-0 rounded-full bg-[#e4e6eb] object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[14px] font-semibold text-[#050505]">{authorName}</p>
+                        <p className="flex items-center gap-1 text-[12px] text-[#65676b]">
+                          <Clock size={11} />
+                          {createdAt ? createdAt.toLocaleString() : "Unknown time"}
+                          {hasMedia && (
+                            <span className="ml-1 rounded bg-[#e7f3ff] px-1.5 py-0.5 text-[11px] font-semibold text-[#0866ff]">
+                              {mediaList.length} attachment{mediaList.length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          <span
+                            className={`ml-1 rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                              isApproved
+                                ? "bg-[#d4edda] text-[#155724]"
+                                : isRejected
+                                ? "bg-[#f8d7da] text-[#721c24]"
+                                : "bg-[#fff3cd] text-[#856404]"
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 gap-2">
+                        {isPending ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={actionLoading === postId}
+                              onClick={() => handleModerate(postId, true)}
+                              className="h-9 cursor-pointer rounded-md bg-[#0866ff] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#075ce5] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actionLoading === postId}
+                              onClick={() => handleModerate(postId, false)}
+                              className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[13px] font-semibold text-[#050505] transition-colors hover:bg-[#d8dadf] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        ) : (
+                          <div
+                            className={`flex h-9 items-center gap-1.5 rounded-md px-3 text-[13px] font-semibold ${
+                              isApproved
+                                ? "bg-[#d4edda] text-[#155724]"
+                                : "bg-[#f8d7da] text-[#721c24]"
+                            }`}
+                          >
+                            <span>{isApproved ? "✓" : "✕"}</span>
+                            {isApproved ? "Approved" : "Rejected"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {content && (
+                      <p className="mt-2 line-clamp-3 text-[13px] text-[#050505]">{content}</p>
+                    )}
+
+                    {hasMedia && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {mediaList.slice(0, 4).map((m, i) => {
+                          const url = m.mediaUrl ?? m.MediaUrl ?? m.url ?? "";
+                          const isVideo =
+                            (m.mediaType ?? m.MediaType ?? "").toLowerCase().includes("video");
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => navigate(`/posts/${postId}`)}
+                              className="relative h-20 w-20 overflow-hidden rounded-md bg-[#e4e6eb] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
+                              title="View post"
+                            >
+                              {isVideo ? (
+                                <div className="flex h-full w-full items-center justify-center bg-[#d8dadf]">
+                                  <Play size={24} className="text-[#65676b]" />
+                                </div>
+                              ) : (
+                                <img
+                                  src={url}
+                                  alt=""
+                                  className="h-full w-full object-cover hover:opacity-90"
+                                  onError={(e) => { e.target.style.display = "none"; }}
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                        {mediaList.length > 4 && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/posts/${postId}`)}
+                            className="flex h-20 w-20 items-center justify-center rounded-md bg-[#d8dadf] text-[13px] font-semibold text-[#65676b] hover:bg-[#ced0d4] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
+                            title="View post"
+                          >
+                            +{mediaList.length - 4}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/posts/${postId}`)}
+                          className="flex h-20 items-center gap-1.5 rounded-md bg-[#e7f3ff] px-3 text-[12px] font-semibold text-[#0866ff] hover:bg-[#dbeeff] focus:outline-none focus:ring-2 focus:ring-[#0866ff]"
+                        >
+                          <FileText size={14} />
+                          View post
+                        </button>
+                      </div>
+                    )}
+
+                    {error && actionLoading === postId && (
+                      <p className="mt-2 text-[12px] font-semibold text-red-600">{error}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {hasNextPage && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={isLoading}
+                className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[13px] font-semibold text-[#050505] hover:bg-[#d8dadf] disabled:opacity-60"
+              >
+                {isLoading ? "Loading..." : "See more"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </AdminShell>
   );
 }
@@ -810,7 +1030,8 @@ function GenericManageView({ title }) {
 export default function GroupAdminManage({ view, groupId }) {
   if (view === "overview") return <OverviewView />;
   if (view === "member-requests") return <MemberRequestsView groupId={groupId} />;
-  if (["pending-posts", "spam", "reported-content"].includes(view)) return <PendingPostsView type={view} />;
+  if (["pending-posts", "spam", "reported-content"].includes(view))
+    return <PendingPostsView type={view} groupId={groupId} />;
   if (view === "group-rules") return <RulesView groupId={groupId} />;
   if (view === "community-roles") return <RolesView groupId={groupId} />;
 

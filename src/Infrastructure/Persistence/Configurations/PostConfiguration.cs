@@ -64,6 +64,10 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(p => p.HideReason)
                 .HasMaxLength(1000);
 
+            builder.Property(p => p.IsAnonymous)
+                .IsRequired()
+                .HasDefaultValue(false);
+
             // Self-referencing Relationship: Post -> SharePost (Post)
             builder.HasOne(p => p.SharePost)
                 .WithMany()

@@ -67,7 +67,8 @@ namespace Presentation.Controllers
                     request.LocationTag,
                     request.FeelingActivity,
                     request.TaggedUserIds,
-                    attachments
+                    attachments,
+                    request.IsAnonymous
                 );
 
                 var result = await _sender.Send(command, cancellationToken);
@@ -106,6 +107,7 @@ namespace Presentation.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] bool onlyMine = false,
+            [FromQuery] PostApprovalStatus? approvalStatus = null,
             CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -120,7 +122,7 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var query = new GetPostsByGroupQuery(groupId, page, pageSize, currentUserId, onlyMine);
+            var query = new GetPostsByGroupQuery(groupId, page, pageSize, currentUserId, onlyMine, approvalStatus);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

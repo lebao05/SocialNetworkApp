@@ -13,6 +13,7 @@ export async function createPostApi({
   feelingActivity = null,
   taggedUserIds = [],
   attachments = [],
+  isAnonymous = false,
 }) {
   const formData = new FormData();
 
@@ -22,6 +23,7 @@ export async function createPostApi({
   if (sharePostId !== null) formData.append("SharePostId", sharePostId);
   if (locationTag !== null) formData.append("LocationTag", locationTag);
   if (feelingActivity !== null) formData.append("FeelingActivity", feelingActivity);
+  if (isAnonymous) formData.append("IsAnonymous", true);
 
   // Append tagged user ids as repeated fields
   if (Array.isArray(taggedUserIds)) {
@@ -60,11 +62,13 @@ export async function getUserPostsApi(userId, page = 1, pageSize = 10) {
 }
 
 /**
- * Get posts by group: GET /api/posts/group/{groupId}?page=&pageSize=&onlyMine=
+ * Get posts by group: GET /api/posts/group/{groupId}?page=&pageSize=&onlyMine=&approvalStatus=
+ * Pass approvalStatus to filter by PostApprovalStatus. Defaults to "Approved" so
+ * the group discussion tab only shows posts that have been approved by admins.
  */
-export async function getPostsByGroupApi(groupId, page = 1, pageSize = 10, onlyMine = false) {
+export async function getPostsByGroupApi(groupId, { page = 1, pageSize = 10, onlyMine = false, approvalStatus = "Approved" } = {}) {
   const response = await axios.get(`/posts/group/${groupId}`, {
-    params: { page, pageSize, onlyMine },
+    params: { page, pageSize, onlyMine, approvalStatus },
   });
 
   return response.data;

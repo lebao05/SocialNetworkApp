@@ -23,8 +23,19 @@ namespace Application.Posts.Queries.GetPostsByGroup
         {
             var page = Math.Max(1, request.Page);
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
-            var authorId = request.OnlyMine ? request.UserId : null;
-            var posts = await _postRepository.GetByGroupIdPagedAsync(request.GroupId, page, pageSize, authorId, cancellationToken);
+
+            PagedList<Post> posts;
+            if (request.ApprovalStatus.HasValue)
+            {
+                posts = await _postRepository.GetByGroupIdPagedAsync(
+                    request.GroupId, page, pageSize, request.ApprovalStatus.Value, cancellationToken);
+            }
+            else
+            {
+                var authorId = request.OnlyMine ? request.UserId : null;
+                posts = await _postRepository.GetByGroupIdPagedAsync(
+                    request.GroupId, page, pageSize, authorId, cancellationToken);
+            }
 
             var reactionMap = request.UserId.HasValue
                 ? (await _postRepository.GetPostReactionsAsync(posts.Items.Select(p => p.Id), request.UserId.Value, cancellationToken))
@@ -68,7 +79,13 @@ namespace Application.Posts.Queries.GetPostsByGroup
                 post.Comments.Count,
                 MapGroup(post.Group),
                 post.SharePost is null ? null : MapSharedPost(post.SharePost),
-                userReaction);
+                userReaction,
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous);
         }
 
         private static PostDto MapSharedPost(Post post)
@@ -98,7 +115,14 @@ namespace Application.Posts.Queries.GetPostsByGroup
                 MapReactionCounts(post),
                 post.Comments.Count,
                 MapGroup(post.Group),
-                null);
+                null,
+                null,
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous);
         }
 
         private static IReadOnlyCollection<ReactionCountDto> MapReactionCounts(Post post)

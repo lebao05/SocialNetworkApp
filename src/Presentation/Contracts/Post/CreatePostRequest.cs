@@ -13,5 +13,6 @@ namespace Presentation.Contracts.Post
         public Feeling? FeelingActivity { get; init; } = null;
         public List<Guid> TaggedUserIds { get; init; } = new();
         public List<IFormFile> Attachments { get; init; } = new();
+        public bool IsAnonymous { get; init; } = false;
     }
 }

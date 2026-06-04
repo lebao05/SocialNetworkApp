@@ -127,6 +127,13 @@ namespace Application.Posts.Commands.CreatePost
                 ? PostVisibility.Group
                 : request.Visibility;
 
+            if (request.IsAnonymous && request.GroupId.HasValue && group?.AllowAnonymousPost != true)
+            {
+                return Result.Failure<long>(new Error(
+                    "Post.AnonymousNotAllowed",
+                    "Anonymous posts are not allowed in this group."));
+            }
+
             var post = new Post(
                 id: 0,
                 authorId: request.AuthorId,
@@ -135,7 +142,8 @@ namespace Application.Posts.Commands.CreatePost
                 visibility: visibility,
                 sharePostId: request.SharePostId,
                 locationTag: request.LocationTag,
-                feelingActivity: request.FeelingActivity);
+                feelingActivity: request.FeelingActivity,
+                isAnonymous: request.IsAnonymous && group?.AllowAnonymousPost == true);
 
             var uploadedUrls = new List<string>();
             try
@@ -179,6 +187,7 @@ namespace Application.Posts.Commands.CreatePost
 
             if (group?.IsPostApprovalRequired == true && !authorCanBypassGroupPostApproval)
             {
+                Console.WriteLine("Post requires approval");
                 post.SetPendingApproval();
             }
 

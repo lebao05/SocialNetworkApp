@@ -12,6 +12,7 @@ using Application.Groups.Commands.CreateGroupRule;
 using Application.Groups.Commands.UpdateGroupRule;
 using Application.Groups.Commands.DeleteGroupRule;
 using Application.Groups.Queries.GetGroupDetail;
+using Application.Groups.Queries.GetGroupInsights;
 using Application.Groups.Queries.GetGroupJoinRequests;
 using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
@@ -67,6 +68,25 @@ namespace Presentation.Controllers
             }
 
             var query = new GetGroupDetailQuery(groupId, userId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{groupId:long}/insights")]
+        public async Task<IActionResult> GetGroupInsights(
+            long groupId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetGroupInsightsQuery(groupId, userId, fromDate, toDate);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
