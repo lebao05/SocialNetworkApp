@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Search, MoreHorizontal, UserPlus } from "lucide-react";
 import { useFollowees } from "../../hooks/useFollowees";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 export default function FollowingTab({ theme }) {
     const { followees, loading, error } = useFollowees();
     const [searchQuery, setSearchQuery] = useState("");
@@ -65,13 +67,7 @@ export default function FollowingTab({ theme }) {
 
                                     {/* Micro-rounded square avatar style */}
                                     <div className="w-20 h-20 rounded-lg overflow-hidden bg-[#E4E6EB] flex-shrink-0 border border-[#ced0d4] shadow-sm flex items-center justify-center">
-                                        {item.avatarUrl || item.avatar ? (
-                                            <img src={item.avatarUrl || item.avatar} alt={item.fullName || item.name} className="w-full h-full object-cover select-none" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 text-[#65676B] text-xl font-bold uppercase select-none">
-                                                {(item.fullName || item.name || "??").substring(0, 2)}
-                                            </div>
-                                        )}
+                                        <img src={(item.avatarUrl || item.avatar || DEFAULT_AVATAR)} alt={item.fullName || item.name} className="w-full h-full object-cover select-none" />
                                     </div>
 
                                     {/* Title & Badge Details */}

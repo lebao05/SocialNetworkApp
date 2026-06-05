@@ -27,7 +27,7 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.Messages
                 .Where(m => m.ConversationId == conversationId && 
-                            !m.IsDeleted && 
+                            m.DeletedAt == null && 
                             m.SearchContent != null && 
                             m.SearchContent.Contains(searchHash))
                 .AsNoTracking()
@@ -46,7 +46,7 @@ namespace Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken)
         {
             IQueryable<Message> query = _context.Messages
-                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                .Where(m => m.ConversationId == conversationId && m.DeletedAt == null)
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)

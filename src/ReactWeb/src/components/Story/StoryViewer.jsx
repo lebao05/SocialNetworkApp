@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Send, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, MessageCircle, Send, X, ChevronLeft, ChevronRight, MoreHorizontal, Pause, Play, Settings, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { currentUser, storyGroups } from "../../data/mockData";
 
@@ -15,14 +15,13 @@ function PlusIcon() {
 
 function ProgressBars({ total, current, progress }) {
   return (
-    <div className="absolute top-0 left-0 right-0 z-30 flex gap-1 px-3 pt-3">
+    <div className="absolute left-0 right-0 top-0 z-30 flex gap-1 px-4 pt-4">
       {Array.from({ length: total }).map((_, index) => {
-        const fill =
-          index < current ? 100 : index === current ? progress : 0;
+        const fill = index < current ? 100 : index === current ? progress : 0;
         return (
           <div
             key={index}
-            className="h-1 flex-1 overflow-hidden rounded-full bg-white/20"
+            className="h-1 flex-1 overflow-hidden rounded-full bg-white/25"
           >
             <div
               className="h-full rounded-full bg-white transition-[width] duration-75 ease-linear"
@@ -35,59 +34,70 @@ function ProgressBars({ total, current, progress }) {
   );
 }
 
-function StoryListPanel({ groups, currentGroupIndex, currentStoryIndex, onSelect }) {
+function StoryListPanel({ groups, currentGroupIndex, onSelect }) {
   const navigate = useNavigate();
 
-  const handleClose = () => navigate(-1);
-
   return (
-    <div className="w-[260px] shrink-0 border-r border-[#dddfe2] bg-white flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#dddfe2] bg-white">
-        <p className="text-[#050505] text-lg font-bold">Tin</p>
-        <button
-          type="button"
-          onClick={handleClose}
-          className="h-8 w-8 rounded-full bg-[#f0f2f5] text-[#65676b] hover:bg-[#e4e6eb] flex items-center justify-center transition-colors"
-        >
-          <X size={15} />
-        </button>
-      </div>
-
-      {/* Create story */}
-      <div className="px-2 py-3 border-b border-[#dddfe2]">
-        <button
-          type="button"
-          onClick={() => navigate("/stories/create")}
-          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#f0f2f5] transition-colors"
-        >
-          <div className="relative w-11 h-11 shrink-0">
-            <img
-              src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
-              alt="me"
-              className="w-11 h-11 rounded-full object-cover border border-[#dddfe2]"
-            />
-            <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-[#0866ff] flex items-center justify-center border-2 border-white">
-              <PlusIcon />
+    <div className="flex h-full w-[360px] shrink-0 flex-col border-r border-[#e4e6eb] bg-white">
+      <div className="border-b border-[#eef0f3] px-5 py-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#f0f2f5] text-[#050505] transition hover:bg-[#e4e6eb]"
+            >
+              <X size={18} />
+            </button>
+            <div>
+              <p className="text-[24px] font-bold leading-tight text-[#050505]">Stories</p>
+              <p className="mt-0.5 text-[13px] text-[#65676b]">Browse what your friends shared today</p>
             </div>
           </div>
-          <span className="text-[15px] font-semibold text-[#050505]">Tạo tin</span>
-        </button>
-      </div>
-
-      {/* Story list */}
-      <div className="flex-1 overflow-y-auto py-2 px-2 bg-white">
-        <div className="flex items-center justify-between px-2 py-2 mb-1">
-          <span className="text-[15px] font-semibold text-[#050505]">Tin đang theo dõi</span>
           <button
             type="button"
-            className="text-[13px] font-semibold text-[#65676b] hover:underline hover:text-[#050505] transition-colors"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#f0f2f5] text-[#050505] transition hover:bg-[#e4e6eb]"
           >
-            Xem tất cả
+            <Settings size={18} />
           </button>
         </div>
 
-        <div className="space-y-0.5">
+        <button
+          type="button"
+          onClick={() => navigate("/stories/create")}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-[#dbe7ff] bg-[linear-gradient(135deg,#f3f8ff,#eef4ff)] px-4 py-4 text-left transition hover:border-[#bfd6ff] hover:shadow-sm"
+        >
+          <div className="relative h-14 w-14 shrink-0">
+            <img
+              src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
+              alt="me"
+              className="h-14 w-14 rounded-2xl object-cover ring-1 ring-black/5"
+            />
+            <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-white bg-[#0866ff] shadow-sm">
+              <PlusIcon />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-[#050505]">Create a story</p>
+            <p className="mt-1 text-[13px] leading-5 text-[#65676b]">Share a photo, video, or a quick thought with friends.</p>
+          </div>
+        </button>
+      </div>
+
+      <div className="border-b border-[#eef0f3] px-5 py-4">
+        <div className="flex items-center gap-2 rounded-2xl bg-[#f7f8fa] px-3 py-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f3ff] text-[#0866ff]">
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <p className="text-[14px] font-semibold text-[#050505]">Following stories</p>
+            <p className="text-[12px] text-[#65676b]">{groups.length} people have new story updates</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="space-y-1.5">
           {groups.map((group, groupIndex) => {
             const isActive = groupIndex === currentGroupIndex;
             const firstStory = group.stories[0];
@@ -97,50 +107,44 @@ function StoryListPanel({ groups, currentGroupIndex, currentStoryIndex, onSelect
                 key={group.id}
                 type="button"
                 onClick={() => onSelect(groupIndex, 0)}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-all border ${
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all ${
                   isActive
-                    ? "bg-[#e7f3ff] border-[#1877f2]/30"
-                    : "hover:bg-[#f0f2f5] border-transparent"
+                    ? "border-[#cfe2ff] bg-[#edf5ff] shadow-sm"
+                    : "border-transparent bg-white hover:border-[#e4e6eb] hover:bg-[#f7f8fa]"
                 }`}
               >
-                {/* Avatar with ring */}
-                <div className={`w-11 h-11 rounded-full shrink-0 p-0.5 bg-[#1877f2]`}>
-                  <img
-                    src={group.avatar}
-                    alt={group.user}
-                    className="w-full h-full rounded-full object-cover ring-2 ring-white"
-                  />
-                  {/* Multi-story indicator */}
+                <div className="relative shrink-0">
+                  <div className={`rounded-full p-[2px] ${isActive ? "bg-[#1877f2]" : "bg-[linear-gradient(135deg,#f9ca24,#eb4d4b,#a55eea,#686de0)]"}`}>
+                    <img
+                      src={group.avatar}
+                      alt={group.user}
+                      className="h-12 w-12 rounded-full border-2 border-white object-cover"
+                    />
+                  </div>
                   {group.stories.length > 1 && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
+                    <div className="absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#0866ff] px-1 text-[10px] font-bold text-white">
                       {group.stories.length}
                     </div>
                   )}
                 </div>
 
-                {/* Text info */}
                 <div className="min-w-0 flex-1">
-                  <p className={`truncate text-[13px] font-semibold leading-tight ${isActive ? "text-[#1877f2]" : "text-[#050505]"}`}>
+                  <p className={`truncate text-[14px] font-semibold ${isActive ? "text-[#0866ff]" : "text-[#050505]"}`}>
                     {group.user}
                   </p>
-                  <p className="truncate text-[11px] text-[#65676b] mt-0.5">
-                    {firstStory?.timestamp || "Vừa xong"}
+                  <p className="mt-0.5 truncate text-[12px] text-[#65676b]">
+                    {firstStory?.label}
+                  </p>
+                  <p className="mt-1 text-[11px] font-medium text-[#65676b]">
+                    {firstStory?.timestamp || "Just now"}
                   </p>
                 </div>
 
-                {/* Thumbnail stack */}
-                <div className="relative w-9 h-9 shrink-0">
-                  <img
-                    src={firstStory?.bg}
-                    alt=""
-                    className={`w-9 h-9 rounded-lg object-cover border ${isActive ? "border-[#1877f2]" : "border-[#dbdbdb]"}`}
-                  />
-                  {group.stories.length > 1 && (
-                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[8px] font-bold flex items-center justify-center border border-white">
-                      {group.stories.length}
-                    </div>
-                  )}
-                </div>
+                <img
+                  src={firstStory?.bg}
+                  alt="Story thumbnail"
+                  className={`h-12 w-10 shrink-0 rounded-xl object-cover ring-1 ${isActive ? "ring-[#b7d3ff]" : "ring-black/5"}`}
+                />
               </button>
             );
           })}
@@ -155,6 +159,8 @@ function StoryViewerStage({
   storyIndex,
   storiesCount,
   progress,
+  isPaused,
+  onTogglePaused,
   onPrev,
   onNext,
   onStoryPrev,
@@ -163,8 +169,7 @@ function StoryViewerStage({
   const story = group.stories[storyIndex];
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
-      {/* Full-bleed story image */}
+    <div className="relative h-full w-full overflow-hidden rounded-[28px] bg-black shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
       <img
         src={story.bg}
         alt={group.user}
@@ -172,115 +177,107 @@ function StoryViewerStage({
         draggable={false}
       />
 
-      {/* Top gradient overlay */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-transparent to-black/70" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
-      {/* Progress bars for current user's stories */}
-      <ProgressBars
-        total={storiesCount}
-        current={storyIndex}
-        progress={progress}
-      />
+      <ProgressBars total={storiesCount} current={storyIndex} progress={progress} />
 
-      {/* Top bar: user info */}
-      <div className="absolute left-0 right-0 top-0 z-20 flex items-start px-4 pt-7">
-        <div className="flex items-center gap-2.5">
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-start justify-between px-4 pt-8">
+        <div className="flex items-center gap-3">
           <img
             src={group.avatar}
             alt={group.user}
-            className="h-9 w-9 rounded-full border-2 border-white object-cover"
+            className="h-10 w-10 rounded-full border-2 border-white object-cover"
           />
           <div>
-            <p className="text-white text-[13px] font-semibold">{group.user}</p>
-            <p className="text-white/60 text-[11px]">{story.timestamp || "Vừa xong"}</p>
+            <p className="text-[14px] font-semibold text-white">{group.user}</p>
+            <p className="text-[11px] text-white/70">{story.timestamp || "Just now"}</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onTogglePaused}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45"
+            aria-label={isPaused ? "Play story" : "Pause story"}
+          >
+            {isPaused ? <Play size={16} /> : <Pause size={16} />}
+          </button>
+          <button
+            type="button"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45"
+            aria-label="More options"
+          >
+            <MoreHorizontal size={18} />
+          </button>
         </div>
       </div>
 
-      {/* Prev user zone */}
       <button
         type="button"
         onClick={onPrev}
-        className="absolute left-0 top-0 z-20 h-full w-[15%] opacity-0"
+        className="absolute left-0 top-0 z-20 h-full w-[16%] opacity-0"
         aria-label="Previous person"
       />
 
-      {/* Next user / next story zone */}
       <button
         type="button"
         onClick={storyIndex < storiesCount - 1 ? onStoryNext : onNext}
-        className="absolute right-0 top-0 z-20 h-full w-[85%] opacity-0"
-        aria-label="Next"
+        className="absolute right-0 top-0 z-20 h-full w-[84%] opacity-0"
+        aria-label="Next story"
       />
 
-      {/* Prev story button (visible) */}
-      {storyIndex > 0 && (
-        <button
-          type="button"
-          onClick={onStoryPrev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 rounded-full bg-black/40 p-2 text-white hover:bg-black/65 transition-colors"
-          aria-label="Story trước"
-        >
-          <ChevronLeft size={20} />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onStoryPrev}
+        className={`absolute left-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white/15 p-2.5 text-white backdrop-blur-sm transition hover:bg-white/25 ${storyIndex > 0 ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        aria-label="Previous story"
+      >
+        <ChevronLeft size={20} />
+      </button>
 
-      {/* Next story button (visible) */}
-      {storyIndex < storiesCount - 1 && (
-        <button
-          type="button"
-          onClick={onStoryNext}
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 rounded-full bg-black/40 p-2 text-white hover:bg-black/65 transition-colors"
-          aria-label="Story sau"
-        >
-          <ChevronRight size={20} />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onStoryNext}
+        className={`absolute right-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white/15 p-2.5 text-white backdrop-blur-sm transition hover:bg-white/25 ${storyIndex < storiesCount - 1 ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        aria-label="Next story"
+      >
+        <ChevronRight size={20} />
+      </button>
 
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-4 space-y-2">
-        <p className="text-white text-[15px] font-semibold leading-snug drop-shadow-lg">
-          {story.label}
-        </p>
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-5 pb-5">
+        <div className="mb-4 rounded-2xl bg-black/20 p-4 backdrop-blur-sm">
+          <p className="text-[16px] font-semibold leading-snug text-white drop-shadow-lg">
+            {story.label}
+          </p>
+        </div>
 
-        {/* Reply input */}
-        <div className="rounded-full border border-white/20 bg-black/35 backdrop-blur-md px-3 py-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-md">
             <input
               type="text"
-              placeholder="Gửi tin nhắn..."
-              className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none"
+              placeholder={`Reply to ${group.user}...`}
+              className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/55 outline-none"
             />
             <button
               type="button"
-              className="text-white/70 hover:text-white transition-colors"
+              className="text-white/80 transition hover:text-white"
             >
               <Send size={16} />
             </button>
           </div>
-        </div>
 
-        {/* Reaction icons */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="rounded-full bg-black/30 p-2 hover:bg-black/50 text-white transition-colors"
-            >
-              <Heart size={16} />
-            </button>
-            <button
-              type="button"
-              className="rounded-full bg-black/30 p-2 hover:bg-black/50 text-white transition-colors"
-            >
-              <MessageCircle size={16} />
-            </button>
-          </div>
           <button
             type="button"
-            className="rounded-full bg-black/30 p-2 hover:bg-black/50 text-white transition-colors"
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45"
           >
-            <Send size={16} />
+            <Heart size={18} />
+          </button>
+          <button
+            type="button"
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45"
+          >
+            <MessageCircle size={18} />
           </button>
         </div>
       </div>
@@ -314,7 +311,6 @@ export default function StoryViewer() {
   );
 
   const goNextGroup = useCallback(() => goToGroup(currentGroupIndex + 1), [currentGroupIndex, goToGroup]);
-
   const goPrevGroup = useCallback(() => goToGroup(currentGroupIndex - 1), [currentGroupIndex, goToGroup]);
 
   const goNextStory = useCallback(() => {
@@ -364,24 +360,24 @@ export default function StoryViewer() {
     const handleKey = (e) => {
       if (e.key === "ArrowRight" || e.key === "ArrowDown") goNextStory();
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") goPrevStory();
+      if (e.key === " ") {
+        e.preventDefault();
+        setIsPaused((prev) => !prev);
+      }
       if (e.key === "Escape") navigate(-1);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [goNextStory, goPrevStory, navigate]);
 
-  const handleClose = () => navigate(-1);
-
   if (!currentGroup) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex bg-white">
-      {/* Left: compact story list */}
-      <div className="hidden lg:flex lg:w-[260px] lg:shrink-0">
+    <div className="fixed inset-0 z-[100] flex bg-[#0f1115]">
+      <div className="hidden lg:flex lg:h-full lg:w-[360px] lg:shrink-0">
         <StoryListPanel
           groups={storyGroups}
           currentGroupIndex={currentGroupIndex}
-          currentStoryIndex={currentStoryIndex}
           onSelect={(groupIndex, storyIdx) => {
             setCurrentGroupIndex(groupIndex);
             setCurrentStoryIndex(storyIdx);
@@ -390,16 +386,16 @@ export default function StoryViewer() {
         />
       </div>
 
-      {/* Right: centered story viewer */}
-      <div className="flex-1 flex items-center justify-center bg-black/60">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_#1d2433,_#0f1115_60%)] p-4 sm:p-6 lg:p-10">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.06),_transparent_55%)]" />
+
         <div
-          className="relative w-full h-full max-w-[700px] bg-black
-            lg:w-[40%] lg:max-w-[700px]
-            md:w-[60%] md:max-w-[500px]
-            sm:w-full sm:max-w-full"
+          className="relative z-10 h-full w-full max-w-[560px] lg:h-[92vh]"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
-          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+          }}
           onTouchEnd={(e) => {
             if (touchStartX.current === null) return;
             const delta = touchStartX.current - e.changedTouches[0].clientX;
@@ -414,20 +410,21 @@ export default function StoryViewer() {
             storyIndex={currentStoryIndex}
             storiesCount={totalStoriesInGroup}
             progress={progress}
+            isPaused={isPaused}
+            onTogglePaused={() => setIsPaused((prev) => !prev)}
             onPrev={goPrevGroup}
             onNext={goNextGroup}
             onStoryPrev={goPrevStory}
             onStoryNext={goNextStory}
           />
 
-          {/* Close button */}
           <button
             type="button"
-            onClick={handleClose}
-            className="absolute right-3 top-3 z-40 rounded-full bg-black/40 p-2 text-white hover:bg-black/65 transition-colors"
-            aria-label="Đóng"
+            onClick={() => navigate(-1)}
+            className="absolute right-4 top-4 z-40 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 lg:hidden"
+            aria-label="Close"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
       </div>

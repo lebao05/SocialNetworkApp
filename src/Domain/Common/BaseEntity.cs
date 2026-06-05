@@ -1,17 +1,19 @@
-﻿namespace Domain.Common;
+namespace Domain.Common;
 
 public abstract class BaseEntity : IEquatable<BaseEntity>
 {
     public long Id { get; init; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; protected set; }
 
     protected BaseEntity(long id)
     {
         Id = id;
         CreatedAt = DateTime.UtcNow;
     }
+
+    protected BaseEntity() : this(0) { }
 
     public void SetUpdated()
         => UpdatedAt = DateTime.UtcNow;

@@ -3,6 +3,8 @@ import { X, ChevronDown, Smile, Search, ArrowLeft, Loader2, User } from "lucide-
 import { useTag } from "../../hooks/useTag";
 import { createPostApi } from "../../apis/postApi";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 // Translated Mock Lists to English matching screenshots
 const TAG_FRIENDS_SUGGESTIONS = [
   { id: "101", name: "Gia Nhu", status: "Friends", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
@@ -59,7 +61,7 @@ const LOCATIONS_LIST = [
   "Long Mach Mang Pool"
 ];
 
-export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" }, onSubmit, groupId = null, allowAnonymousPost = false }) {
+export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: DEFAULT_AVATAR }, onSubmit, groupId = null, allowAnonymousPost = false }) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
   const [newPostFiles, setNewPostFiles] = useState([]);

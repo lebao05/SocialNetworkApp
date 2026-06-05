@@ -290,6 +290,7 @@ function PeopleTab({ contentOffsetClass, groupId }) {
 
 function MediaTab({ contentOffsetClass, groupId }) {
   const [activeMediaType, setActiveMediaType] = useState("image");
+  const [viewerIndex, setViewerIndex] = useState(null);
   const { medias, isLoading, hasMore, error, loadMore } = useMedias({
     groupId,
     mediaType: activeMediaType,
@@ -298,10 +299,102 @@ function MediaTab({ contentOffsetClass, groupId }) {
 
   const isVideoTab = activeMediaType === "video";
 
+  useEffect(() => {
+    setViewerIndex(null);
+  }, [activeMediaType]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (viewerIndex === null) return;
+
+      if (event.key === "Escape") {
+        setViewerIndex(null);
+      }
+
+      if (!isVideoTab && event.key === "ArrowLeft") {
+        setViewerIndex((current) => (current > 0 ? current - 1 : current));
+      }
+
+      if (!isVideoTab && event.key === "ArrowRight") {
+        setViewerIndex((current) => (current < medias.length - 1 ? current + 1 : current));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewerIndex, isVideoTab, medias.length]);
+
+  const activeItem = viewerIndex !== null ? medias[viewerIndex] : null;
+
   return (
-    <main className={contentOffsetClass}>
-      <div className="mx-auto w-full max-w-[900px] px-3 py-3">
-        <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
+    <>
+      {activeItem && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setViewerIndex(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setViewerIndex(null)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-2xl text-white transition-colors hover:bg-white/40"
+          >
+            ✕
+          </button>
+
+          {!isVideoTab && viewerIndex > 0 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setViewerIndex((current) => current - 1);
+              }}
+              className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-2xl text-white transition-colors hover:bg-white/40"
+            >
+              ‹
+            </button>
+          )}
+
+          {!isVideoTab && viewerIndex < medias.length - 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setViewerIndex((current) => current + 1);
+              }}
+              className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-2xl text-white transition-colors hover:bg-white/40"
+            >
+              ›
+            </button>
+          )}
+
+          {isVideoTab ? (
+            <video
+              src={activeItem.mediaUrl}
+              controls
+              autoPlay
+              className="max-h-[90vh] max-w-[90vw] rounded-lg bg-black object-contain shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={activeItem.mediaUrl}
+              alt=""
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
+
+          {!isVideoTab && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-1.5 text-sm font-medium text-white/80">
+              {viewerIndex + 1} / {medias.length}
+            </div>
+          )}
+        </div>
+      )}
+
+      <main className={contentOffsetClass}>
+        <div className="mx-auto w-full max-w-[900px] px-3 py-3">
+          <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-[18px] font-bold">Media</h2>
           </div>
@@ -334,9 +427,13 @@ function MediaTab({ contentOffsetClass, groupId }) {
             </div>
           ) : (
             <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-6">
-              {medias.map((item) =>
+              {medias.map((item, index) =>
                 isVideoTab ? (
-                  <div key={item.id} className="relative aspect-square w-full overflow-hidden bg-black">
+                  <div
+                    key={item.id}
+                    onClick={() => setViewerIndex(index)}
+                    className="relative aspect-square w-full overflow-hidden bg-black cursor-pointer"
+                  >
                     <img
                       src={item.thumbnailUrl || item.mediaUrl}
                       alt=""
@@ -351,9 +448,10 @@ function MediaTab({ contentOffsetClass, groupId }) {
                 ) : (
                   <img
                     key={item.id}
+                    onClick={() => setViewerIndex(index)}
                     src={item.mediaUrl}
                     alt=""
-                    className="aspect-square w-full object-cover"
+                    className="aspect-square w-full cursor-pointer object-cover"
                   />
                 )
               )}
@@ -375,6 +473,7 @@ function MediaTab({ contentOffsetClass, groupId }) {
         </section>
       </div>
     </main>
+    </>
   );
 }
 

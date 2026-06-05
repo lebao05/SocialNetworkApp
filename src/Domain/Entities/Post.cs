@@ -13,10 +13,6 @@ namespace Domain.Entities
         public string? LocationTag { get; private set; }
         public Feeling? FeelingActivity { get; private set; }
 
-
-        // Soft delete
-        public DateTime? DeletedAt { get; private set; }
-
         // Post approval (for group posts where IsPostApprovalRequired = true)
         public PostApprovalStatus ApprovalStatus { get; private set; }
 
@@ -85,13 +81,11 @@ namespace Domain.Entities
 
         public void SoftDelete()
         {
-            IsDeleted = true;
             DeletedAt = DateTime.UtcNow;
         }
 
         public void Restore()
         {
-            IsDeleted = false;
             DeletedAt = null;
         }
 

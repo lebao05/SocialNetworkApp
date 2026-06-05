@@ -142,6 +142,16 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_posts")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+            // User -> SeenStories
+            builder.HasMany(u => u.SeenStories)
+                .WithOne(ss => ss.User)
+                .HasForeignKey(ss => ss.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Navigation(u => u.SeenStories)
+                .HasField("_seenStories")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
             // User -> Comments
             builder.HasMany(u => u.Comments)
                 .WithOne(pc => pc.User)

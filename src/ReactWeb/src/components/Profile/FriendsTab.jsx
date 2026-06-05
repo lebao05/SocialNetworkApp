@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Search, MoreHorizontal, User, MessageCircle, X, Star, UserCheck, EyeOff, UserX } from "lucide-react";
 import { useProfileFriends } from "../../hooks/useProfileFriends";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 export default function FriendsTab({ userId, theme }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -35,7 +37,7 @@ export default function FriendsTab({ userId, theme }) {
     }, 300);
   };
 
-  const getAvatar = (friend) => friend.avatarUrl || friend.avatar;
+  const getAvatar = (friend) => friend.avatarUrl || friend.avatar || DEFAULT_AVATAR;
   const getName = (friend) => friend.fullName || friend.name;
   const getMutual = (friend) => friend.mutualFriendsCount ?? friend.mutual ?? 0;
 

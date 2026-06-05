@@ -66,13 +66,17 @@ export default function StoryBar() {
     navigate("/stories");
   };
 
+  const handleOpenCreateStory = () => {
+    navigate("/stories/create");
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] px-4 py-3">
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {/* Add story */}
         <button
           type="button"
-          onClick={handleOpenStories}
+          onClick={handleOpenCreateStory}
           className="flex flex-col items-center gap-1.5 flex-shrink-0 w-20 group cursor-pointer focus:outline-none"
         >
           <div className="relative w-[72px] h-[72px]">

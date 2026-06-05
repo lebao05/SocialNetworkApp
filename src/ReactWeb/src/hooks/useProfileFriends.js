@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getProfileFriendsApi } from "../apis/friendApi";
+import { getFriendsApi } from "../apis/friendApi";
 
 export function useProfileFriends(userId, searchTerm = "") {
     const [friends, setFriends] = useState([]);
@@ -11,7 +11,7 @@ export function useProfileFriends(userId, searchTerm = "") {
 
         try {
             setLoading(true);
-            const data = await getProfileFriendsApi(userId, searchTerm || null);
+            const data = await getFriendsApi(1, searchTerm || null);
             setFriends(Array.isArray(data) ? data : data?.items ?? []);
             setError(null);
         } catch (err) {

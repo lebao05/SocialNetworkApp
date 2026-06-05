@@ -137,7 +137,7 @@ export default function FriendsPage() {
             {/* CARD GRID */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {items.map((item) => {
-                const avatar = item.senderAvatarUrl || item.avatarUrl || item.avatar;
+                const avatar = item.senderAvatarUrl || item.avatarUrl || item.avatar || import.meta.env.VITE_DEFAULT_AVATAR;
                 return (
                   <div
                     key={item.id ?? getDisplayName(item)}

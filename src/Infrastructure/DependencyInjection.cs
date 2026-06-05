@@ -29,6 +29,7 @@ namespace Infrastructure
             services.AddScoped<IMessageRepository, MessageRepository>();
             services.AddScoped<ISchoolRepository, SchoolRepository>();
             services.AddScoped<IPostRepository, PostRepository>();
+            services.AddScoped<IReelRepository, ReelRepository>();
             services.AddScoped<IFeedRepository, FeedRepository>();
 
             services.AddScoped<IUploadService>(provider =>

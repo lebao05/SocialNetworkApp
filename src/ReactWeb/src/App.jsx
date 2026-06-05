@@ -11,6 +11,8 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupsCreatePage from "./pages/GroupsCreatePage";
 import SearchPage from "./pages/SearchPage";
 import ReelsPage from "./pages/ReelsPage";
+import SavedPage from "./pages/SavedPage";
+import BirthdaysPage from "./pages/BirthdaysPage";
 import StoryViewer from "./components/Story/StoryViewer";
 import CreateStoryPage from "./pages/CreateStoryPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -24,6 +26,8 @@ export default function App() {
       {/* Protected Routes */}
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
+      <Route path="/saved" element={<ProtectedRoute><SavedPage /></ProtectedRoute>} />
+      <Route path="/birthdays" element={<ProtectedRoute><BirthdaysPage /></ProtectedRoute>} />
       <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/stories" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />

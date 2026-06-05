@@ -15,6 +15,8 @@ import Navbar from "../components/Navbar/Navbar";
 import { useAuth } from "../contexts/authContext";
 import { useGroup } from "../hooks/useGroup";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 const privacyOptions = [
   {
     value: "public",
@@ -52,7 +54,7 @@ export default function GroupsCreatePage() {
   const displayUser = useMemo(
     () => ({
       name: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Le Bao" : "Le Bao",
-      avatar: user?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      avatar: user?.avatarUrl || DEFAULT_AVATAR,
     }),
     [user]
   );

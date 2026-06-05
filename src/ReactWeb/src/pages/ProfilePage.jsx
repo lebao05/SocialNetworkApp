@@ -11,6 +11,8 @@ import AboutTab from "../components/Profile/AboutTab";
 import FriendsTab from "../components/Profile/FriendsTab";
 import FollowingTab from "../components/Profile/FollowingTab";
 import MediaTab from "../components/Profile/MediaTab";
+import ProfileReelsTab from "../components/Profile/ProfileReelsTab";
+import CreateReelModal from "../components/Profile/CreateReelModal";
 import CreatePostModal from "../components/Profile/CreatePostModal";
 import {
   Camera,
@@ -34,9 +36,14 @@ import {
   MessageCircle,
   Share2,
   Heart,
-  ArrowLeft
+  ArrowLeft,
+  Play
 } from "lucide-react";
 import PostCard from "../components/Feed/PostCard";
+import { useProfileFriends } from "../hooks/useProfileFriends";
+import { useProfileReels } from "../hooks/useProfileReels";
+
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 // Mock User matching the user's screenshots exactly
 const mockProfileUser = {
@@ -63,19 +70,6 @@ const mockProfileUser = {
   }
 };
 
-// Mock Friends matching the screenshot names exactly
-const mockFriends = [
-  { id: 101, name: "Nguyễn Trần Đăng Khoa", mutual: 23, avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80" },
-  { id: 102, name: "Bùi Duy Anh", mutual: 60, avatar: "" }, // empty triggers default gray avatar
-  { id: 103, name: "Vũ Thành Toàn", mutual: 37, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80" },
-  { id: 104, name: "Quỳnh Tran", mutual: 22, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
-  { id: 105, name: "Vu Phan Anh", mutual: 19, avatar: "" },
-  { id: 106, name: "Tran Hoang Bach", mutual: 0, avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80" },
-  { id: 107, name: "Phương Nguyễn", mutual: 26, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" },
-  { id: 108, name: "Phạm Việt Nhật", mutual: 23, avatar: "" },
-  { id: 109, name: "Nguyễn Trí Nhân", mutual: 41, avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80" }
-];
-
 // Mock Gallery Photos
 const mockPhotos = [
   "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80", // photo 1
@@ -88,7 +82,6 @@ const mockPhotos = [
   "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=300&auto=format&fit=crop&q=80", // photo 8
 ];
 
-
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
@@ -99,6 +92,8 @@ export default function ProfilePage() {
   const { schools, loading: schoolsLoading, fetchSchools } = useSchools(viewUserId);
   const { medias: userPhotos, isLoading: photosLoading, error: photosError, loadMore: loadMorePhotos } = useUserMedias({ userId: viewUserId, mediaType: "image", pageSize: 9 });
   const { medias: userVideos, isLoading: videosLoading, error: videosError, loadMore: loadMoreVideos } = useUserMedias({ userId: viewUserId, mediaType: "video", pageSize: 12 });
+  const { friends: profileFriends, loading: friendsLoading } = useProfileFriends(viewUserId);
+  const { reels: profileReels, isLoading: reelsLoading, error: reelsError, refresh: refreshProfileReels } = useProfileReels(viewUserId, { initialPage: 1, pageSize: 12 });
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -132,6 +127,7 @@ export default function ProfilePage() {
     // posts are managed by useUserPosts; nothing local to reset
     setIsEditingBio(false);
     setIsCreateModalOpen(false);
+    setIsCreateReelOpen(false);
   }, [viewUserId]);
 
   useEffect(() => {
@@ -142,26 +138,26 @@ export default function ProfilePage() {
         setProfileName(`${personalInfo.firstName} ${personalInfo.lastName}`);
       }
 
-      const genderStr = personalInfo.gender === 0 ? "Nam" : "Nữ";
+      const genderStr = personalInfo.gender === 0 ? "Male" : "Female";
 
       const relMapping = {
-        0: 'Độc thân',
-        1: 'Đang hẹn hò',
-        2: 'Đã đính hôn',
-        3: 'Đã kết hôn',
-        4: 'Trong một mối quan hệ mở',
-        5: 'Có mối quan hệ phức tạp',
-        6: 'Đã ly thân',
-        7: 'Đã ly hôn',
-        8: 'Góa'
+        0: "Single",
+        1: "In a relationship",
+        2: "Engaged",
+        3: "Married",
+        4: "In an open relationship",
+        5: "It's complicated",
+        6: "Separated",
+        7: "Divorced",
+        8: "Widowed"
       };
-      const relationshipStr = relMapping[personalInfo.relationshipStatus] ?? 'Chưa cập nhật';
+      const relationshipStr = relMapping[personalInfo.relationshipStatus] ?? "Not specified";
 
       const formatDateToDayMonth = (dateStr) => {
         if (!dateStr) return "";
         const date = new Date(dateStr);
         if (isNaN(date.getTime())) return "";
-        return `${date.getDate()} tháng ${date.getMonth() + 1}`;
+        return date.toLocaleDateString("en-US", { day: "numeric", month: "long" });
       };
 
       setProfileDetails(prev => ({
@@ -178,14 +174,15 @@ export default function ProfilePage() {
     }
   }, [personalInfo]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
 
 
   // Localized User details
   const displayUser = {
     name: profileName,
-    avatar: personalInfo?.avatarUrl || authUser?.avatarUrl || mockProfileUser.avatar,
+    avatar: personalInfo?.avatarUrl || authUser?.avatarUrl || DEFAULT_AVATAR,
     coverPhoto: personalInfo?.coverPhotoUrl || mockProfileUser.coverPhoto,
-    friendsCount: mockProfileUser.friendsCount
+    friendsCount: profileFriends.length || mockProfileUser.friendsCount
   };
 
   const handleSaveBio = async () => {
@@ -292,16 +289,16 @@ export default function ProfilePage() {
       }
       if (field === 'relationship') {
         const mapping = {
-          'Độc thân': 0,
-          'Đang hẹn hò': 1,
-          'Đã đính hôn': 2,
-          'Đã kết hôn': 3,
-          'Trong một mối quan hệ mở': 4,
-          'Có mối quan hệ phức tạp': 5,
-          'Đã ly thân': 6,
-          'Đã ly hôn': 7,
-          'Góa': 8,
-          'Chưa cập nhật': null
+          'Single': 0,
+          'In a relationship': 1,
+          'Engaged': 2,
+          'Married': 3,
+          'In an open relationship': 4,
+          "It's complicated": 5,
+          'Separated': 6,
+          'Divorced': 7,
+          'Widowed': 8,
+          'Not specified': null
         };
         updateData.relationshipStatus = mapping[value] !== undefined ? mapping[value] : null;
       }
@@ -309,14 +306,11 @@ export default function ProfilePage() {
       await updateUserInfoApi(updateData);
 
       if (field === 'dateOfBirth') {
-        const parts = value.split("-");
-        const monthNames = ["", "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
-        const day = parseInt(parts[2] || "1");
-        const monthNum = parseInt(parts[1] || "1");
+        const date = new Date(value);
         setProfileDetails(prev => ({
           ...prev,
-          birthDate: `${day} ${monthNames[monthNum] || ""}`,
-          birthYear: parts[0] || ""
+          birthDate: !isNaN(date.getTime()) ? date.toLocaleDateString("en-US", { day: "numeric", month: "long" }) : "",
+          birthYear: !isNaN(date.getTime()) ? String(date.getFullYear()) : ""
         }));
       } else {
         setProfileDetails(prev => ({
@@ -327,14 +321,11 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Failed to update profile field", error);
       if (field === 'dateOfBirth') {
-        const parts = value.split("-");
-        const monthNames = ["", "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
-        const day = parseInt(parts[2] || "1");
-        const monthNum = parseInt(parts[1] || "1");
+        const date = new Date(value);
         setProfileDetails(prev => ({
           ...prev,
-          birthDate: `${day} ${monthNames[monthNum] || ""}`,
-          birthYear: parts[0] || ""
+          birthDate: !isNaN(date.getTime()) ? date.toLocaleDateString("en-US", { day: "numeric", month: "long" }) : "",
+          birthYear: !isNaN(date.getTime()) ? String(date.getFullYear()) : ""
         }));
       } else {
         setProfileDetails(prev => ({
@@ -356,6 +347,17 @@ export default function ProfilePage() {
       await refreshPosts();
     } catch (err) {
       console.error("Create post failed:", err);
+    }
+  };
+
+  const handleCreateReel = async () => {
+    if (!isOwnProfile) return;
+
+    try {
+      await refreshProfileReels();
+      setActiveTab("reels");
+    } catch (err) {
+      console.error("Refresh reels failed:", err);
     }
   };
 
@@ -391,12 +393,12 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#18191a] px-4 text-center">
         <div className="max-w-lg rounded-2xl bg-white dark:bg-[#242526] shadow-sm p-8">
-          <h2 className="text-2xl font-bold mb-3 text-[#111827] dark:text-[#e4e6eb]">Không thể tải trang cá nhân</h2>
+          <h2 className="text-2xl font-bold mb-3 text-[#111827] dark:text-[#e4e6eb]">Unable to load profile</h2>
           <p className="text-sm text-[#4b5563] dark:text-[#b0b3b8] mb-6">
-            {infoError?.message || 'Đã xảy ra lỗi khi tải thông tin người dùng. Vui lòng thử lại sau.'}
+            {infoError?.message || 'Something went wrong while loading this profile. Please try again later.'}
           </p>
           <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-[#1877f2] text-white hover:bg-blue-600 transition-all">
-            Thử lại
+            Retry
           </button>
         </div>
       </div>
@@ -438,7 +440,7 @@ export default function ProfilePage() {
                 className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
               >
                 <Camera size={16} />
-                <span className="hidden sm:inline">{coverUploading ? "Đang tải..." : "Thêm ảnh bìa"}</span>
+                <span className="hidden sm:inline">{coverUploading ? "Uploading..." : "Upload cover image"}</span>
               </button>
             )}
           </div>
@@ -457,17 +459,11 @@ export default function ProfilePage() {
                   className="hidden"
                   onChange={handleAvatarFileSelect}
                 />
-                {displayUser.avatar ? (
-                  <img
-                    src={displayUser.avatar}
-                    alt={displayUser.name}
-                    className={`w-[168px] h-[168px] rounded-full border-4 ${darkMode ? "border-[#242526]" : "border-white"} object-cover shadow-lg`}
-                  />
-                ) : (
-                  <div className={`w-[168px] h-[168px] rounded-full border-4 ${darkMode ? "border-[#242526]" : "border-white"} bg-[#8a8d91] flex items-center justify-center text-white text-5xl font-bold shadow-lg`}>
-                    {displayUser.name.charAt(0)}
-                  </div>
-                )}
+                <img
+                  src={displayUser.avatar || DEFAULT_AVATAR}
+                  alt={displayUser.name}
+                  className={`w-[168px] h-[168px] rounded-full border-4 ${darkMode ? "border-[#242526]" : "border-white"} object-cover shadow-lg`}
+                />
                 {isOwnProfile && (
                   <button
                     type="button"
@@ -490,24 +486,14 @@ export default function ProfilePage() {
 
                 {/* Overlapping Mutual Friends Avatars */}
                 <div className="flex items-center justify-center md:justify-start -space-x-2 mt-2 overflow-hidden">
-                  {mockFriends.slice(0, 8).map((friend, i) => (
-                    friend.avatar ? (
-                      <img
-                        key={friend.id}
-                        src={friend.avatar}
-                        alt={friend.name}
-                        className="w-8 h-8 rounded-full border-2 border-transparent ring-2 ring-[#242526] object-cover"
-                        style={{ zIndex: 10 - i }}
-                      />
-                    ) : (
-                      <div
-                        key={friend.id}
-                        className="w-8 h-8 rounded-full border-2 border-transparent ring-2 ring-[#242526] bg-gray-500 flex items-center justify-center text-[10px] text-white font-bold"
-                        style={{ zIndex: 10 - i }}
-                      >
-                        {friend.name.charAt(0)}
-                      </div>
-                    )
+                  {profileFriends.slice(0, 8).map((friend, i) => (
+                    <img
+                      key={friend.id}
+                      src={friend.avatarUrl || DEFAULT_AVATAR}
+                      alt={friend.fullName || friend.userName || "Friend"}
+                      className="w-8 h-8 rounded-full border-2 border-transparent ring-2 ring-[#242526] object-cover bg-[#e4e6eb]"
+                      style={{ zIndex: 10 - i }}
+                    />
                   ))}
                 </div>
 
@@ -592,6 +578,7 @@ export default function ProfilePage() {
               { id: "about", label: "About" },
               { id: "friends", label: "Friends" },
               { id: "media", label: "Media" },
+              { id: "reels", label: "Reels" },
               { id: "following", label: "Following" },
             ].map(tab => (
               <button
@@ -651,7 +638,7 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {profileDetails.relationship && profileDetails.relationship !== 'Chưa cập nhật' && (
+                  {profileDetails.relationship && profileDetails.relationship !== 'Not specified' && (
                     <div className={`flex items-start gap-3 ${theme.text}`}>
                       <Heart className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <span>{profileDetails.relationship}</span>
@@ -682,7 +669,7 @@ export default function ProfilePage() {
                       <Clock className="w-5 h-5 flex-shrink-0 text-gray-500 mt-0.5" />
                       <div className="flex items-center gap-1.5">
                         <span>Born in <span className="font-semibold">{profileDetails.birthYear}</span></span>
-                        <Lock size={13} className="text-gray-400" title="Chỉ mình tôi" />
+                        <Lock size={13} className="text-gray-400" title="Only me" />
                       </div>
                     </div>
                   )}
@@ -725,26 +712,71 @@ export default function ProfilePage() {
               <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Photos</h2>
+                    <h2 className={`text-xl font-bold ${theme.text}`}>Reels</h2>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("reels")}
+                    className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
+                  >
+                    See all reels
+                  </button>
+                </div>
+
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateReelOpen(true)}
+                    className="mb-3 w-full rounded-lg border border-dashed border-[#c7d2fe] bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-[#1877f2] transition hover:bg-[#eef5ff]"
+                  >
+                    Create reel
+                  </button>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {profileReels.slice(0, 4).map((reel) => (
+                    <button
+                      key={reel.id}
+                      type="button"
+                      onClick={() => setActiveTab("reels")}
+                      className="group relative aspect-[9/16] overflow-hidden rounded-xl bg-black text-left"
+                    >
+                      <img src={reel.poster} alt={reel.caption} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/80" />
+                      <div className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white">
+                        <Play size={16} fill="currentColor" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-2.5 text-white">
+                        <p className="line-clamp-2 text-xs font-semibold leading-snug">{reel.caption}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photos Gallery Box */}
+              <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className={`text-xl font-bold ${theme.text}`}>Media</h2>
                   </div>
                   <button
                     onClick={() => setActiveTab("media")}
                     className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
                   >
-                    See all photos
+                    See all media
                   </button>
                 </div>
 
-                {/* 4-column Photo Grid */}
-                <div className="grid grid-cols-4 gap-1 rounded-lg overflow-hidden">
+                {/* 3x3 Media Grid */}
+                <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
                   {photosLoading && userPhotos.length === 0 ? (
-                    <div className="col-span-4 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading photos...</div>
+                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading media...</div>
                   ) : userPhotos.length === 0 ? (
-                    <div className="col-span-4 flex items-center justify-center py-8 text-sm text-[#65676b]">No photos yet.</div>
+                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No media yet.</div>
                   ) : (
-                    userPhotos.slice(0, 8).map((photo) => (
+                    userPhotos.slice(0, 9).map((photo) => (
                       <div key={photo.id} className="aspect-square bg-gray-700 hover:brightness-90 transition-all cursor-pointer">
-                        <img src={photo.mediaUrl} alt="" className="w-full h-full object-cover" />
+                        <img src={photo.mediaUrl} alt="User media" className="w-full h-full object-cover" />
                       </div>
                     ))
                   )}
@@ -765,24 +797,24 @@ export default function ProfilePage() {
                   </button>
                 </div>
 
-                {/* 4-column Friends Grid */}
-                <div className="grid grid-cols-4 gap-1">
-                  {mockFriends.map((friend) => (
-                    <div key={friend.id} className="cursor-pointer group flex flex-col">
-                      <div className="h-28 bg-gray-200 dark:bg-[#3a3b3c] rounded-md overflow-hidden relative hover:opacity-90 transition-opacity">
-                        {friend.avatar ? (
-                          <img src={friend.avatar} alt={friend.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-[#3a3b3c] text-[#65676B] text-base font-medium uppercase">
-                            {friend.name.charAt(0)}
-                          </div>
-                        )}
+                {/* 3x3 Friends Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {friendsLoading && profileFriends.length === 0 ? (
+                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading friends...</div>
+                  ) : profileFriends.length === 0 ? (
+                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No friends yet.</div>
+                  ) : (
+                    profileFriends.slice(0, 9).map((friend) => (
+                      <div key={friend.id} className="cursor-pointer group flex flex-col min-w-0">
+                        <div className="aspect-square bg-gray-200 dark:bg-[#3a3b3c] rounded-md overflow-hidden relative hover:opacity-90 transition-opacity">
+                          <img src={friend.avatarUrl || DEFAULT_AVATAR} alt={friend.fullName || friend.userName || "Friend"} className="w-full h-full object-cover" />
+                        </div>
+                        <span className={`text-sm font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
+                          {friend.fullName || friend.userName}
+                        </span>
                       </div>
-                      <span className={`text-sm font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
-                        {friend.name}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -808,7 +840,7 @@ export default function ProfilePage() {
                         onClick={() => setIsCreateModalOpen(true)}
                         className={`flex-1 text-left px-4 py-2.5 rounded-full text-[15px] transition-all cursor-pointer text-gray-500 ${darkMode ? 'bg-[#3a3b3c] hover:bg-[#4e4f50] text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
                       >
-                        {displayUser.name} ơi, bạn đang nghĩ gì thế?
+                        What’s on your mind, {displayUser.name}?
                       </button>
                     </div>
 
@@ -919,6 +951,16 @@ export default function ProfilePage() {
                 loadMoreVideos={loadMoreVideos}
               />
             )}
+            {activeTab === "reels" && (
+              <ProfileReelsTab
+                theme={theme}
+                reels={profileReels}
+                isLoading={reelsLoading}
+                error={reelsError}
+                canCreate={isOwnProfile}
+                onCreateReel={() => setIsCreateReelOpen(true)}
+              />
+            )}
             {activeTab === "following" && (
               <FollowingTab theme={theme} />
             )}
@@ -933,6 +975,13 @@ export default function ProfilePage() {
               displayUser={displayUser}
               onSubmit={handleCreatePost}
               theme={theme}
+            />
+
+            <CreateReelModal
+              isOpen={isCreateReelOpen}
+              onClose={() => setIsCreateReelOpen(false)}
+              displayUser={displayUser}
+              onSubmit={handleCreateReel}
             />
 
 

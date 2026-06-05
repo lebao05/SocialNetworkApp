@@ -1,10 +1,11 @@
-using System;
+using Application.Abstractions;
+using CloudinaryDotNet.Actions;
+using CloudinaryDotNet;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Application.Abstractions;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
+
 namespace Infrastructure.Services
 {
     public class CloudinaryUploadService : IUploadService
@@ -39,6 +40,17 @@ namespace Infrastructure.Services
 
         public async Task<string> UploadVideoAsync(Stream fileStream, string fileName)
         {
+            var result = await UploadVideoInternalAsync(fileStream, fileName);
+            return result.VideoUrl;
+        }
+
+        public async Task<UploadedVideoResult> UploadVideoWithMetadataAsync(Stream fileStream, string fileName)
+        {
+            return await UploadVideoInternalAsync(fileStream, fileName);
+        }
+
+        private async Task<UploadedVideoResult> UploadVideoInternalAsync(Stream fileStream, string fileName)
+        {
             var uploadParams = new VideoUploadParams
             {
                 File = new FileDescription(fileName, fileStream),
@@ -54,7 +66,31 @@ namespace Infrastructure.Services
                 throw new Exception("Upload failed: " + result.Error?.Message);
             }
 
-            return result.SecureUrl.ToString();
+            var thumbnailUrl = result.PublicId is null
+                ? null
+                : _cloudinary.Api.UrlImgUp
+                    .Transform(new Transformation().Width(480).Crop("fill").Quality("auto").FetchFormat("jpg"))
+                    .BuildUrl($"{result.PublicId}.jpg");
+
+            var duration = FormatDuration(result.Duration);
+
+            return new UploadedVideoResult(
+                result.SecureUrl.ToString(),
+                thumbnailUrl,
+                duration);
+        }
+
+        private static string? FormatDuration(double? durationSeconds)
+        {
+            if (!durationSeconds.HasValue || durationSeconds.Value <= 0)
+            {
+                return null;
+            }
+
+            var timeSpan = TimeSpan.FromSeconds(durationSeconds.Value);
+            return timeSpan.TotalHours >= 1
+                ? timeSpan.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
+                : timeSpan.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         }
 
         public async Task<string> UploadFileAsync(Stream fileStream, string fileName)

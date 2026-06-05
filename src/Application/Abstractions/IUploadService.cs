@@ -4,6 +4,7 @@ namespace Application.Abstractions
     {
         Task<string> UploadImageAsync(Stream fileStream, string fileName);
         Task<string> UploadVideoAsync(Stream fileStream, string fileName);
+        Task<UploadedVideoResult> UploadVideoWithMetadataAsync(Stream fileStream, string fileName);
         Task<string> UploadFileAsync(Stream fileStream, string fileName);
         Task DeleteFileAsync(string fileUrl);
     }

@@ -95,9 +95,9 @@ namespace Infrastructure.Persistence.Repositories
             var existingConversationUserIds = _context.ConversationMembers
                 .Where(m => m.UserId == userId)
                 .Select(m => m.ConversationId)
-                .Join(_context.Conversations.Where(c => c.IsOneToOne), 
-                    cid => cid, 
-                    c => c.Id, 
+                .Join(_context.Conversations.Where(c => c.IsOneToOne),
+                    cid => cid,
+                    c => c.Id,
                     (cid, c) => c)
                 .SelectMany(c => c.Members)
                 .Where(m => m.UserId != userId)
@@ -131,5 +131,5 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
-
+    }
 }

@@ -21,7 +21,7 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<bool> ExistsAsync(long id, CancellationToken cancellationToken = default)
         {
-            return await _context.Conversations.AnyAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
+            return await _context.Conversations.AnyAsync(c => c.Id == id && c.DeletedAt == null, cancellationToken);
         }
         public async Task<global::Domain.Entities.Conversation?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
         {
@@ -29,7 +29,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
-                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
+                .FirstOrDefaultAsync(c => c.Id == id && c.DeletedAt == null, cancellationToken);
         }
         public async Task<ConversationMember?> GetMemberAsync(
             long conversationId,
@@ -55,7 +55,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
-                .Where(c => !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .Where(c => c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
                 .OrderByDescending(c => c.Messages.Max(m => m.CreatedAt));
 
             // 2. Execute pagination logic
@@ -78,7 +78,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
-                .Where(c => c.IsOneToOne && !c.IsDeleted)
+                .Where(c => c.IsOneToOne && c.DeletedAt == null)
                 .Where(c => c.Members.Any(m => m.UserId == userId1) && c.Members.Any(m => m.UserId == userId2))
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -97,7 +97,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
-                .Where(c => !c.IsOneToOne && !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .Where(c => !c.IsOneToOne && c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
                 .Where(c => c.Name != null && c.Name.ToLower().Contains(lowerTerm))
                 .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
@@ -119,7 +119,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
-                .Where(c => c.IsOneToOne && !c.IsDeleted && c.Members.Any(m => m.UserId == userId))
+                .Where(c => c.IsOneToOne && c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
                 .Where(c => c.Members.Any(m =>
                     m.UserId != userId &&
                     (m.User.FirstName.ToLower().Contains(lowerTerm) ||

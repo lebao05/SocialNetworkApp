@@ -22,9 +22,12 @@ export async function acceptFriendRequestApi(requestId) {
  * Fetches the current user's friends list.
  * Maps to GET /api/friend.
  */
-export async function getFriendsApi(page = 1) {
+export async function getFriendsApi(page = 1, searchTerm = null) {
     const response = await axios.get("/friend", {
-        params: { page },
+        params: {
+            page,
+            searchTerm: searchTerm || undefined,
+        },
     });
     return response.data;
 }
@@ -58,17 +61,5 @@ export async function getFriendRecommendationsApi(limit = 10) {
  */
 export async function getFolloweesApi() {
     const response = await axios.get("/friend/followees");
-    return response.data;
-}
-
-/**
- * Fetches a given user's friends, optionally filtered by a search term.
- * Maps to GET /api/friend/{userId}/friends?searchTerm=...
- * Returns: { id, userName, fullName, avatarUrl, mutualFriendsCount }[]
- */
-export async function getProfileFriendsApi(userId, searchTerm = null) {
-    const response = await axios.get(`/friend/${userId}/friends`, {
-        params: { searchTerm: searchTerm || undefined },
-    });
     return response.data;
 }

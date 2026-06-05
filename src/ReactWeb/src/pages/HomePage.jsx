@@ -3,12 +3,15 @@ import Navbar from "../components/Navbar/Navbar";
 import LeftSidebar from "../components/Sidebar/LeftSidebar";
 import StoryBar from "../components/Feed/StoryBar";
 import CreatePost from "../components/Feed/CreatePost";
+import HomeReelsRail from "../components/Feed/HomeReelsRail";
 import PostCard from "../components/Feed/PostCard";
 import RightSidebar from "../components/RightSidebar/RightSidebar";
 import { MiniChatBox } from "../components/Messenger/MessengerMini";
 import { useAuth } from "../contexts/authContext";
 import { useFeed } from "../hooks/useFeed";
 import CreatePostModal from "../components/Profile/CreatePostModal";
+
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function HomePage() {
   const { user: currentUser } = useAuth();
@@ -69,7 +72,7 @@ export default function HomePage() {
 
   const displayUser = {
     name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Bạn",
-    avatar: currentUser?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+    avatar: currentUser?.avatarUrl || DEFAULT_AVATAR,
   };
 
   const handleCreatePost = async (payload) => {
@@ -104,6 +107,8 @@ export default function HomePage() {
               theme={theme}
               darkMode={false}
             />
+
+            <HomeReelsRail />
 
             {posts.length > 0 ? (
               posts.map((feedItem) => (

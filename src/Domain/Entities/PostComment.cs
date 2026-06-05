@@ -9,9 +9,6 @@ namespace Domain.Entities
         public long? ParentCommentId { get; private set; }
         public Guid? RepliedUserId { get; private set; }
         public string Content { get; private set; } = string.Empty;
-        
-        // Soft delete
-        public DateTime? DeletedAt { get; private set; }
 
         // Navigation
         public Post Post { get; private set; } = null!;

@@ -55,8 +55,12 @@ namespace Domain.Entities
         public IReadOnlyCollection<Following> Followers => _followers;
 
         private readonly List<Post> _posts = new();
+        private readonly List<Reel> _reels = new();
+        private readonly List<StorySeen> _seenStories = new();
         private readonly List<PostComment> _comments = new();
+        private readonly List<ReelComment> _reelComments = new();
         private readonly List<CommentReaction> _commentReactions = new();
+        private readonly List<ReelReaction> _reelReactions = new();
         private readonly List<SavedPost> _savedPosts = new();
         private readonly List<UserFeed> _userFeeds = new();
         private readonly List<Notification> _receivedNotifications = new();
@@ -66,8 +70,12 @@ namespace Domain.Entities
 
         // Navigation Collections
         public virtual IReadOnlyCollection<Post> Posts => _posts;
+        public virtual IReadOnlyCollection<Reel> Reels => _reels;
+        public virtual IReadOnlyCollection<StorySeen> SeenStories => _seenStories;
         public virtual IReadOnlyCollection<PostComment> Comments => _comments;
+        public virtual IReadOnlyCollection<ReelComment> ReelComments => _reelComments;
         public virtual IReadOnlyCollection<CommentReaction> CommentReactions => _commentReactions;
+        public virtual IReadOnlyCollection<ReelReaction> ReelReactions => _reelReactions;
         public virtual IReadOnlyCollection<SavedPost> SavedPosts => _savedPosts;
         public virtual IReadOnlyCollection<UserFeed> UserFeeds => _userFeeds;
         public virtual IReadOnlyCollection<Notification> ReceivedNotifications => _receivedNotifications;

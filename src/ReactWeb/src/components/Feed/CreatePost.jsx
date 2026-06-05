@@ -2,6 +2,8 @@ import React from "react";
 import { Video, Image as ImageIcon, Smile } from "lucide-react";
 import { useAuth } from "../../contexts/authContext";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 export default function CreatePost({
   displayUser: propDisplayUser,
   setIsCreateModalOpen,
@@ -18,7 +20,7 @@ export default function CreatePost({
   // Fallback to current authenticated user if propDisplayUser is not passed
   const displayUser = propDisplayUser || {
     name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Bạn",
-    avatar: currentUser?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"
+    avatar: currentUser?.avatarUrl || DEFAULT_AVATAR
   };
 
   return (

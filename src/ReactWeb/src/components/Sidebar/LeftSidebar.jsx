@@ -35,7 +35,7 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => 
       <span className={`truncate text-[15px] ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
     </>
   );
-  const className = `flex items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
+  const className = `flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
     active ? "bg-[#E7F3FF] text-[#1877F2]" : "text-[#050505] hover:bg-[#F2F2F2]"
   }`;
 
@@ -51,7 +51,7 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => 
 };
 
 const ShortcutItem = ({ icon: Icon, name }) => (
-  <div className="flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]">
+  <div className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]">
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-gradient-to-tr from-gray-200 to-gray-300 shadow-sm">
       <Icon size={19} className="text-[#374151]" />
     </div>
@@ -65,7 +65,7 @@ export default function LeftSidebar() {
   const primaryMenu = [
     { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", active: true },
     { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500" },
-    { id: "saved", label: "Saved", icon: Bookmark, iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600" },
+    { id: "saved", label: "Saved", icon: Bookmark, iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600", to: "/saved" },
     { id: "groups", label: "Groups", icon: MdGroups, iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500" },
     { id: "reels", label: "Reels", icon: Clapperboard, iconBg: "bg-gradient-to-r from-pink-500 to-rose-500", to: "/watch" },
     { id: "feeds", label: "Feed", icon: FileText, iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600" },
@@ -74,7 +74,7 @@ export default function LeftSidebar() {
   const extendedMenu = [
     { id: "chat-ai", label: "Chat with AI", icon: Sparkles, iconBg: "bg-gradient-to-r from-sky-400 to-blue-500" },
     { id: "messenger", label: "Messenger", icon: MessageCircle, iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500" },
-    { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500" },
+    { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500", to: "/birthdays" },
   ];
 
   const userShortcuts = [
@@ -94,7 +94,7 @@ export default function LeftSidebar() {
 
   return (
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
-      <Link to="/profile" className="mb-1 flex items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]">
+      <Link to="/profile" className="mb-1 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]">
         <img
           src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
           alt="avatar"
@@ -115,7 +115,7 @@ export default function LeftSidebar() {
       <button
         type="button"
         onClick={() => setIsExpanded((value) => !value)}
-        className="flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]"
+        className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]"
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300/40 bg-[#E4E6EB] text-black shadow-sm">
           {isExpanded ? <ChevronUp size={20} strokeWidth={2.5} /> : <ChevronDown size={20} strokeWidth={2.5} />}
@@ -127,7 +127,7 @@ export default function LeftSidebar() {
 
       <div className="mb-1.5 flex items-center justify-between px-2">
         <p className="text-[15px] font-semibold text-[#65676B]">Your Shortcuts</p>
-        <button type="button" className="rounded-md px-2 py-0.5 text-[14px] text-[#1877F2] transition hover:bg-[#F2F2F2]">
+        <button type="button" className="cursor-pointer rounded-md px-2 py-0.5 text-[14px] text-[#1877F2] transition hover:bg-[#F2F2F2]">
           Edit
         </button>
       </div>

@@ -44,7 +44,7 @@ public class Message : AggregateRoot
 
     public Result UpdateContent(Guid requesterId, string? newContent)
     {
-        if (IsDeleted)
+        if (DeletedAt is not null)
         {
             return Result.Failure(new Error(
                 "Message.Deleted",

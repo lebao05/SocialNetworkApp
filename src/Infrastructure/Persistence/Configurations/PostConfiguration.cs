@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -138,8 +139,8 @@ namespace Infrastructure.Persistence.Configurations
                 .HasField("_tags")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            // Soft delete query filter (ignores soft-deleted rows by default!)
             builder.HasQueryFilter(p => p.DeletedAt == null);
+
         }
     }
 }

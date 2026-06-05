@@ -34,10 +34,14 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<GroupRule> GroupRules { get; set; }
         public DbSet<ReportedGroupContent> ReportedGroupContents { get; set; }
         public DbSet<Post> Posts { get; set; }
+        public DbSet<Reel> Reels { get; set; }
+        public DbSet<StorySeen> StorySeens { get; set; }
         public DbSet<PostMedia> PostMedias { get; set; }
         public DbSet<PostTag> PostTags { get; set; }
         public DbSet<PostComment> PostComments { get; set; }
+        public DbSet<ReelComment> ReelComments { get; set; }
         public DbSet<PostReaction> PostReactions { get; set; }
+        public DbSet<ReelReaction> ReelReactions { get; set; }
         public DbSet<CommentReaction> CommentReactions { get; set; }
         public DbSet<SavedPost> SavedPosts { get; set; }
         public DbSet<UserFeed> UserFeeds { get; set; }
@@ -62,10 +66,14 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new GroupRuleConfiguration());
             builder.ApplyConfiguration(new ReportedGroupContentConfiguration());
             builder.ApplyConfiguration(new PostConfiguration());
+            builder.ApplyConfiguration(new ReelConfiguration());
+            builder.ApplyConfiguration(new StorySeenConfiguration());
             builder.ApplyConfiguration(new PostMediaConfiguration());
             builder.ApplyConfiguration(new PostTagConfiguration());
             builder.ApplyConfiguration(new PostCommentConfiguration());
+            builder.ApplyConfiguration(new ReelCommentConfiguration());
             builder.ApplyConfiguration(new PostReactionConfiguration());
+            builder.ApplyConfiguration(new ReelReactionConfiguration());
             builder.ApplyConfiguration(new CommentReactionConfiguration());
             builder.ApplyConfiguration(new SavedPostConfiguration());
             builder.ApplyConfiguration(new UserFeedConfiguration());
