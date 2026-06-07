@@ -12,16 +12,15 @@ namespace Domain.Entities
         public string? AudioTitle { get; private set; }
         public string? Duration { get; private set; }
         public ReelVisibility Visibility { get; private set; }
+        public int ViewCount { get; private set; }
 
         public User Author { get; private set; } = null!;
 
         private readonly List<ReelComment> _comments = new();
         private readonly List<ReelReaction> _reactions = new();
-        private readonly List<StorySeen> _seenByUsers = new();
 
         public virtual IReadOnlyCollection<ReelComment> Comments => _comments;
         public virtual IReadOnlyCollection<ReelReaction> Reactions => _reactions;
-        public virtual IReadOnlyCollection<StorySeen> SeenByUsers => _seenByUsers;
 
         private Reel(long id) : base(id) { }
 
@@ -42,6 +41,7 @@ namespace Domain.Entities
             AudioTitle = string.IsNullOrWhiteSpace(audioTitle) ? null : audioTitle.Trim();
             Duration = string.IsNullOrWhiteSpace(duration) ? null : duration.Trim();
             Visibility = visibility;
+            ViewCount = 0;
             CreatedAt = DateTime.UtcNow;
         }
 
@@ -59,6 +59,12 @@ namespace Domain.Entities
             AudioTitle = string.IsNullOrWhiteSpace(audioTitle) ? null : audioTitle.Trim();
             Duration = string.IsNullOrWhiteSpace(duration) ? null : duration.Trim();
             Visibility = visibility;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void RecordView()
+        {
+            ViewCount++;
             UpdatedAt = DateTime.UtcNow;
         }
 

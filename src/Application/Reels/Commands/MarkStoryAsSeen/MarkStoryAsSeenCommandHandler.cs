@@ -8,16 +8,16 @@ namespace Application.Reels.Commands.MarkStoryAsSeen
 {
     internal sealed class MarkStoryAsSeenCommandHandler : ICommandHandler<MarkStoryAsSeenCommand>
     {
-        private readonly IReelRepository _reelRepository;
+        private readonly IStoryRepository _storyRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public MarkStoryAsSeenCommandHandler(
-            IReelRepository reelRepository,
+            IStoryRepository storyRepository,
             IUserRepository userRepository,
             IUnitOfWork unitOfWork)
         {
-            _reelRepository = reelRepository;
+            _storyRepository = storyRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
@@ -30,13 +30,18 @@ namespace Application.Reels.Commands.MarkStoryAsSeen
                 return Result.Failure(new Error("User.NotFound", $"The user with Id {request.UserId} was not found."));
             }
 
-            var story = await _reelRepository.GetByIdAsync(request.StoryId, cancellationToken);
+            var story = await _storyRepository.GetByIdAsync(request.StoryId, cancellationToken);
             if (story is null)
             {
                 return Result.Failure(new Error("Story.NotFound", $"The story with Id {request.StoryId} was not found."));
             }
 
-            var existingSeen = await _reelRepository.GetStorySeenAsync(request.StoryId, request.UserId, cancellationToken);
+            if (story.IsExpired)
+            {
+                return Result.Failure(new Error("Story.Expired", "This story has expired."));
+            }
+
+            var existingSeen = await _storyRepository.GetStorySeenAsync(request.StoryId, request.UserId, cancellationToken);
             if (existingSeen is not null)
             {
                 existingSeen.MarkSeen();
@@ -45,7 +50,7 @@ namespace Application.Reels.Commands.MarkStoryAsSeen
             }
 
             var storySeen = new StorySeen(request.StoryId, request.UserId);
-            _reelRepository.AddStorySeen(storySeen);
+            _storyRepository.AddStorySeen(storySeen);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.Success();

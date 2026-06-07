@@ -56,7 +56,9 @@ namespace Domain.Entities
 
         private readonly List<Post> _posts = new();
         private readonly List<Reel> _reels = new();
-        private readonly List<StorySeen> _seenStories = new();
+        private readonly List<Story> _stories = new();
+        private readonly List<StorySeen> _storySeens = new();
+        private readonly List<StoryReaction> _storyReactions = new();
         private readonly List<PostComment> _comments = new();
         private readonly List<ReelComment> _reelComments = new();
         private readonly List<CommentReaction> _commentReactions = new();
@@ -71,7 +73,9 @@ namespace Domain.Entities
         // Navigation Collections
         public virtual IReadOnlyCollection<Post> Posts => _posts;
         public virtual IReadOnlyCollection<Reel> Reels => _reels;
-        public virtual IReadOnlyCollection<StorySeen> SeenStories => _seenStories;
+        public virtual IReadOnlyCollection<Story> Stories => _stories;
+        public virtual IReadOnlyCollection<StorySeen> StorySeens => _storySeens;
+        public virtual IReadOnlyCollection<StoryReaction> StoryReactions => _storyReactions;
         public virtual IReadOnlyCollection<PostComment> Comments => _comments;
         public virtual IReadOnlyCollection<ReelComment> ReelComments => _reelComments;
         public virtual IReadOnlyCollection<CommentReaction> CommentReactions => _commentReactions;

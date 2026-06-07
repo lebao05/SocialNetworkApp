@@ -42,8 +42,17 @@ import {
 import PostCard from "../components/Feed/PostCard";
 import { useProfileFriends } from "../hooks/useProfileFriends";
 import { useProfileReels } from "../hooks/useProfileReels";
+import ReelViewModal from "../components/Reels/ReelViewModal";
+import { useReels } from "../contexts/ReelsContext";
+import { toggleLikeReelApi, deleteReelApi } from "../apis/reelApi";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
+function formatCompactCount(value) {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return "0";
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(num);
+}
 
 // Mock User matching the user's screenshots exactly
 const mockProfileUser = {
@@ -93,7 +102,8 @@ export default function ProfilePage() {
   const { medias: userPhotos, isLoading: photosLoading, error: photosError, loadMore: loadMorePhotos } = useUserMedias({ userId: viewUserId, mediaType: "image", pageSize: 9 });
   const { medias: userVideos, isLoading: videosLoading, error: videosError, loadMore: loadMoreVideos } = useUserMedias({ userId: viewUserId, mediaType: "video", pageSize: 12 });
   const { friends: profileFriends, loading: friendsLoading } = useProfileFriends(viewUserId);
-  const { reels: profileReels, isLoading: reelsLoading, error: reelsError, refresh: refreshProfileReels } = useProfileReels(viewUserId, { initialPage: 1, pageSize: 12 });
+  const { reels: profileReels, isLoading: reelsLoading, error: reelsError, refresh: refreshProfileReels, hasMore: reelsHasMore, loadMore: loadMoreReels, toggleLike: toggleReelLike, deleteReel: deleteProfileReel } = useProfileReels(viewUserId, { initialPage: 1, pageSize: 12 });
+  const { reelChosen, source, closeReel, updateReel, removeReel, nextReel, prevReel, getChosenIndex, openReel, syncFromProfile } = useReels();
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -360,6 +370,45 @@ export default function ProfilePage() {
       console.error("Refresh reels failed:", err);
     }
   };
+
+  const handleLikeReelFromModal = async (reelId) => {
+    const target = profileReels.find((r) => r.id === reelId);
+    if (!target) return;
+    const wasLiked = target.isLikedByCurrentUser;
+    updateReel({
+      id: reelId,
+      isLikedByCurrentUser: !wasLiked,
+      likeCount: wasLiked ? target.likeCount - 1 : target.likeCount + 1,
+      likes: formatCompactCount(wasLiked ? target.likeCount - 1 : target.likeCount + 1),
+    });
+    try {
+      const result = await toggleLikeReelApi(reelId);
+      updateReel({
+        id: reelId,
+        isLikedByCurrentUser: result.isLiked,
+        likeCount: result.likeCount ?? target.likeCount,
+        likes: formatCompactCount(result.likeCount ?? target.likeCount),
+      });
+    } catch {
+      updateReel({
+        id: reelId,
+        isLikedByCurrentUser: wasLiked,
+        likeCount: target.likeCount,
+        likes: formatCompactCount(target.likeCount),
+      });
+    }
+  };
+
+  const handleDeleteReelFromModal = async (reelId) => {
+    await deleteProfileReel(reelId);
+  };
+
+  // Sync profile reels into context when they change (for scroll navigation)
+  useEffect(() => {
+    if (profileReels.length > 0 && source === "profile") {
+      syncFromProfile(profileReels, reelsHasMore);
+    }
+  }, [profileReels, reelsHasMore, source, syncFromProfile]);
 
   // Likes are handled within PostCard component; no local like handling required.
 
@@ -958,6 +1007,10 @@ export default function ProfilePage() {
                 isLoading={reelsLoading}
                 error={reelsError}
                 canCreate={isOwnProfile}
+                hasMore={reelsHasMore}
+                loadMore={loadMoreReels}
+                onLike={toggleReelLike}
+                onDelete={deleteProfileReel}
                 onCreateReel={() => setIsCreateReelOpen(true)}
               />
             )}
@@ -989,6 +1042,22 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Unified Reel Viewer Modal */}
+      {reelChosen && source === "profile" && (
+        <ReelViewModal
+          reel={reelChosen}
+          reelsList={profileReels}
+          onClose={closeReel}
+          onLike={handleLikeReelFromModal}
+          onDelete={handleDeleteReelFromModal}
+          canDelete={isOwnProfile}
+          onNext={nextReel}
+          onPrev={prevReel}
+          hasPrev={getChosenIndex() > 0}
+          hasNext={getChosenIndex() < profileReels.length - 1}
+        />
+      )}
     </div>
   );
 }

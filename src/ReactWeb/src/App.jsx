@@ -29,6 +29,7 @@ export default function App() {
       <Route path="/saved" element={<ProtectedRoute><SavedPage /></ProtectedRoute>} />
       <Route path="/birthdays" element={<ProtectedRoute><BirthdaysPage /></ProtectedRoute>} />
       <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
+      <Route path="/watch/:reelId" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/stories" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />
       <Route path="/stories/create" element={<ProtectedRoute><CreateStoryPage /></ProtectedRoute>} />

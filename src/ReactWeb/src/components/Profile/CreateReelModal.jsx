@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Film, LoaderCircle, Play, Square, UploadCloud, Video, Wand2, Volume2, VolumeX, X } from "lucide-react";
+import { createReelApi } from "../../apis/reelApi";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit }) {
   const [caption, setCaption] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState(null);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [audioTitle, setAudioTitle] = useState("Original audio");
@@ -16,6 +18,8 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
   const [isMuted, setIsMuted] = useState(false);
   const [previewDuration, setPreviewDuration] = useState(0);
   const [previewCurrentTime, setPreviewCurrentTime] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef(null);
   const previewVideoRef = useRef(null);
   const activeObjectUrlsRef = useRef([]);
@@ -24,6 +28,7 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
     if (!isOpen) {
       setCaption("");
       setVideoUrl("");
+      setVideoFile(null);
       setThumbnailUrl("");
       setThumbnailFile(null);
       setAudioTitle("Original audio");
@@ -34,6 +39,8 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
       setIsMuted(false);
       setPreviewDuration(0);
       setPreviewCurrentTime(0);
+      setIsSubmitting(false);
+      setSubmitError("");
       fileInputRef.current && (fileInputRef.current.value = "");
     }
   }, [isOpen]);
@@ -135,6 +142,7 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
 
     const nextVideoUrl = registerObjectUrl(URL.createObjectURL(file));
     setVideoUrl(nextVideoUrl);
+    setVideoFile(file);
     setPreviewCurrentTime(0);
     setPreviewDuration(0);
     setIsPreviewPlaying(false);
@@ -153,25 +161,31 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
     }
   };
 
-  const handleSubmit = () => {
-    const nextReel = {
-      id: `reel-${Date.now()}`,
-      author: displayUser?.name || "You",
-      handle: "@yourprofile",
-      avatar: displayUser?.avatar || DEFAULT_AVATAR,
-      poster: previewBackground,
-      thumbnailFile,
-      videoUrl,
-      caption: caption || "New reel draft ready to share.",
-      verified: false,
-      likes: "0",
-      comments: "0",
-      shares: "0",
-      audioTitle,
-    };
+  const handleSubmit = async () => {
+    if (!videoFile) {
+      setSubmitError("Please select a video before creating the reel.");
+      return;
+    }
 
-    onSubmit?.(nextReel);
-    onClose();
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      await createReelApi({
+        caption,
+        audioTitle,
+        visibility: 0,
+        videoFile,
+        thumbnailFile,
+      });
+      await onSubmit?.();
+      onClose();
+    } catch (err) {
+      console.error("Failed to create reel:", err);
+      setSubmitError(err?.response?.data?.message || err?.message || "Failed to create reel. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePreviewToggle = async () => {
@@ -410,6 +424,11 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
                   {generationError}
                 </p>
               )}
+          {submitError && (
+                <p className="mt-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-xs font-medium text-[#b91c1c]">
+                  {submitError}
+                </p>
+              )}
             </div>
 
             <label className="block">
@@ -463,9 +482,10 @@ export default function CreateReelModal({ isOpen, onClose, displayUser, onSubmit
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="flex-1 rounded-xl bg-[#1877f2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                disabled={isSubmitting || !videoFile}
+                className="flex-1 rounded-xl bg-[#1877f2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create reel
+                {isSubmitting ? "Creating..." : "Create reel"}
               </button>
             </div>
           </div>

@@ -35,7 +35,9 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<ReportedGroupContent> ReportedGroupContents { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<Reel> Reels { get; set; }
+        public DbSet<Story> Stories { get; set; }
         public DbSet<StorySeen> StorySeens { get; set; }
+        public DbSet<StoryReaction> StoryReactions { get; set; }
         public DbSet<PostMedia> PostMedias { get; set; }
         public DbSet<PostTag> PostTags { get; set; }
         public DbSet<PostComment> PostComments { get; set; }
@@ -68,6 +70,8 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new PostConfiguration());
             builder.ApplyConfiguration(new ReelConfiguration());
             builder.ApplyConfiguration(new StorySeenConfiguration());
+            builder.ApplyConfiguration(new StoryReactionConfiguration());
+            builder.ApplyConfiguration(new StoryConfiguration());
             builder.ApplyConfiguration(new PostMediaConfiguration());
             builder.ApplyConfiguration(new PostTagConfiguration());
             builder.ApplyConfiguration(new PostCommentConfiguration());
@@ -79,7 +83,6 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new UserFeedConfiguration());
             builder.ApplyConfiguration(new NotificationConfiguration());
 
-
             base.OnModelCreating(builder);
             builder.Entity<User>().ToTable("AspNetUsers");
             builder.Entity<IdentityRole<Guid>>().ToTable("AspNetRoles");
@@ -88,8 +91,6 @@ namespace Infrastructure.Persistence.Contexts
             builder.Entity<IdentityUserLogin<Guid>>().ToTable("AspNetUserLogins");
             builder.Entity<IdentityRoleClaim<Guid>>().ToTable("AspNetRoleClaims");
             builder.Entity<IdentityUserToken<Guid>>().ToTable("AspNetUserTokens");
- 
-            builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

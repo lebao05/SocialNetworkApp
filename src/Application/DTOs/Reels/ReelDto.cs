@@ -16,7 +16,6 @@ namespace Application.DTOs.Reels
         int LikeCount,
         int CommentCount,
         int ViewCount,
-        ReactionType? UserReaction,
         DateTime CreatedAt,
         DateTime? UpdatedAt,
         bool IsOwnReel,

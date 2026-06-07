@@ -21,10 +21,6 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(r => r.ReelId)
                 .IsRequired();
 
-            builder.Property(r => r.ReactionType)
-                .IsRequired()
-                .HasColumnType("SMALLINT");
-
             builder.Property(r => r.CreatedAt)
                 .IsRequired();
 

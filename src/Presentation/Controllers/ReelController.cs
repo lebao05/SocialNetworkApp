@@ -1,6 +1,11 @@
 using Application.Reels.Commands.CreateReel;
 using Application.Reels.Commands.MarkStoryAsSeen;
+using Application.Reels.Commands.ToggleLikeReel;
+using Application.Reels.Commands.DeleteReel;
 using Application.Reels.Queries.GetReelsByUser;
+using Application.Reels.Queries.GetRecommendedReels;
+using Application.Reels.Queries.GetReelById;
+using Application.Reels.Queries.GetReelComments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +39,63 @@ namespace Presentation.Controllers
             }
 
             var query = new GetReelsByUserQuery(userId, page, pageSize, currentUserId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("recommended")]
+        public async Task<IActionResult> GetRecommendedReels(
+            [FromQuery] int pageSize = 12,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetRecommendedReelsQuery(userId, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{reelId:long}")]
+        public async Task<IActionResult> GetReelById(long reelId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid? currentUserId = null;
+
+            if (Guid.TryParse(userIdClaim, out var parsedUserId))
+            {
+                currentUserId = parsedUserId;
+            }
+
+            var query = new GetReelByIdQuery(reelId, currentUserId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{reelId:long}/comments")]
+        public async Task<IActionResult> GetReelComments(
+            long reelId,
+            [FromQuery] long? parentCommentId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid? userId = null;
+
+            if (Guid.TryParse(userIdClaim, out var parsedUserId))
+            {
+                userId = parsedUserId;
+            }
+
+            var query = new GetReelCommentsQuery(reelId, parentCommentId, page, pageSize, userId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -75,6 +137,38 @@ namespace Presentation.Controllers
             return result.IsSuccess
                 ? Ok(new { id = result.Value })
                 : HandleFailure(result);
+        }
+
+        [HttpPost("{reelId:long}/like")]
+        public async Task<IActionResult> ToggleLikeReel(long reelId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new ToggleLikeReelCommand(userId, reelId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpDelete("{reelId:long}")]
+        public async Task<IActionResult> DeleteReel(long reelId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new DeleteReelCommand(userId, reelId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess ? Ok() : HandleFailure(result);
         }
 
         [HttpPost("{storyId:long}/seen")]

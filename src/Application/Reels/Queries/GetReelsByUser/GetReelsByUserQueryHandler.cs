@@ -4,7 +4,6 @@ using Application.Abstractions.Repositories;
 using Application.DTOs.Reels;
 using Application.Shared;
 using Domain.Entities;
-using Domain.Enums;
 using Domain.Shared;
 
 namespace Application.Reels.Queries.GetReelsByUser
@@ -42,12 +41,11 @@ namespace Application.Reels.Queries.GetReelsByUser
 
         private static ReelDto Map(Reel reel, Guid? currentUserId)
         {
-            var userReaction = currentUserId.HasValue
-                ? reel.Reactions.FirstOrDefault(reaction => reaction.UserId == currentUserId.Value)?.ReactionType
-                : null;
+            var hasUserReaction = currentUserId.HasValue
+                && reel.Reactions.Any(reaction => reaction.UserId == currentUserId.Value);
 
-            var likeCount = reel.Reactions.Count(reaction => reaction.ReactionType == ReactionType.Like || reaction.ReactionType == ReactionType.Love);
-            var viewCount = EstimateViewCount(reel, likeCount);
+            var likeCount = reel.Reactions.Count;
+
             var authorName = reel.Author is null
                 ? "Người dùng"
                 : $"{reel.Author.FirstName} {reel.Author.LastName}".Trim();
@@ -65,21 +63,11 @@ namespace Application.Reels.Queries.GetReelsByUser
                 reel.Visibility,
                 likeCount,
                 reel.Comments.Count,
-                viewCount,
-                userReaction,
+                reel.ViewCount,
                 reel.CreatedAt,
                 reel.UpdatedAt,
                 currentUserId.HasValue && reel.AuthorId == currentUserId.Value,
-                userReaction.HasValue);
-        }
-
-        private static int EstimateViewCount(Reel reel, int likeCount)
-        {
-            var reactionCount = reel.Reactions.Count;
-            var commentCount = reel.Comments.Count;
-            var baseline = reactionCount * 8 + commentCount * 5 + likeCount * 12;
-            var minimum = Math.Max(1, likeCount + commentCount + reactionCount) * 10;
-            return Math.Max(baseline, minimum);
+                hasUserReaction);
         }
     }
 }

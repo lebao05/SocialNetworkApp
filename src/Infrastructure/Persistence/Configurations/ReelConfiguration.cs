@@ -40,6 +40,10 @@ namespace Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasColumnType("SMALLINT");
 
+            builder.Property(r => r.ViewCount)
+                .IsRequired()
+                .HasDefaultValue(0);
+
             builder.Property(r => r.CreatedAt)
                 .IsRequired();
 
@@ -67,15 +71,6 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Navigation(r => r.Reactions)
                 .HasField("_reactions")
-                .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-            builder.HasMany(r => r.SeenByUsers)
-                .WithOne(ss => ss.Story)
-                .HasForeignKey(ss => ss.StoryId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Navigation(r => r.SeenByUsers)
-                .HasField("_seenByUsers")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
             builder.HasQueryFilter(r => r.DeletedAt == null);

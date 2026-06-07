@@ -1,20 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getUserReelsApi } from "../apis/reelApi";
-
-function mapReactionTypeToLabel(reactionType) {
-  if (reactionType === null || reactionType === undefined) return null;
-
-  const reactionMap = {
-    0: "Like",
-    1: "Love",
-    2: "Haha",
-    3: "Wow",
-    4: "Sad",
-    5: "Angry",
-  };
-
-  return reactionMap[reactionType] ?? String(reactionType);
-}
+import { deleteReelApi, getUserReelsApi, toggleLikeReelApi } from "../apis/reelApi";
 
 function formatCompactCount(value) {
   const num = Number(value || 0);
@@ -46,8 +31,6 @@ function normalizeReel(reel) {
     commentCount: reel.commentCount || 0,
     views: formatCompactCount(reel.viewCount),
     viewCount: reel.viewCount || 0,
-    userReaction: mapReactionTypeToLabel(reel.userReaction),
-    userReactionType: reel.userReaction,
     isOwnReel: Boolean(reel.isOwnReel),
     isLikedByCurrentUser: Boolean(reel.isLikedByCurrentUser),
     createdAt: reel.createdAt,
@@ -73,11 +56,11 @@ export function useProfileReels(profileUserId, { initialPage = 1, pageSize = 12 
 
     try {
       const data = await getUserReelsApi(profileUserId, nextPage, pageSize);
-      const items = Array.isArray(data) ? data : data.items || [];
+      const items = data.items ?? [];
       const normalized = items.map(normalizeReel);
 
       setReels((prev) => (nextPage === 1 ? normalized : [...prev, ...normalized]));
-      setHasMore(Array.isArray(data) ? normalized.length >= pageSize : Boolean(data.hasNextPage));
+      setHasMore(Boolean(data.hasNextPage));
       setPage(nextPage);
     } catch (err) {
       console.error("Failed to load profile reels:", err);
@@ -105,6 +88,72 @@ export function useProfileReels(profileUserId, { initialPage = 1, pageSize = 12 
     loadPage(page + 1);
   }, [hasMore, isLoading, loadPage, page]);
 
+  const toggleLike = useCallback(async (reelId) => {
+    const target = reels.find((r) => r.id === reelId);
+    if (!target) return;
+
+    const wasLiked = target.isLikedByCurrentUser;
+    const prevCount = target.likeCount;
+
+    // Optimistic update
+    setReels((prev) =>
+      prev.map((r) =>
+        r.id === reelId
+          ? {
+              ...r,
+              isLikedByCurrentUser: !wasLiked,
+              likeCount: wasLiked ? r.likeCount - 1 : r.likeCount + 1,
+              likes: formatCompactCount(wasLiked ? r.likeCount - 1 : r.likeCount + 1),
+            }
+          : r
+      )
+    );
+
+    try {
+      const result = await toggleLikeReelApi(reelId);
+      // Sync with server response
+      setReels((prev) =>
+        prev.map((r) =>
+          r.id === reelId
+            ? {
+                ...r,
+                isLikedByCurrentUser: result.isLiked,
+                likeCount: result.likeCount ?? r.likeCount,
+                likes: formatCompactCount(result.likeCount ?? r.likeCount),
+              }
+            : r
+        )
+      );
+    } catch (err) {
+      // Revert on failure
+      setReels((prev) =>
+        prev.map((r) =>
+          r.id === reelId
+            ? {
+                ...r,
+                isLikedByCurrentUser: wasLiked,
+                likeCount: prevCount,
+                likes: formatCompactCount(prevCount),
+              }
+            : r
+        )
+      );
+      console.error("Failed to toggle like:", err);
+    }
+  }, [reels]);
+
+  const deleteReel = useCallback(async (reelId) => {
+    const prevReels = reels;
+    setReels((prev) => prev.filter((r) => r.id !== reelId));
+
+    try {
+      await deleteReelApi(reelId);
+    } catch (err) {
+      setReels(prevReels);
+      console.error("Failed to delete reel:", err);
+    }
+  }, [reels]);
+
   return {
     reels,
     isLoading,
@@ -114,5 +163,7 @@ export function useProfileReels(profileUserId, { initialPage = 1, pageSize = 12 
     error,
     refresh,
     loadMore,
+    toggleLike,
+    deleteReel,
   };
 }
