@@ -1,16 +1,22 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, MoreHorizontal, UserPlus } from "lucide-react";
 import { useFollowees } from "../../hooks/useFollowees";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
-export default function FollowingTab({ theme }) {
-    const { followees, loading, error } = useFollowees();
+export default function FollowingTab({ theme, userId = null }) {
+    const navigate = useNavigate();
+    const { followees, loading, error } = useFollowees(userId);
     const [searchQuery, setSearchQuery] = useState("");
 
     const filteredItems = followees.filter((item) =>
         (item.fullName || item.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const handleNavigateProfile = (followeeId) => {
+        navigate(`/profile/${followeeId}`);
+    };
 
     return (
         <div className="w-full rounded-lg shadow-sm p-4 bg-white text-[#050505] relative border border-[#ced0d4] transition-colors duration-200">
@@ -66,14 +72,20 @@ export default function FollowingTab({ theme }) {
                                 <div className="flex items-center gap-4 min-w-0 flex-1">
 
                                     {/* Micro-rounded square avatar style */}
-                                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-[#E4E6EB] flex-shrink-0 border border-[#ced0d4] shadow-sm flex items-center justify-center">
+                                    <div
+                                        className="w-20 h-20 rounded-lg overflow-hidden bg-[#E4E6EB] flex-shrink-0 border border-[#ced0d4] shadow-sm flex items-center justify-center cursor-pointer"
+                                        onClick={() => handleNavigateProfile(item.id)}
+                                    >
                                         <img src={(item.avatarUrl || item.avatar || DEFAULT_AVATAR)} alt={item.fullName || item.name} className="w-full h-full object-cover select-none" />
                                     </div>
 
                                     {/* Title & Badge Details */}
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5 max-w-full">
-                                            <h3 className="font-semibold text-[16px] leading-snug hover:underline cursor-pointer text-[#050505] truncate">
+                                            <h3
+                                                className="font-semibold text-[16px] leading-snug hover:underline cursor-pointer text-[#050505] truncate"
+                                                onClick={() => handleNavigateProfile(item.id)}
+                                            >
                                                 {item.fullName || item.name}
                                             </h3>
                                         </div>

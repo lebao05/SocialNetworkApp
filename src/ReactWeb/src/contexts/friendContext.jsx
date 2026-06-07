@@ -4,7 +4,12 @@ import {
     getIncomingFriendRequestsApi,
     getFriendRecommendationsApi,
     sendFriendRequestApi,
-    acceptFriendRequestApi
+    acceptFriendRequestApi,
+    rejectFriendRequestApi,
+    cancelFriendRequestApi,
+    unfriendApi,
+    followUserApi,
+    unfollowUserApi,
 } from "../apis/friendApi";
 
 const FriendContext = createContext(null);
@@ -44,10 +49,10 @@ export function FriendProvider({ children }) {
         };
     };
 
-    const fetchFriends = async (page = 1, append = false) => {
+    const fetchFriends = async (page = 1, append = false, userId = null) => {
         try {
             setLoading(true);
-            const data = await getFriendsApi(page);
+            const data = await getFriendsApi(page, null, userId);
             const { items, pageNumber, pageSize, totalCount } = normalizePagedResponse(data);
             setFriends((prev) => (append ? [...prev, ...items] : items));
             setFriendsPage(pageNumber);
@@ -136,6 +141,79 @@ export function FriendProvider({ children }) {
         }
     };
 
+    const rejectFriendRequest = async (requestId) => {
+        try {
+            setLoading(true);
+            const data = await rejectFriendRequestApi(requestId);
+            setError(null);
+            return data;
+        } catch (err) {
+            console.log(`Error rejecting friend request ${requestId}:`, err);
+            handleApiError(err, "Unable to reject friend request");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const unfriend = async (friendUserId) => {
+        try {
+            setLoading(true);
+            const data = await unfriendApi(friendUserId);
+            setFriends((prev) => prev.filter((f) => f.userId !== friendUserId && f.id !== friendUserId));
+            setError(null);
+            return data;
+        } catch (err) {
+            console.log(`Error unfriending user ${friendUserId}:`, err);
+            handleApiError(err, "Unable to unfriend");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const cancelFriendRequest = async (receiverId) => {
+        try {
+            setLoading(true);
+            const data = await cancelFriendRequestApi(receiverId);
+            setError(null);
+            return data;
+        } catch (err) {
+            handleApiError(err, "Unable to cancel friend request");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const followUser = async (userId) => {
+        try {
+            setLoading(true);
+            const data = await followUserApi(userId);
+            setError(null);
+            return data;
+        } catch (err) {
+            handleApiError(err, "Unable to follow user");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const unfollowUser = async (userId) => {
+        try {
+            setLoading(true);
+            const data = await unfollowUserApi(userId);
+            setError(null);
+            return data;
+        } catch (err) {
+            handleApiError(err, "Unable to unfollow user");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
 
     const clearFriendError = () => setError(null);
@@ -159,6 +237,11 @@ export function FriendProvider({ children }) {
                 fetchFriendRecommendations,
                 sendFriendRequest,
                 acceptFriendRequest,
+                rejectFriendRequest,
+                unfriend,
+                cancelFriendRequest,
+                followUser,
+                unfollowUser,
                 setFriends,
                 setIncomingRequests,
                 setRecommendations,

@@ -5,7 +5,7 @@ namespace Application.Abstractions.Repositories
 {
     public interface IFriendshipRepository
     {
-        Task<bool> ExistsAsync(Guid user1Id, Guid user2Id);
+        Task<bool> ExistsAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken = default);
         Task<bool> ExistsFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken);
 
         Task AddAsync(Friendship friendship);
@@ -21,5 +21,6 @@ namespace Application.Abstractions.Repositories
             int pageSize,
             CancellationToken cancellationToken);
         Task<List<User>> GetFolloweesAsync(Guid userId, CancellationToken cancellationToken);
+        Task RemoveFriendshipAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken);
     }
 }

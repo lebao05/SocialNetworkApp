@@ -2,6 +2,7 @@ using Application.Stories.Commands.CreateStory;
 using Application.Stories.Commands.DeleteStory;
 using Application.Stories.Commands.ToggleStoryLike;
 using Application.Stories.Queries.GetStoriesByUserId;
+using Application.Stories.Queries.GetStoryTimeline;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -62,6 +63,25 @@ public class StoryController : ApiController
         }
 
         var query = new GetStoriesByUserIdQuery(userId, currentUserId);
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpGet("timeline")]
+    public async Task<IActionResult> GetStoryTimeline(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var query = new GetStoryTimelineQuery(userId, page, pageSize);
         var result = await _sender.Send(query, cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

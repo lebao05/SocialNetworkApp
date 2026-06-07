@@ -1,55 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { storyGroups, currentUser } from "../../data/mockData";
+import { useAuth } from "../../contexts/authContext";
+import { useStories } from "../../contexts/StoriesContext";
+import ProfileStoryRing from "../Story/ProfileStoryRing";
 
-function StoryRing({ children, isSeen }) {
-  if (isSeen) {
-    return (
-      <div className="relative w-[72px] h-[72px]">
-        <div className="absolute inset-0 rounded-full bg-[#dbdbdb] p-[2px]">
-          <div className="w-full h-full rounded-full bg-white p-[2px]">
-            <div className="w-full h-full rounded-full overflow-hidden">{children}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="relative w-[72px] h-[72px] p-[3px] bg-gradient-to-tr from-[#f9ca24] via-[#f0932b] via-30% via-[#eb4d4b] via-60% via-[#a55eea] to-[#686de0] rounded-full">
-      <div className="w-full h-full rounded-full bg-white p-[2px]">
-        <div className="w-full h-full rounded-full overflow-hidden">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function StoryCard({ group, isSeen, onClick }) {
-  const firstStory = group.stories[0];
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0 w-20 focus:outline-none"
-    >
-      <StoryRing isSeen={isSeen}>
-        <img
-          src={group.avatar}
-          alt={group.user}
-          className="w-full h-full object-cover"
-        />
-      </StoryRing>
-      <span className="text-[11px] text-[#65676b] font-medium truncate w-full text-center leading-tight group-hover:underline">
-        {group.user}
-      </span>
-      {group.stories.length > 1 && !isSeen && (
-        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[8px] font-bold flex items-center justify-center">
-          {group.stories.length}
-        </span>
-      )}
-    </button>
-  );
-}
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 function PlusIcon() {
   return (
@@ -59,21 +14,56 @@ function PlusIcon() {
   );
 }
 
+function StoryCard({ group, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(group.userId)}
+      className="flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0 w-20 focus:outline-none"
+    >
+      <div className="relative">
+        <ProfileStoryRing
+          userId={group.userId}
+          avatarUrl={group.avatar}
+          name={group.user}
+          hasActiveStories={group.stories.length > 0}
+          size="lg"
+          onStoryClick={onClick}
+        />
+        {group.stories.length > 1 && group.hasUnseenStories && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[8px] font-bold flex items-center justify-center">
+            {group.stories.length}
+          </span>
+        )}
+      </div>
+      <span className="text-[11px] text-[#65676b] font-medium truncate w-full text-center leading-tight group-hover:underline">
+        {group.user}
+      </span>
+    </button>
+  );
+}
+
 export default function StoryBar() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const { timelineGroups: groups, timelineLoading: isLoading } = useStories();
 
-  const handleOpenStories = () => {
-    navigate("/stories");
-  };
+  const displayUser = useMemo(() => ({
+    avatar: currentUser?.avatarUrl || DEFAULT_AVATAR,
+  }), [currentUser]);
 
   const handleOpenCreateStory = () => {
     navigate("/stories/create");
   };
 
+  const handleOpenUserStory = (userId) => {
+    if (!userId) return;
+    navigate(`/profile/${userId}/stories`);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] px-4 py-3">
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {/* Add story */}
         <button
           type="button"
           onClick={handleOpenCreateStory}
@@ -83,7 +73,7 @@ export default function StoryBar() {
             <div className="absolute inset-0 rounded-full border border-[#dbdbdb] p-[2px]">
               <div className="w-full h-full rounded-full overflow-hidden">
                 <img
-                  src={currentUser.avatar}
+                  src={displayUser.avatar}
                   alt="me"
                   className="w-full h-full object-cover"
                 />
@@ -100,15 +90,20 @@ export default function StoryBar() {
 
         <div className="w-px h-10 bg-[#dddfe2] shrink-0 mx-1" />
 
-        {/* Story groups */}
-        {storyGroups.map((group) => (
-          <StoryCard
-            key={group.id}
-            group={group}
-            isSeen={false}
-            onClick={handleOpenStories}
-          />
-        ))}
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex w-20 shrink-0 flex-col items-center gap-2 animate-pulse">
+                <div className="h-[72px] w-[72px] rounded-full bg-[#eef0f3]" />
+                <div className="h-3 w-14 rounded bg-[#eef0f3]" />
+              </div>
+            ))
+          : groups.map((group) => (
+              <StoryCard
+                key={group.userId}
+                group={group}
+                onClick={handleOpenUserStory}
+              />
+            ))}
       </div>
     </div>
   );

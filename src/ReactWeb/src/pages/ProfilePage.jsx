@@ -45,6 +45,7 @@ import { useProfileReels } from "../hooks/useProfileReels";
 import ReelViewModal from "../components/Reels/ReelViewModal";
 import { useReels } from "../contexts/ReelsContext";
 import { toggleLikeReelApi, deleteReelApi } from "../apis/reelApi";
+import ProfileRelationshipActions from "../components/Profile/ProfileRelationshipActions";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -54,46 +55,10 @@ function formatCompactCount(value) {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(num);
 }
 
-// Mock User matching the user's screenshots exactly
-const mockProfileUser = {
-  id: 99,
-  name: "Lê Bảo",
-  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", // High quality portrait
-  coverPhoto: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80", // Premium aesthetic abstract background
-  bio: "belief",
-  friendsCount: 230,
-  details: {
-    educationCollege: null,
-    educationCollegeYear: null,
-    educationHighSchool: null,
-    currentCity: null,
-    hometown: null,
-    birthDate: null,
-    birthYear: null,
-    gender: null,
-    pronoun: null,
-    relationship: null,
-    family: null,
-    language: null,
-    joinedDate: null
-  }
-};
-
-// Mock Gallery Photos
-const mockPhotos = [
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80", // photo 1
-  "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300&auto=format&fit=crop&q=80", // photo 2
-  "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=300&auto=format&fit=crop&q=80", // photo 3
-  "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=300&auto=format&fit=crop&q=80", // photo 4
-  "https://images.unsplash.com/photo-1520201163981-8cc95007dd2a?w=300&auto=format&fit=crop&q=80", // photo 5
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300&auto=format&fit=crop&q=80", // photo 6
-  "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=300&auto=format&fit=crop&q=80", // photo 7
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=300&auto=format&fit=crop&q=80", // photo 8
-];
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, setUser: setAuthUser } = useAuth();
   const { userId } = useParams();
   const viewUserId = userId || authUser?.id;
   const isOwnProfile = !userId || String(authUser?.id) === String(userId);
@@ -189,10 +154,10 @@ export default function ProfilePage() {
 
   // Localized User details
   const displayUser = {
-    name: profileName,
+    name: profileName || (authUser ? `${authUser.firstName || ""} ${authUser.lastName || ""}`.trim() : ""),
     avatar: personalInfo?.avatarUrl || authUser?.avatarUrl || DEFAULT_AVATAR,
-    coverPhoto: personalInfo?.coverPhotoUrl || mockProfileUser.coverPhoto,
-    friendsCount: profileFriends.length || mockProfileUser.friendsCount
+    coverPhoto: personalInfo?.coverPhotoUrl || authUser?.coverPhotoUrl,
+    friendsCount: profileFriends.length 
   };
 
   const handleSaveBio = async () => {
@@ -230,6 +195,7 @@ export default function ProfilePage() {
       const response = await uploadAvatarApi(file);
       if (response?.Url) {
         setPersonalInfo(prev => prev ? { ...prev, avatarUrl: response.Url } : prev);
+        setAuthUser(prev => prev ? { ...prev, avatarUrl: response.Url } : prev);
       }
     } catch (error) {
       console.error("Avatar upload failed", error);
@@ -245,6 +211,7 @@ export default function ProfilePage() {
       const response = await uploadCoverPhotoApi(file);
       if (response?.Url) {
         setPersonalInfo(prev => prev ? { ...prev, coverPhotoUrl: response.Url } : prev);
+        setAuthUser(prev => prev ? { ...prev, coverPhotoUrl: response.Url } : prev);
       }
     } catch (error) {
       console.error("Cover photo upload failed", error);
@@ -465,10 +432,10 @@ export default function ProfilePage() {
         {/* ========================================================
             1. HEADER SECTION (Cover, Avatar, Bio, Buttons)
             ======================================================== */}
-        <div className={`${theme.card} rounded-b-xl shadow-md overflow-hidden relative transition-colors duration-200`}>
+        <div className={`${theme.card} rounded-b-xl shadow-md relative transition-colors duration-200`}>
 
           {/* Cover Photo */}
-          <div className="relative h-[250px] md:h-[350px] bg-[#2d3139]">
+          <div className="relative h-[250px] md:h-[350px] bg-[#2d3139] overflow-hidden rounded-b-xl">
             <img
               src={displayUser.coverPhoto}
               alt="Cover"
@@ -533,34 +500,27 @@ export default function ProfilePage() {
                   {displayUser.name}
                 </h1>
 
-                {/* Overlapping Mutual Friends Avatars */}
-                <div className="flex items-center justify-center md:justify-start -space-x-2 mt-2 overflow-hidden">
-                  {profileFriends.slice(0, 8).map((friend, i) => (
-                    <img
-                      key={friend.id}
-                      src={friend.avatarUrl || DEFAULT_AVATAR}
-                      alt={friend.fullName || friend.userName || "Friend"}
-                      className="w-8 h-8 rounded-full border-2 border-transparent ring-2 ring-[#242526] object-cover bg-[#e4e6eb]"
-                      style={{ zIndex: 10 - i }}
-                    />
-                  ))}
-                </div>
 
                 {/* Bio Panel */}
                 <div className="mt-3 flex flex-col items-center md:items-start">
                   {!isEditingBio ? (
                     <div className="flex items-center gap-2 group">
                       <span className={`text-[15px] italic font-medium ${theme.text}`}>{bio || "Add a bio..."}</span>
-                      <button
-                        onClick={() => setIsEditingBio(true)}
-                        className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs ${theme.textSub}`}
-                        title="Edit bio"
-                      >
-                        <Edit2 size={12} />
-                      </button>
+                      {
+                        isOwnProfile && (
+                          <button
+                            onClick={() => setIsEditingBio(true)}
+                            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs ${theme.textSub}`}
+                            title="Edit bio"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        )
+                      }
+
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2 mt-1 w-[260px]">
+                    <div className="flex flex-col gap-2 mt-1 w-[200px]">
                       <textarea
                         value={bioInput}
                         onChange={(e) => setBioInput(e.target.value)}
@@ -582,7 +542,9 @@ export default function ProfilePage() {
             {/* Header Action Buttons */}
             {isOwnProfile ? (
               <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
-                <button className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                <button
+                  onClick={() => navigate('/stories/create')}
+                  className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
                   <Plus size={16} />
                   Add to Story
                 </button>
@@ -599,20 +561,12 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
-                <button
-                  onClick={() => navigate('/messenger')}
-                  className="flex-1 md:flex-initial bg-[#1877f2] hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-                >
-                  <MessageCircle size={16} />
-                  Message
-                </button>
-                <button className={`flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${theme.btnGray}`}>
-                  <Plus size={16} />
-                  Add Friend
-                </button>
-                <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
-                  <ChevronDown size={18} />
-                </button>
+                <ProfileRelationshipActions
+                  profile={personalInfo}
+                  isOwnProfile={isOwnProfile}
+                  isDarkMode={darkMode}
+                  onUpdate={(updates) => setPersonalInfo((prev) => prev ? { ...prev, ...updates } : prev)}
+                />
               </div>
             )}
 
@@ -756,116 +710,77 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </div>
-
               {/* Photos Gallery Box */}
-              <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Reels</h2>
+              {
+                userPhotos.length > 0 && (
+                  <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h2 className={`text-xl font-bold ${theme.text}`}>Media</h2>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("media")}
+                        className="text-[#1877f2] cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
+                      >
+                        See all media
+                      </button>
+                    </div>
+
+                    {/* 3x3 Media Grid */}
+                    <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
+                      {photosLoading && userPhotos.length === 0 ? (
+                        <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading media...</div>
+                      ) : userPhotos.length === 0 ? (
+                        <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No media yet.</div>
+                      ) : (
+                        userPhotos.slice(0, 9).map((photo) => (
+                          <div key={photo.id} className="aspect-square bg-gray-700 hover:brightness-90 transition-all cursor-pointer">
+                            <img src={photo.mediaUrl} alt="User media" className="w-full h-full object-cover" />
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setActiveTab("reels")}
-                    className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
-                  >
-                    See all reels
-                  </button>
-                </div>
-
-                {isOwnProfile && (
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateReelOpen(true)}
-                    className="mb-3 w-full rounded-lg border border-dashed border-[#c7d2fe] bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-[#1877f2] transition hover:bg-[#eef5ff]"
-                  >
-                    Create reel
-                  </button>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  {profileReels.slice(0, 4).map((reel) => (
-                    <button
-                      key={reel.id}
-                      type="button"
-                      onClick={() => setActiveTab("reels")}
-                      className="group relative aspect-[9/16] overflow-hidden rounded-xl bg-black text-left"
-                    >
-                      <img src={reel.poster} alt={reel.caption} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/80" />
-                      <div className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white">
-                        <Play size={16} fill="currentColor" />
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-2.5 text-white">
-                        <p className="line-clamp-2 text-xs font-semibold leading-snug">{reel.caption}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Photos Gallery Box */}
-              <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Media</h2>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("media")}
-                    className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
-                  >
-                    See all media
-                  </button>
-                </div>
-
-                {/* 3x3 Media Grid */}
-                <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
-                  {photosLoading && userPhotos.length === 0 ? (
-                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading media...</div>
-                  ) : userPhotos.length === 0 ? (
-                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No media yet.</div>
-                  ) : (
-                    userPhotos.slice(0, 9).map((photo) => (
-                      <div key={photo.id} className="aspect-square bg-gray-700 hover:brightness-90 transition-all cursor-pointer">
-                        <img src={photo.mediaUrl} alt="User media" className="w-full h-full object-cover" />
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                )
+              }
 
               {/* Friends Box */}
-              <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <h2 className={`text-xl font-bold ${theme.text}`}>Friends</h2>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("friends")}
-                    className="text-[#1877f2] hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
-                  >
-                    See all friends
-                  </button>
-                </div>
-
-                {/* 3x3 Friends Grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  {friendsLoading && profileFriends.length === 0 ? (
-                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading friends...</div>
-                  ) : profileFriends.length === 0 ? (
-                    <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No friends yet.</div>
-                  ) : (
-                    profileFriends.slice(0, 9).map((friend) => (
-                      <div key={friend.id} className="cursor-pointer group flex flex-col min-w-0">
-                        <div className="aspect-square bg-gray-200 dark:bg-[#3a3b3c] rounded-md overflow-hidden relative hover:opacity-90 transition-opacity">
-                          <img src={friend.avatarUrl || DEFAULT_AVATAR} alt={friend.fullName || friend.userName || "Friend"} className="w-full h-full object-cover" />
-                        </div>
-                        <span className={`text-sm font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
-                          {friend.fullName || friend.userName}
-                        </span>
+              {
+                profileFriends.length > 0 && (
+                  <div className={`${theme.card} rounded-xl shadow p-4 transition-colors duration-200`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <h2 className={`text-xl font-bold ${theme.text}`}>Friends</h2>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                      <button
+                        onClick={() => setActiveTab("friends")}
+                        className="text-[#1877f2] cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all"
+                      >
+                        See all friends
+                      </button>
+                    </div>
+
+                    {/* 3x3 Friends Grid */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {friendsLoading && profileFriends.length === 0 ? (
+                        <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">Loading friends...</div>
+                      ) : profileFriends.length === 0 ? (
+                        <div className="col-span-3 flex items-center justify-center py-8 text-sm text-[#65676b]">No friends yet.</div>
+                      ) : (
+                        profileFriends.slice(0, 9).map((friend) => (
+                          <div onClick={() => navigate(`/profile/${friend.id}`)} key={friend.id} className="cursor-pointer group flex flex-col min-w-0">
+                            <div className="aspect-square bg-gray-200 dark:bg-[#3a3b3c] rounded-md overflow-hidden relative hover:opacity-90 transition-opacity">
+                              <img src={friend.avatarUrl || DEFAULT_AVATAR} alt={friend.fullName || friend.userName || "Friend"} className="w-full h-full object-cover" />
+                            </div>
+                            <span className={`text-sm font-semibold mt-1.5 leading-tight truncate group-hover:underline ${theme.text}`}>
+                              {friend.fullName || friend.userName}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>)
+              }
 
             </div>
           )}
@@ -1015,7 +930,7 @@ export default function ProfilePage() {
               />
             )}
             {activeTab === "following" && (
-              <FollowingTab theme={theme} />
+              <FollowingTab theme={theme} userId={viewUserId} />
             )}
             {/* ========================================================
           3. DIALOGS & OVERLAYS (Post Creator, Details Editor)

@@ -1,3 +1,4 @@
+using Application.DTOs.Users;
 using Domain.Enums;
 using System;
 
@@ -16,5 +17,11 @@ namespace Application.DTOs.Users
         string? Hometown,
         string? Website,
         RelationshipStatus? RelationshipStatus,
-        DateTime? CreatedAt);
+        DateTime? CreatedAt,
+        bool IsFriend,
+        bool IsFollowing,
+        bool HasIncomingRequest,
+        bool HasOutgoingRequest,
+        long? IncomingRequestId,
+        long? OutgoingRequestId);
 }

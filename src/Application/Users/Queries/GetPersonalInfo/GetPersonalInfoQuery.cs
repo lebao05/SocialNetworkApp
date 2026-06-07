@@ -4,5 +4,5 @@ using System;
 
 namespace Application.Users.Queries.GetPersonalInfo
 {
-    public sealed record GetPersonalInfoQuery(Guid UserId) : IQuery<PersonalInfoResponse>;
+    public sealed record GetPersonalInfoQuery(Guid UserId, Guid? CurrentUserId = null) : IQuery<PersonalInfoResponse>;
 }

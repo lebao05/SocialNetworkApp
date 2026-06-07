@@ -35,5 +35,10 @@ namespace Domain.Entities
         {
             Status = FriendRequestStatus.Rejected;
         }
+
+        public void Cancel()
+        {
+            Status = FriendRequestStatus.Cancelled;
+        }
     }
 }

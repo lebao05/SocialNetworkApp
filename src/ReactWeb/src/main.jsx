@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/authContext.jsx";
 import { ConversationProvider } from "./contexts/conversationContext.jsx";
 import { FriendProvider } from "./contexts/friendContext.jsx";
 import { ReelsProvider } from "./contexts/ReelsContext.jsx";
+import { StoriesProvider } from "./contexts/StoriesContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -15,7 +16,9 @@ createRoot(document.getElementById("root")).render(
         <ConversationProvider>
           <FriendProvider>
             <ReelsProvider>
-              <App />
+              <StoriesProvider>
+                <App />
+              </StoriesProvider>
             </ReelsProvider>
           </FriendProvider>
         </ConversationProvider>

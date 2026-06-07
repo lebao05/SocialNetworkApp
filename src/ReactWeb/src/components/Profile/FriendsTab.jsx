@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, MoreHorizontal, User, MessageCircle, X, Star, UserCheck, EyeOff, UserX } from "lucide-react";
 import { useProfileFriends } from "../../hooks/useProfileFriends";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function FriendsTab({ userId, theme }) {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [hoveredFriendId, setHoveredFriendId] = useState(null);
@@ -96,6 +98,7 @@ export default function FriendsTab({ userId, theme }) {
                   {/* Profile Image Wrap (Hover Trigger Anchor) */}
                   <div
                     className="relative cursor-pointer"
+                    onClick={() => navigate(`/profile/${friend.id}`)}
                     onMouseEnter={() => handleMouseEnter(friend.id)}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -120,18 +123,19 @@ export default function FriendsTab({ userId, theme }) {
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div className="w-[72px] h-[72px] rounded-full overflow-hidden border-2 border-white shadow-md bg-[#E4E6EB]">
-                            {getAvatar(friend) ? (
-                              <img src={getAvatar(friend)} alt={getName(friend)} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-[#E4E6EB]" />
-                            )}
+                            <img
+                              src={getAvatar(friend)}
+                              alt={getName(friend)}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => navigate(`/profile/${friend.id}`)}
+                            />
                           </div>
-                          <button onClick={() => setHoveredFriendId(null)} className="p-1 rounded-full hover:bg-[#E4E6EB] text-[#65676B]">
+                          <button onClick={(e) => { e.stopPropagation(); setHoveredFriendId(null); }} className="p-1 rounded-full hover:bg-[#E4E6EB] text-[#65676B]">
                             <X size={18} />
                           </button>
                         </div>
 
-                        <h4 className="text-xl font-bold hover:underline cursor-pointer mb-2 text-[#050505]">{getName(friend)}</h4>
+                        <h4 onClick={() => navigate(`/profile/${friend.id}`)} className="text-xl font-bold hover:underline cursor-pointer mb-2 text-[#050505]">{getName(friend)}</h4>
 
                         <div className="space-y-1.5 text-[13px] text-[#65676B] mb-4">
                           {getMutual(friend) > 0 && (
@@ -162,6 +166,7 @@ export default function FriendsTab({ userId, theme }) {
                   {/* Identification Stack */}
                   <div className="min-w-0">
                     <h3
+                      onClick={() => navigate(`/profile/${friend.id}`)}
                       onMouseEnter={() => handleMouseEnter(friend.id)}
                       onMouseLeave={handleMouseLeave}
                       className="font-semibold text-[17px] leading-tight hover:underline cursor-pointer text-[#050505] truncate"

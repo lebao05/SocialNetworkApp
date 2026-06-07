@@ -13,8 +13,8 @@ import SearchPage from "./pages/SearchPage";
 import ReelsPage from "./pages/ReelsPage";
 import SavedPage from "./pages/SavedPage";
 import BirthdaysPage from "./pages/BirthdaysPage";
-import StoryViewer from "./components/Story/StoryViewer";
 import CreateStoryPage from "./pages/CreateStoryPage";
+import StoryPage from "./pages/StoryPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -31,8 +31,8 @@ export default function App() {
       <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/watch/:reelId" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
-      <Route path="/stories" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />
       <Route path="/stories/create" element={<ProtectedRoute><CreateStoryPage /></ProtectedRoute>} />
+      <Route path="/profile/:userId/stories" element={<ProtectedRoute><StoryPage /></ProtectedRoute>} />
       <Route path="/messenger" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/messenger/:convId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

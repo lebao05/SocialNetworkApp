@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
-import { Search, Users, UserPlus, ChevronRight } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Search, Users, UserPlus, ChevronRight, Check, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useFriendContext } from "../contexts/friendContext";
 import Navbar from "../components/Navbar/Navbar";
 
@@ -26,6 +27,7 @@ export default function FriendsPage() {
     fetchFriends,
     fetchIncomingFriendRequests,
     acceptFriendRequest,
+    rejectFriendRequest,
     loadMoreFriends,
     loadMoreIncomingFriendRequests,
     hasMoreFriends,
@@ -34,6 +36,22 @@ export default function FriendsPage() {
 
   const [activeTab, setActiveTab] = useState("requests");
   const [searchTerm, setSearchTerm] = useState("");
+  const [requestStatuses, setRequestStatuses] = useState({});
+  const [processingIds, setProcessingIds] = useState({});
+
+  // Sync statuses when incomingRequests loads from the API
+  useEffect(() => {
+    if (incomingRequests.length === 0) return;
+    setRequestStatuses((prev) => {
+      const next = { ...prev };
+      for (const r of incomingRequests) {
+        if (!(r.id in next)) {
+          next[r.id] = r.status;
+        }
+      }
+      return next;
+    });
+  }, [incomingRequests]);
 
   const items = useMemo(() => {
     const source = activeTab === "friends" ? friends : incomingRequests;
@@ -43,25 +61,45 @@ export default function FriendsPage() {
     return source.filter((item) => getDisplayName(item).toLowerCase().includes(lowerTerm));
   }, [activeTab, friends, incomingRequests, searchTerm]);
 
-  const handlePrimaryAction = async (item) => {
-    if (activeTab === "requests") {
+  const handleAccept = async (item) => {
+    setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
+    try {
       await acceptFriendRequest(item.id);
-      await fetchIncomingFriendRequests(1, false);
-      await fetchFriends(1, false);
+      setRequestStatuses((prev) => ({ ...prev, [item.id]: 1 }));
+    } finally {
+      setProcessingIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  const handleReject = async (item) => {
+    setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      await rejectFriendRequest(item.id);
+      setRequestStatuses((prev) => ({ ...prev, [item.id]: 2 }));
+    } finally {
+      setProcessingIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#050505] font-sans antialiased">
       <Navbar />
-      
+
       <div className="flex pt-14 h-[calc(100vh-56px)] overflow-hidden">
-        
+
         {/* SIDEBAR - WHITE THEME */}
         <aside className="w-[360px] bg-white border-r border-[#ced0d4] flex flex-col flex-shrink-0 h-full hidden md:flex shadow-md">
           <div className="p-4 space-y-4">
             <h1 className="text-2xl font-bold text-[#050505]">Friends</h1>
-            
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#65676B]" size={18} />
               <input
@@ -82,14 +120,12 @@ export default function FriendsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center justify-between rounded-lg px-2 py-2.5 transition mb-1 ${
-                    isActive ? "bg-[#F2F2F2]" : "hover:bg-[#F2F2F2]"
-                  }`}
+                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2.5 transition mb-1 ${isActive ? "bg-[#F2F2F2]" : "hover:bg-[#F2F2F2]"
+                    }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      isActive ? "bg-[#1877F2] text-white" : "bg-[#E4E6EB] text-[#050505]"
-                    }`}>
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-full ${isActive ? "bg-[#1877F2] text-white" : "bg-[#E4E6EB] text-[#050505]"
+                      }`}>
                       <Icon size={20} />
                     </span>
                     <span className="font-semibold text-[15px]">{tab.label}</span>
@@ -104,7 +140,7 @@ export default function FriendsPage() {
         {/* MAIN PANEL - WHITE THEME */}
         <main className="flex-1 overflow-y-auto p-8">
           <div className="max-w-[1200px] mx-auto">
-            
+
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-[#050505]">
@@ -116,16 +152,6 @@ export default function FriendsPage() {
                     : "Browse your friends list."}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (activeTab === "friends") await fetchFriends(1, false);
-                  else await fetchIncomingFriendRequests(1, false);
-                }}
-                className="inline-flex items-center justify-center rounded-full border border-[#ced0d4] bg-white px-4 py-2 text-[15px] font-medium text-[#1877F2] transition hover:bg-[#F2F2F2]"
-              >
-                Refresh
-              </button>
             </div>
 
             {error && (
@@ -144,24 +170,34 @@ export default function FriendsPage() {
                     className="bg-white rounded-xl overflow-hidden border border-[#ced0d4] shadow-sm transition hover:shadow-md flex flex-col"
                   >
                     <div className="relative aspect-square w-full bg-[#E4E6EB]">
-                      {avatar ? (
-                        <img
-                          src={avatar}
-                          alt={getDisplayName(item)}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-[#65676B]">
-                          {getDisplayName(item).charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <Link
+                        to={`/profile/${item.senderId || item.userId}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="block w-full h-full"
+                      >
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={getDisplayName(item)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-[#65676B]">
+                            {getDisplayName(item).charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </Link>
                     </div>
 
                     <div className="p-4 flex flex-col gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[17px] font-bold text-[#050505]">
+                        <Link
+                          to={`/profile/${item.senderId || item.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="truncate text-[17px] font-bold text-[#050505] hover:underline block"
+                        >
                           {getDisplayName(item)}
-                        </p>
+                        </Link>
                         <p className="text-[13px] text-[#65676B] truncate mt-1">
                           {getSubtitle(item, activeTab)}
                         </p>
@@ -174,19 +210,38 @@ export default function FriendsPage() {
                           </button>
                         ) : (
                           <>
-                            <button
-                              type="button"
-                              onClick={() => handlePrimaryAction(item)}
-                              className="w-full rounded-md cursor-pointer bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5]"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              type="button"
-                              className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]"
-                            >
-                              Dismiss
-                            </button>
+                            {requestStatuses[item.id] === 1 || requestStatuses[item.id] === 2 ? (
+                              <div className={`flex items-center justify-center gap-2 rounded-md py-2 text-[15px] font-semibold ${
+                                requestStatuses[item.id] === 1
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-600"
+                                }`}>
+                                {requestStatuses[item.id] === 1 ? (
+                                  <><Check size={15} /> Request accepted</>
+                                ) : (
+                                  <><X size={15} /> Request declined</>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAccept(item)}
+                                  disabled={!!processingIds[item.id]}
+                                  className="w-full rounded-md cursor-pointer bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5] disabled:opacity-50"
+                                >
+                                  {processingIds[item.id] ? "Processing..." : "Confirm"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(item)}
+                                  disabled={!!processingIds[item.id]}
+                                  className="w-full rounded-md cursor-pointer bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf] disabled:opacity-50"
+                                >
+                                  Dismiss
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>

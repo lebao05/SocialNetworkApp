@@ -26,19 +26,20 @@ internal sealed class GetFolloweesQueryHandler
     {
         var followees = await _friendshipRepository.GetFolloweesAsync(request.UserId, cancellationToken);
 
-        var items = await Task.WhenAll(followees.Select(async followee =>
+        var items = new List<FolloweeResponse>();
+        foreach (var followee in followees)
         {
-            var mutualCount = await _friendGraphService.GetMutualFriendCountAsync(request.UserId, followee.Id);
-            var isFriend = await _friendshipRepository.ExistsAsync(request.UserId, followee.Id);
+            var mutualCount = await _friendGraphService.GetMutualFriendCountAsync(request.UserId, followee.Id, cancellationToken);
+            var isFriend = await _friendshipRepository.ExistsAsync(request.UserId, followee.Id, cancellationToken);
 
-            return new FolloweeResponse(
+            items.Add(new FolloweeResponse(
                 followee.Id,
                 $"{followee.FirstName} {followee.LastName}".Trim(),
                 followee.AvatarUrl,
                 mutualCount,
-                isFriend);
-        }));
+                isFriend));
+        }
 
-        return Result.Success(items.ToList());
+        return Result.Success(items);
     }
 }

@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Camera, Image, Type, Palette, Shuffle, Sparkles, LayoutPanelLeft, Play
 } from "lucide-react";
-import { currentUser } from "../data/mockData";
+import { useAuth } from "../contexts/authContext";
+import { useStories } from "../contexts/StoriesContext";
 
 const TEXT_BG_OPTIONS = [
   { id: "pink", gradient: "linear-gradient(135deg, #ff6b9d, #c44ea0)", label: "Pink" },
@@ -35,10 +36,15 @@ const TEXT_COLOR_OPTIONS = [
   "#c084fc",
 ];
 
-function DraggableText({ text, style, containerRef }) {
+function DraggableText({ text, style, containerRef, onPositionChange }) {
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
+
+  const updatePosition = useCallback((nextPos) => {
+    setPos(nextPos);
+    onPositionChange?.(nextPos);
+  }, [onPositionChange]);
 
   const handleMouseDown = (e) => {
     e.preventDefault();
@@ -56,11 +62,11 @@ function DraggableText({ text, style, containerRef }) {
     const rect = containerRef.current.getBoundingClientRect();
     const newX = ((e.clientX - offset.current.x) / rect.width) * 100;
     const newY = ((e.clientY - offset.current.y) / rect.height) * 100;
-    setPos({
+    updatePosition({
       x: Math.max(8, Math.min(92, newX)),
       y: Math.max(10, Math.min(90, newY)),
     });
-  }, [containerRef]);
+  }, [containerRef, updatePosition]);
 
   const handleMouseUp = useCallback(() => {
     dragging.current = false;
@@ -120,11 +126,23 @@ function ToolChip({ icon: Icon, label, active = false, onClick }) {
   );
 }
 
+function buildUserDisplayName(user) {
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+  return fullName || user?.name || "You";
+}
+
 export default function CreateStoryPage() {
   const navigate = useNavigate();
   const previewRef = useRef(null);
   const fileInputRef = useRef(null);
   const objectUrlRef = useRef(null);
+  const { user } = useAuth();
+  const {
+    createStory,
+    isCreatingStory,
+    createStoryError,
+    clearCreateStoryError,
+  } = useStories();
 
   const [mode, setMode] = useState("text");
   const [textValue, setTextValue] = useState("");
@@ -133,6 +151,14 @@ export default function CreateStoryPage() {
   const [textColor, setTextColor] = useState(TEXT_STYLES[0].color);
   const [mediaSrc, setMediaSrc] = useState(null);
   const [mediaType, setMediaType] = useState(null);
+  const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [mediaWarning, setMediaWarning] = useState("");
+
+  const displayUser = useMemo(() => ({
+    avatar: user?.avatarUrl || user?.avatar || import.meta.env.VITE_DEFAULT_AVATAR,
+    name: buildUserDisplayName(user),
+    id: user?.id,
+  }), [user]);
 
   useEffect(() => {
     return () => {
@@ -147,6 +173,7 @@ export default function CreateStoryPage() {
     setSelectedBg(TEXT_BG_OPTIONS[0]);
     setSelectedStyle(TEXT_STYLES[0]);
     setTextColor(TEXT_STYLES[0].color);
+    setTextPosition({ x: 50, y: 50 });
   }, []);
 
   const resetMediaModeState = useCallback(() => {
@@ -156,6 +183,8 @@ export default function CreateStoryPage() {
     }
     setMediaSrc(null);
     setMediaType(null);
+    setMediaWarning("");
+    setTextPosition({ x: 50, y: 50 });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -164,23 +193,31 @@ export default function CreateStoryPage() {
   const switchMode = useCallback((nextMode) => {
     if (nextMode === mode) return;
 
+    clearCreateStoryError();
+    setMediaWarning("");
+
     if (nextMode === "media") {
       setTextValue("");
+      setTextPosition({ x: 50, y: 50 });
     } else {
       resetMediaModeState();
       setTextValue("");
       setSelectedBg(TEXT_BG_OPTIONS[0]);
       setSelectedStyle(TEXT_STYLES[0]);
+      setTextColor(TEXT_STYLES[0].color);
+      setTextPosition({ x: 50, y: 50 });
     }
 
     setMode(nextMode);
-  }, [mode, resetMediaModeState]);
+  }, [clearCreateStoryError, mode, resetMediaModeState]);
 
   const handleClose = () => navigate(-1);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    clearCreateStoryError();
 
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
@@ -190,6 +227,7 @@ export default function CreateStoryPage() {
     objectUrlRef.current = url;
     setMediaSrc(url);
     setMediaType(file.type.startsWith("video") ? "video" : "image");
+    setMediaWarning("Media upload is not connected yet. You can preview it here, but only text stories can be shared until a story upload API exists.");
     setMode("media");
   };
 
@@ -205,7 +243,31 @@ export default function CreateStoryPage() {
     setTextColor(nextStyle.color);
   };
 
-  const canShare = mode === "text" ? !!textValue.trim() : !!mediaSrc;
+  const canShare = mode === "text" ? !!textValue.trim() : false;
+
+  const handleShareStory = async () => {
+    if (!canShare || isCreatingStory) return;
+
+    clearCreateStoryError();
+
+    const payload = {
+      mediaUrl: null,
+      mediaType: 0,
+      backgroundGradient: selectedBg.gradient,
+      textContent: textValue.trim(),
+      textColor,
+      textStyle: selectedStyle.id,
+      textPositionX: textPosition.x.toFixed(2),
+      textPositionY: textPosition.y.toFixed(2),
+      fontFamily: selectedStyle.fontFamily,
+    };
+
+    const result = await createStory(payload);
+
+    if (result.success) {
+      navigate(-1);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[200] overflow-hidden bg-[#f0f2f5]">
@@ -231,12 +293,12 @@ export default function CreateStoryPage() {
             <div className="border-b border-[#eef0f3] px-5 py-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
+                  src={displayUser.avatar}
                   alt="me"
                   className="h-11 w-11 rounded-full object-cover ring-1 ring-black/10"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[#050505]">{currentUser?.name || "You"}</p>
+                  <p className="text-sm font-semibold text-[#050505]">{displayUser.name}</p>
                   <p className="text-xs text-[#65676b]">Sharing to your story</p>
                 </div>
               </div>
@@ -253,6 +315,12 @@ export default function CreateStoryPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
+              {createStoryError && (
+                <div className="mb-4 rounded-2xl border border-[#f5c2c7] bg-[#fff1f2] px-4 py-3 text-sm text-[#b42318]">
+                  {createStoryError}
+                </div>
+              )}
+
               {mode === "text" && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-[#e4e6eb] bg-[#f8fafc] p-4">
@@ -372,6 +440,12 @@ export default function CreateStoryPage() {
                     </button>
                   </div>
 
+                  {mediaWarning && (
+                    <div className="rounded-2xl border border-[#fde68a] bg-[#fff7d6] px-4 py-3 text-sm text-[#92400e]">
+                      {mediaWarning}
+                    </div>
+                  )}
+
                   {mediaSrc ? (
                     <div className="overflow-hidden rounded-2xl border border-[#d8dbe1] bg-white">
                       {mediaType === "video" ? (
@@ -467,14 +541,15 @@ export default function CreateStoryPage() {
             <div className="border-t border-[#eef0f3] px-5 py-4">
               <button
                 type="button"
-                disabled={!canShare}
+                onClick={handleShareStory}
+                disabled={!canShare || isCreatingStory}
                 className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition ${
-                  canShare
+                  canShare && !isCreatingStory
                     ? "cursor-pointer bg-[#0866ff] text-white hover:bg-[#0757d8]"
                     : "cursor-not-allowed bg-[#e4e6eb] text-[#bcc0c4]"
                 }`}
               >
-                Share story
+                {isCreatingStory ? "Sharing..." : "Share story"}
               </button>
             </div>
           </div>
@@ -537,12 +612,12 @@ export default function CreateStoryPage() {
                 <div className="absolute left-5 right-5 top-5 flex items-center justify-between text-white/90">
                   <div className="flex items-center gap-3">
                     <img
-                      src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
+                      src={displayUser.avatar}
                       alt="me"
                       className="h-10 w-10 rounded-full border border-white/30 object-cover"
                     />
                     <div>
-                      <p className="text-sm font-semibold text-white">{currentUser?.name || "You"}</p>
+                      <p className="text-sm font-semibold text-white">{displayUser.name}</p>
                       <p className="text-xs text-white/70">Just now</p>
                     </div>
                   </div>
@@ -553,6 +628,7 @@ export default function CreateStoryPage() {
                     text={textValue}
                     style={{ ...selectedStyle, color: textColor }}
                     containerRef={previewRef}
+                    onPositionChange={setTextPosition}
                   />
                 )}
               </div>

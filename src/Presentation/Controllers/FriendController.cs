@@ -1,6 +1,9 @@
 using Application.Friend.Commands.AcceptFriendRequest;
+using Application.Friend.Commands.CancelFriendRequest;
+using Application.Friend.Commands.RejectFriendRequest;
 using Application.Friend.Commands.SendFriendRequest;
 using Application.Friend.Commands.SyncAllFriends;
+using Application.Friend.Commands.Unfriend;
 using Application.Friend.Queries.GetFriends;
 using Application.Friend.Queries.GetFriendRecommendations;
 using Application.Friend.Queries.GetFollowees;
@@ -23,7 +26,7 @@ namespace Presentation.Controllers
         {
         }
 
-        [HttpPost("friend-request")]
+        [HttpPost("friend-request/{receiverId:Guid}")]
         public async Task<IActionResult> SendFriendRequest(
             Guid receiverId,
             CancellationToken ct)
@@ -42,30 +45,50 @@ namespace Presentation.Controllers
 
         [HttpPost("accept")]
         public async Task<IActionResult> AcceptFriendRequest(
-            long requestId,
+            [FromQuery]long requestId,
             CancellationToken ct)
         {
+            Console.WriteLine(requestId);
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
             var command = new AcceptFriendRequestCommand(requestId, userId);
 
             var result = await _sender.Send(command, ct);
-
             if (result.IsFailure)
                 return HandleFailure(result);
 
             return Ok();
         }
 
+        [HttpPost("reject")]
+        public async Task<IActionResult> RejectFriendRequest(
+            [FromQuery]long requestId,
+            CancellationToken ct)
+        {
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var command = new RejectFriendRequestCommand(requestId, userId);
+
+            var result = await _sender.Send(command, ct);
+            if (result.IsFailure)
+                return HandleFailure(result);
+
+            return NoContent();
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetFriends(
+            [FromQuery] Guid? userId = null,
             [FromQuery] int page = 1,
             [FromQuery] string? searchTerm = null,
             CancellationToken ct = default)
         {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+            var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
 
-            var query = new GetFriendsQuery(userId, page, searchTerm);
+            // If userId is provided and is not the current user, allow fetching their friends
+            var targetUserId = userId ?? currentUserId;
+
+            var query = new GetFriendsQuery(targetUserId, page, searchTerm);
 
             var result = await _sender.Send(query, ct);
 
@@ -97,11 +120,16 @@ namespace Presentation.Controllers
         }
 
         [HttpGet("followees")]
-        public async Task<IActionResult> GetFollowees(CancellationToken ct = default)
+        public async Task<IActionResult> GetFollowees(
+            [FromQuery] Guid? userId = null,
+            CancellationToken ct = default)
         {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User);
-            var query = new GetFolloweesQuery(userId);
+            var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+            var targetUserId = userId ?? currentUserId;
+
+            var query = new GetFolloweesQuery(targetUserId);
             var result = await _sender.Send(query, ct);
+
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
 
@@ -133,6 +161,37 @@ namespace Presentation.Controllers
             var command = new SyncAllFriendsCommand();
             var result = await _sender.Send(command, ct);
             return result.IsSuccess ? Ok(new { SyncedUsersCount = result.Value }) : HandleFailure(result);
+        }
+
+        [HttpDelete("{friendUserId:guid}")]
+        public async Task<IActionResult> Unfriend(
+            Guid friendUserId,
+            CancellationToken ct)
+        {
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var command = new UnfriendCommand(userId, friendUserId);
+
+            var result = await _sender.Send(command, ct);
+
+            if (result.IsFailure)
+                return HandleFailure(result);
+
+            return NoContent();
+        }
+
+        [HttpDelete("cancel-request/{receiverId:guid}")]
+        public async Task<IActionResult> CancelFriendRequest(
+            Guid receiverId,
+            CancellationToken ct)
+        {
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var command = new CancelFriendRequestCommand(userId, receiverId);
+
+            var result = await _sender.Send(command, ct);
+
+            return result.IsSuccess ? NoContent() : HandleFailure(result);
         }
     }
 }

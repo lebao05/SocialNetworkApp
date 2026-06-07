@@ -22,6 +22,15 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
+        public async Task<FriendRequest?> GetPendingRequestAsync(Guid senderId, Guid receiverId)
+        {
+            return await _context.FriendRequests
+                .FirstOrDefaultAsync(x =>
+                    x.SenderId == senderId &&
+                    x.ReceiverId == receiverId &&
+                    x.Status == FriendRequestStatus.Pending);
+        }
+
         public async Task<bool> ExistsPendingRequestAsync(Guid senderId, Guid receiverId)
         {
             return await _context.FriendRequests
@@ -51,6 +60,11 @@ namespace Infrastructure.Persistence.Repositories
         public async Task AddAsync(FriendRequest request)
         {
             await _context.FriendRequests.AddAsync(request);
+        }
+
+        public void Update(FriendRequest request)
+        {
+            _context.FriendRequests.Update(request);
         }
     }
 }

@@ -39,10 +39,10 @@ public class StoryConfiguration : IEntityTypeConfiguration<Story>
             .HasMaxLength(50);
 
         builder.Property(s => s.TextPositionX)
-            .HasMaxLength(10);
+            .HasMaxLength(20);
 
         builder.Property(s => s.TextPositionY)
-            .HasMaxLength(10);
+            .HasMaxLength(20);
 
         builder.Property(s => s.FontFamily)
             .HasMaxLength(100);
@@ -67,7 +67,14 @@ public class StoryConfiguration : IEntityTypeConfiguration<Story>
             .HasForeignKey(r => r.StoryId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Ignore(s => s.SeenByUsers);
+        builder.HasMany(s => s.SeenByUsers)
+            .WithOne(ss => ss.Story)
+            .HasForeignKey(ss => ss.StoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Navigation(s => s.SeenByUsers)
+            .HasField("_seenByUsers")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Ignore(s => s.IsExpired);
     }

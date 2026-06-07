@@ -7,6 +7,8 @@ namespace Application.Abstractions.Repositories
     {
         Task<FriendRequest?> GetByIdAsync(long id);
 
+        Task<FriendRequest?> GetPendingRequestAsync(Guid senderId, Guid receiverId);
+
         Task<bool> ExistsPendingRequestAsync(Guid senderId, Guid receiverId);
 
         Task<PagedList<FriendRequest>> GetIncomingPendingAsync(
@@ -16,5 +18,7 @@ namespace Application.Abstractions.Repositories
             CancellationToken cancellationToken = default);
 
         Task AddAsync(FriendRequest request);
+
+        void Update(FriendRequest request);
     }
 }

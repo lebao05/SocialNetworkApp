@@ -1,4 +1,6 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Stories;
+using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +55,18 @@ public sealed class StoryRepository : IStoryRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Story>> GetOwnActiveStoriesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Stories
+            .AsNoTracking()
+            .Include(s => s.User)
+            .Include(s => s.SeenByUsers)
+            .Include(s => s.Reactions)
+            .Where(s => s.UserId == userId && s.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<StorySeen?> GetStorySeenAsync(long storyId, Guid userId, CancellationToken cancellationToken = default)
     {
         return await _context.StorySeens
@@ -74,6 +88,74 @@ public sealed class StoryRepository : IStoryRepository
             .ToListAsync(cancellationToken);
 
         return friendIds;
+    }
+
+    public async Task<PagedList<StoryTimelineUserPageItem>> GetTimelineUsersPagedAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        var relatedUserIds = await _context.Friendships
+            .AsNoTracking()
+            .Where(f => f.User1Id == userId || f.User2Id == userId)
+            .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id)
+            .Union(
+                _context.Followings
+                    .AsNoTracking()
+                    .Where(f => f.FollowerId == userId)
+                    .Select(f => f.FolloweeId))
+            .ToListAsync(cancellationToken);
+
+        var groupedUsers = await _context.Stories
+            .AsNoTracking()
+            .Where(s =>
+                s.ExpiresAt > now &&
+                relatedUserIds.Contains(s.UserId))
+            .GroupBy(s => s.UserId)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                HasUnseenStories = g.Any(story =>
+                    !_context.StorySeens.Any(ss =>
+                        ss.StoryId == story.Id &&
+                        ss.UserId == userId))
+            })
+            .ToListAsync(cancellationToken);
+
+        var ordered = groupedUsers
+            .OrderByDescending(x => x.HasUnseenStories)
+            .Select(x => new StoryTimelineUserPageItem(
+                x.UserId,
+                x.HasUnseenStories))
+            .ToList();
+
+        return new PagedList<StoryTimelineUserPageItem>(
+            ordered,
+            page,
+            pageSize,
+            ordered.Count);
+    }
+
+    public async Task<List<Story>> GetActiveStoriesByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
+    {
+        var userIdList = userIds.Distinct().ToList();
+
+        if (userIdList.Count == 0)
+        {
+            return new List<Story>();
+        }
+
+        return await _context.Stories
+            .AsNoTracking()
+            .Include(s => s.User)
+            .Include(s => s.SeenByUsers)
+            .Include(s => s.Reactions)
+            .Where(s => userIdList.Contains(s.UserId) && s.ExpiresAt > DateTime.UtcNow)
+            .OrderBy(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
     }
 
     public void Add(Story story)

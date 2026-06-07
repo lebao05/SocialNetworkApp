@@ -11,7 +11,7 @@ namespace Application.Abstractions
         
         Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int limit = 10);
         Task<List<FriendResponse>> GetMutualFriendsAsync(Guid userId, Guid otherUserId);
-        Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId);
+        Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId, CancellationToken cancellationToken = default);
         Task<List<FriendResponse>> GetShortestPathAsync(Guid startUserId, Guid endUserId);
     }
 }

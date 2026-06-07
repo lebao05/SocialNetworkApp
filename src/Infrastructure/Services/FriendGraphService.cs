@@ -163,7 +163,7 @@ namespace Infrastructure.Services
             });
         }
 
-        public async Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId)
+        public async Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId, CancellationToken cancellationToken = default)
         {
             const string query = @"
                 MATCH (u1:User {id: $userId})-[:FRIEND]-(mutual:User)-[:FRIEND]-(u2:User {id: $otherUserId})

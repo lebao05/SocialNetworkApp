@@ -16,8 +16,9 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { GrGroup } from "react-icons/gr";
+import { useAuth } from "../../contexts/authContext";
 
-import { currentUser, conversations } from "../../data/mockData";
+import { conversations } from "../../data/mockData";
 
 // ── Messenger Dropdown Panel ───────────────────────────────────────────────────
 function MessengerDropdown({ onClose }) {
@@ -180,9 +181,10 @@ function ActionBtn({ children, badge, onClick, active }) {
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [showMessenger, setShowMessenger] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [searchValue, setSearchValue] = useState("suối tiên - núi dinh ( hương quán )");
+  const [searchValue, setSearchValue] = useState("");
   const messengerRef = useRef(null);
 
   const isMessengerPage = location.pathname.startsWith("/messenger");
@@ -203,7 +205,6 @@ export default function Navbar() {
     { icon: Users, path: "/friends" },
     { icon: Tv2, path: "/watch" },
     { icon: GrGroup, path: "/groups" },
-    { icon: Gamepad2, path: "/gaming" },
   ];
 
   const handleSearchSubmit = (event) => {
@@ -272,8 +273,8 @@ export default function Navbar() {
 
         <Link to="/profile" className="flex items-center gap-0.5 cursor-pointer group">
           <img
-            src={currentUser.avatar}
-            alt="avatar"
+            src={authUser?.avatarUrl || "https://via.placeholder.com/40"}
+            alt={authUser ? `${authUser.firstName} ${authUser.lastName}` : "avatar"}
             className="w-10 h-10 rounded-full object-cover hover:ring-2 hover:ring-fb-blue transition-all"
           />
           <ChevronDown size={14} className="text-fb-subtext group-hover:text-fb-text transition-colors" />

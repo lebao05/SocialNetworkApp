@@ -15,12 +15,12 @@ namespace Infrastructure.Persistence.Repositories
             _context = context;
         }
 
-        public async Task<bool> ExistsAsync(Guid user1Id, Guid user2Id)
+        public async Task<bool> ExistsAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken = default)
         {
             return await _context.Friendships
                 .AnyAsync(f =>
                     f.User1Id == user1Id &&
-                    f.User2Id == user2Id);
+                    f.User2Id == user2Id, cancellationToken);
         }
 
         public async Task<bool> ExistsFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken)
@@ -130,6 +130,20 @@ namespace Infrastructure.Persistence.Repositories
                 .Select(f => f.Followee)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task RemoveFriendshipAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken)
+        {
+            var friendship = await _context.Friendships
+                .FirstOrDefaultAsync(f =>
+                    (f.User1Id == user1Id && f.User2Id == user2Id) ||
+                    (f.User1Id == user2Id && f.User2Id == user1Id),
+                    cancellationToken);
+
+            if (friendship is not null)
+            {
+                _context.Friendships.Remove(friendship);
+            }
         }
     }
 }

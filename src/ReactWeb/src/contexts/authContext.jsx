@@ -168,7 +168,8 @@ export function AuthProvider({ children }) {
                 loading,
                 signin,
                 signup,
-                logout
+                logout,
+                setUser
             }}
         >
             {children}

@@ -11,7 +11,7 @@ export function useProfileFriends(userId, searchTerm = "") {
 
         try {
             setLoading(true);
-            const data = await getFriendsApi(1, searchTerm || null);
+            const data = await getFriendsApi(1, searchTerm || null, userId);
             setFriends(Array.isArray(data) ? data : data?.items ?? []);
             setError(null);
         } catch (err) {

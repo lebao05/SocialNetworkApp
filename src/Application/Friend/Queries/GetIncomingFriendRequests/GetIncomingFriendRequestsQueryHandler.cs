@@ -49,7 +49,8 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
         {
             var mutualFriendCount = await _friendGraphService.GetMutualFriendCountAsync(
                 friendRequest.SenderId,
-                receiverId);
+                receiverId,
+                cancellationToken);
 
             return new FriendRequestDto(
                 friendRequest.Id,
