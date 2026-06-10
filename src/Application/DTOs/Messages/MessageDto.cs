@@ -7,6 +7,7 @@ namespace Application.DTOs.Messages
         Guid SenderId,
         string SenderName,
         string? Content,
+        string MessageType,
         DateTime CreatedAt,
         AttachmentDto? Attachment,
         List<MemberMessageDto> MemberStates,
@@ -20,6 +21,7 @@ namespace Application.DTOs.Messages
                 SenderId: message.CreatorId,
                 SenderName: $"{message.Creator.FirstName} {message.Creator.LastName}",
                 Content: message.Content,
+                MessageType: message.MessageType.ToString(),
                 CreatedAt: message.CreatedAt,
 
                 Attachment: AttachmentDto.FromDomain(message.Attachment),

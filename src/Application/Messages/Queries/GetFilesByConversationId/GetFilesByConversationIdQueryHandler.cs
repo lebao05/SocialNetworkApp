@@ -2,16 +2,17 @@ using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Messages;
 using Domain.Shared;
+using Microsoft.EntityFrameworkCore;
 
-namespace Application.Messages.Queries.SearchMessages;
+namespace Application.Messages.Queries.GetFilesByConversationId;
 
-internal sealed class SearchMessagesQueryHandler
-    : IQueryHandler<SearchMessagesQuery, List<MessageDto>>
+internal sealed class GetFilesByConversationIdQueryHandler
+    : IQueryHandler<GetFilesByConversationIdQuery, List<MessageDto>>
 {
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
 
-    public SearchMessagesQueryHandler(
+    public GetFilesByConversationIdQueryHandler(
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository)
     {
@@ -20,34 +21,24 @@ internal sealed class SearchMessagesQueryHandler
     }
 
     public async Task<Result<List<MessageDto>>> Handle(
-        SearchMessagesQuery request,
+        GetFilesByConversationIdQuery request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            return Result.Failure<List<MessageDto>>(new Error(
-                "SearchMessages.InvalidTerm",
-                "Search term cannot be empty."));
-        }
-
         var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId, cancellationToken);
+
         if (conversation is null)
         {
-            return Result.Failure<List<MessageDto>>(new Error(
-                "Conversation.NotFound",
-                "Conversation not found."));
+            return Result.Failure<List<MessageDto>>(new Error("Conversation.NotFound", "Conversation not found"));
         }
 
         if (conversation.Members.All(m => m.UserId != request.UserId))
         {
-            return Result.Failure<List<MessageDto>>(new Error(
-                "Conversation.Forbidden",
-                "You are not a member of this conversation."));
+            return Result.Failure<List<MessageDto>>(new Error("Conversation.Forbidden", "You are not a member of this conversation"));
         }
 
-        var messages = await _messageRepository.SearchMessagesAsync(
+        var messages = await _messageRepository.GetFilesByConversationIdAsync(
             request.ConversationId,
-            request.SearchTerm,
+            request.IsMedia,
             request.PageNumber,
             request.PageSize,
             cancellationToken);

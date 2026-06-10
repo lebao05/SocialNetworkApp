@@ -1,6 +1,9 @@
-﻿
+﻿using Microsoft.AspNetCore.Http;
+
 namespace Presentation.Contracts.Message
 {
-    public record SendMessageRequest(long ConversationId, string Content);
-
+    public sealed record SendMessageRequest(
+        long ConversationId,
+        string? Content,
+        IFormFileCollection? Files);
 }

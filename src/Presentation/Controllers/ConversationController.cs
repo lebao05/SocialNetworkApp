@@ -1,5 +1,9 @@
 using Application.Conversations.Commands.CreateConversation;
+using Application.Conversations.Commands.AssignAdminRole;
+using Application.Conversations.Commands.KickMemberOut;
+using Application.Conversations.Commands.LeaveConversation;
 using Application.Conversations.Commands.RemoveMemberFromConversation;
+using Application.Conversations.Commands.RevokeAdminRole;
 using Application.Conversations.Commands.ToggleNotifications;
 using Application.Conversations.Queries.GetConversationDetail;
 using Application.Conversations.Queries.SearchConversationsAndFriends;
@@ -150,6 +154,80 @@ public class ConversationController : ApiController
             conversationId,
             adminId,
             userIdToRemove
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpDelete("{conversationId:long}/leave")]
+    public async Task<IActionResult> Leave(
+        long conversationId,
+        CancellationToken cancellationToken)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new LeaveConversationCommand(
+            conversationId,
+            userId
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpDelete("{conversationId:long}/kick/{userIdToKick:guid}")]
+    public async Task<IActionResult> KickMemberOut(
+        long conversationId,
+        Guid userIdToKick,
+        CancellationToken cancellationToken)
+    {
+        var adminId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new KickMemberOutCommand(
+            conversationId,
+            adminId,
+            userIdToKick
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpPatch("{conversationId:long}/members/{targetUserId:guid}/assign-admin")]
+    public async Task<IActionResult> AssignAdminRole(
+        long conversationId,
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var ownerId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new AssignAdminRoleCommand(
+            conversationId,
+            ownerId,
+            targetUserId
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpPatch("{conversationId:long}/members/{targetUserId:guid}/revoke-admin")]
+    public async Task<IActionResult> RevokeAdminRole(
+        long conversationId,
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var ownerId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new RevokeAdminRoleCommand(
+            conversationId,
+            ownerId,
+            targetUserId
         );
 
         var result = await _sender.Send(command, cancellationToken);

@@ -3,15 +3,15 @@ using Application.Abstractions.Repositories;
 using Application.DTOs.Messages;
 using Domain.Shared;
 
-namespace Application.Messages.Queries.SearchMessages;
+namespace Application.Messages.Queries.GetPinnedMessages;
 
-internal sealed class SearchMessagesQueryHandler
-    : IQueryHandler<SearchMessagesQuery, List<MessageDto>>
+internal sealed class GetPinnedMessagesQueryHandler
+    : IQueryHandler<GetPinnedMessagesQuery, List<MessageDto>>
 {
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
 
-    public SearchMessagesQueryHandler(
+    public GetPinnedMessagesQueryHandler(
         IConversationRepository conversationRepository,
         IMessageRepository messageRepository)
     {
@@ -20,16 +20,9 @@ internal sealed class SearchMessagesQueryHandler
     }
 
     public async Task<Result<List<MessageDto>>> Handle(
-        SearchMessagesQuery request,
+        GetPinnedMessagesQuery request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            return Result.Failure<List<MessageDto>>(new Error(
-                "SearchMessages.InvalidTerm",
-                "Search term cannot be empty."));
-        }
-
         var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId, cancellationToken);
         if (conversation is null)
         {
@@ -45,9 +38,8 @@ internal sealed class SearchMessagesQueryHandler
                 "You are not a member of this conversation."));
         }
 
-        var messages = await _messageRepository.SearchMessagesAsync(
+        var messages = await _messageRepository.GetPinnedMessagesAsync(
             request.ConversationId,
-            request.SearchTerm,
             request.PageNumber,
             request.PageSize,
             cancellationToken);

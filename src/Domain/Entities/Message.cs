@@ -8,14 +8,13 @@ public class Message : AggregateRoot
 {
     public long ConversationId { get; private set; }
     public Guid CreatorId { get; private set; }
-    public string Ciphertext { get; set; } = string.Empty;
     public string? Content { get; private set; }
     public long? ReplyToMessageId { get; private set; }
     public long? ForwardFromMessageId { get; private set; }
     public MessageType MessageType { get; private set; }
-    public string? SearchContent { get; private set; }
 
     public bool IsSystemMessage { get; private set; }
+    public string? Payload { get; private set; }
     public bool IsPinned { get; private set; }
 
     // Navigation properties
@@ -62,14 +61,24 @@ public class Message : AggregateRoot
         return Result.Success();
     }
 
-    public void UpdateSearchContent(string? searchContent)
-    {
-        SearchContent = searchContent;
-    }
-
     public void SetForwardedFrom(long originalMessageId)
     {
         ForwardFromMessageId = originalMessageId;
+    }
+
+    public void SetMessageType(MessageType type)
+    {
+        MessageType = type;
+    }
+
+    public void SetPayload(string? payload)
+    {
+        Payload = payload;
+    }
+
+    public void AttachFile(MessageAttachment attachment)
+    {
+        Attachment = attachment;
     }
 
     public Result Revoke(Guid requesterId)
@@ -82,7 +91,11 @@ public class Message : AggregateRoot
         }
 
         Content = "This message was revoked.";
-        SearchContent = null;
         return Result.Success();
+    }
+
+    public void TogglePin()
+    {
+        IsPinned = !IsPinned;
     }
 }

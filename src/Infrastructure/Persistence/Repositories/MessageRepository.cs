@@ -23,21 +23,6 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
-        public async Task<List<Message>> SearchMessagesAsync(long conversationId, string searchHash, CancellationToken cancellationToken)
-        {
-            return await _context.Messages
-                .Where(m => m.ConversationId == conversationId && 
-                            m.DeletedAt == null && 
-                            m.SearchContent != null && 
-                            m.SearchContent.Contains(searchHash))
-                .AsNoTracking()
-                .Include(m => m.Creator)
-                .Include(m => m.Attachment)
-                .Include(m => m.MemberMessages)
-                .OrderByDescending(m => m.CreatedAt)
-                .ToListAsync(cancellationToken);
-        }
-
         public async Task<List<Message>> GetMessagesAroundAsync(
             long conversationId, 
             long? anchorMessageId, 
@@ -104,6 +89,104 @@ namespace Infrastructure.Persistence.Repositories
         public void Update(Message message)
         {
             _context.Messages.Update(message);
+        }
+
+        public async Task<MessageReaction?> GetMessageReactionAsync(long messageId, Guid userId, CancellationToken cancellationToken)
+        {
+            return await _context.Set<MessageReaction>()
+                .FirstOrDefaultAsync(r => r.MessageId == messageId && r.UserId == userId, cancellationToken);
+        }
+
+        public void AddReaction(MessageReaction reaction)
+        {
+            _context.Set<MessageReaction>().Add(reaction);
+        }
+
+        public void RemoveReaction(MessageReaction reaction)
+        {
+            _context.Set<MessageReaction>().Remove(reaction);
+        }
+
+        public async Task<List<Message>> GetFilesByConversationIdAsync(
+            long conversationId,
+            bool isMedia,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            var mediaTypes = new[] { "image/", "video/" };
+
+            return await _context.Messages
+                .AsNoTracking()
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .Include(m => m.MemberMessages)
+                .Where(m => m.ConversationId == conversationId && m.DeletedAt == null && m.Attachment != null)
+                .Where(m => isMedia
+                    ? mediaTypes.Any(t => m.Attachment != null && m.Attachment.FileType.ToLower().StartsWith(t))
+                    : !mediaTypes.Any(t => m.Attachment != null && m.Attachment.FileType.ToLower().StartsWith(t)) &&
+                      m.Attachment != null && !m.Attachment.FileType.ToLower().StartsWith("audio/"))
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Message>> GetPinnedMessagesAsync(
+            long conversationId,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Messages
+                .AsNoTracking()
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .Include(m => m.MemberMessages)
+                .Where(m => m.ConversationId == conversationId && m.IsPinned && m.DeletedAt == null)
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Message>> SearchMessagesAsync(
+            long conversationId,
+            string searchTerm,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            var safeTerm = searchTerm.Replace("'", "''");
+            var offset = (pageNumber - 1) * pageSize;
+
+            var sql = $@"
+                SELECT m.""Id"", m.""ConversationId"", m.""CreatorId"", m.""Content"",
+                       m.""ReplyToMessageId"", m.""ForwardFromMessageId"", m.""MessageType"",
+                       m.""IsSystemMessage"", m.""Payload"", m.""IsPinned"",
+                       m.""CreatedAt"", m.""UpdatedAt"", m.""DeletedAt""
+                FROM ""Messages"" m
+                WHERE m.""ConversationId"" = {conversationId}
+                  AND m.""DeletedAt"" IS NULL
+                  AND m.""SearchVector"" @@ plainto_tsquery('english', '{safeTerm}')
+                ORDER BY m.""CreatedAt"" DESC
+                OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
+
+            var ids = await _context.Database
+                .SqlQueryRaw<long>(sql)
+                .ToListAsync(cancellationToken);
+
+            if (ids.Count == 0)
+                return new List<Message>();
+
+            return await _context.Messages
+                .AsNoTracking()
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .Include(m => m.MemberMessages)
+                .Where(m => ids.Contains(m.Id))
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync(cancellationToken);
         }
     }
 }

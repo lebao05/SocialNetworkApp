@@ -19,7 +19,8 @@ namespace Infrastructure.Persistence.Configurations
                 .HasMaxLength(2000)
                 .IsRequired(false);
 
-            builder.Property(m => m.SearchContent)
+            builder.Property(m => m.Payload)
+                .HasMaxLength(4000)
                 .IsRequired(false);
      
             // Creator

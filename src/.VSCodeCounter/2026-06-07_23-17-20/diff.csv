@@ -1,0 +1,222 @@
+"filename", "language", "C#", "JSON", "JavaScript JSX", "JavaScript", "PostCSS", "Dotenv", "comment", "blank", "total"
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\IUploadService.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IFriendRequestRepository.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 2, 4
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IFriendshipRepository.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IGroupListingRepository.cs", "C#", 14, 0, 0, 0, 0, 0, 5, 3, 22
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IPostRepository.cs", "C#", 5, 0, 0, 0, 0, 0, 0, 0, 5
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IReelRepository.cs", "C#", 20, 0, 0, 0, 0, 0, 0, 2, 22
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\Repositories\IStoryRepository.cs", "C#", 21, 0, 0, 0, 0, 0, 0, 3, 24
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Abstractions\UploadedVideoResult.cs", "C#", 7, 0, 0, 0, 0, 0, 0, 1, 8
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Friends\FolloweeResponse.cs", "C#", 7, 0, 0, 0, 0, 0, 0, 2, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Groups\GroupCardDto.cs", "C#", 16, 0, 0, 0, 0, 0, 0, 3, 19
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Groups\GroupDetailDto.cs", "C#", 19, 0, 0, 0, 0, 0, 0, 2, 21
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Groups\GroupInsightsDto.cs", "C#", 18, 0, 0, 0, 0, 0, 0, 2, 20
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Posts\PostDto.cs", "C#", 3, 0, 0, 0, 0, 0, 0, 0, 3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Reels\ReelCommentDto.cs", "C#", 18, 0, 0, 0, 0, 0, 0, 1, 19
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Reels\ReelDto.cs", "C#", 23, 0, 0, 0, 0, 0, 0, 2, 25
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Stories\StoryDto.cs", "C#", 23, 0, 0, 0, 0, 0, 0, 2, 25
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Stories\StoryTimelineUserDto.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Stories\StoryTimelineUserPageItem.cs", "C#", 4, 0, 0, 0, 0, 0, 0, 2, 6
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Users\PersonalInfoResponse.cs", "C#", 7, 0, 0, 0, 0, 0, 0, 0, 7
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\DTOs\Users\UserFriendRequestDto.cs", "C#", 10, 0, 0, 0, 0, 0, 0, 2, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\CancelFriendRequest\CancelFriendRequestCommand.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 3, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\CancelFriendRequest\CancelFriendRequestCommandHandler.cs", "C#", 37, 0, 0, 0, 0, 0, 0, 8, 45
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\RejectFriendRequest\RejectFriendRequestCommand.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 3, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\RejectFriendRequest\RejectFriendRequestCommandHandler.cs", "C#", 54, 0, 0, 0, 0, 0, 4, 13, 71
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\Unfriend\UnfriendCommand.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 3, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Commands\Unfriend\UnfriendCommandHandler.cs", "C#", 63, 0, 0, 0, 0, 0, 5, 13, 81
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Events\Unfriended\UnfriendedDomainEventHandler.cs", "C#", 45, 0, 0, 0, 0, 0, 0, 6, 51
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Queries\GetFollowees\GetFolloweesQuery.cs", "C#", 4, 0, 0, 0, 0, 0, 0, 3, 7
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Queries\GetFollowees\GetFolloweesQueryHandler.cs", "C#", 38, 0, 0, 0, 0, 0, 0, 8, 46
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Queries\GetFriends\GetFriendsQuery.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Queries\GetFriends\GetFriendsQueryHandler.cs", "C#", -10, 0, 0, 0, 0, 0, 0, 0, -10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Friend\Queries\GetIncomingFriendRequests\GetIncomingFriendRequestsQueryHandler.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Commands\CreateGroup\CreateGroupCommandHandler.cs", "C#", 1, 0, 0, 0, 0, 0, 1, 1, 3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Commands\UpdateGroup\UpdateGroupCommand.cs", "C#", -1, 0, 0, 0, 0, 0, 0, 0, -1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Commands\UpdateGroup\UpdateGroupCommandHandler.cs", "C#", -1, 0, 0, 0, 0, 0, 0, 0, -1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupDetail\GetGroupDetailQuery.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupDetail\GetGroupDetailQueryHandler.cs", "C#", 49, 0, 0, 0, 0, 0, 0, 8, 57
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupInsights\GetGroupInsightsQuery.cs", "C#", 10, 0, 0, 0, 0, 0, 0, 2, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupInsights\GetGroupInsightsQueryHandler.cs", "C#", 113, 0, 0, 0, 0, 0, 9, 20, 142
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupJoinRequests\GetGroupJoinRequestsQuery.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroupJoinRequests\GetGroupJoinRequestsQueryHandler.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroups\GetGroupsQuery.cs", "C#", 11, 0, 0, 0, 0, 0, 0, 3, 14
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Groups\Queries\GetGroups\GetGroupsQueryHandler.cs", "C#", 27, 0, 0, 0, 0, 0, 0, 7, 34
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Commands\CreatePost\CreatePostCommand.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Commands\CreatePost\CreatePostCommandHandler.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 1, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Queries\GetPost\GetPostQueryHandler.cs", "C#", 31, 0, 0, 0, 0, 0, 0, 6, 37
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Queries\GetPostsByGroup\GetPostsByGroupQuery.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Queries\GetPostsByGroup\GetPostsByGroupQueryHandler.cs", "C#", 43, 0, 0, 0, 0, 0, 0, 8, 51
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Posts\Queries\GetPostsByPerson\GetPostsByPersonQueryHandler.cs", "C#", 13, 0, 0, 0, 0, 0, 0, 0, 13
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\CreateReel\CreateReelCommand.cs", "C#", 18, 0, 0, 0, 0, 0, 0, 3, 21
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\CreateReel\CreateReelCommandHandler.cs", "C#", 97, 0, 0, 0, 0, 0, 0, 16, 113
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\DeleteReel\DeleteReelCommand.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\DeleteReel\DeleteReelCommandHandler.cs", "C#", 38, 0, 0, 0, 0, 0, 0, 7, 45
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\MarkStoryAsSeen\MarkStoryAsSeenCommand.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\MarkStoryAsSeen\MarkStoryAsSeenCommandHandler.cs", "C#", 51, 0, 0, 0, 0, 0, 0, 9, 60
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\ToggleLikeReel\ToggleLikeReelCommand.cs", "C#", 8, 0, 0, 0, 0, 0, 0, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\ToggleLikeReel\ToggleLikeReelCommandHandler.cs", "C#", 59, 0, 0, 0, 0, 0, 0, 11, 70
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Commands\ToggleLikeReel\ToggleLikeReelResponse.cs", "C#", 7, 0, 0, 0, 0, 0, 0, 1, 8
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetRecommendedReels\GetRecommendedReelsQuery.cs", "C#", 10, 0, 0, 0, 0, 0, 0, 2, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetRecommendedReels\GetRecommendedReelsQueryHandler.cs", "C#", 58, 0, 0, 0, 0, 0, 0, 10, 68
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelById\GetReelByIdQuery.cs", "C#", 9, 0, 0, 0, 0, 0, 0, 2, 11
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelById\GetReelByIdQueryHandler.cs", "C#", 49, 0, 0, 0, 0, 0, 0, 8, 57
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelComments\GetReelCommentsQuery.cs", "C#", 13, 0, 0, 0, 0, 0, 0, 2, 15
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelComments\GetReelCommentsQueryHandler.cs", "C#", 84, 0, 0, 0, 0, 0, 0, 14, 98
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelsByUser\GetReelsByUserQuery.cs", "C#", 12, 0, 0, 0, 0, 0, 0, 2, 14
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Reels\Queries\GetReelsByUser\GetReelsByUserQueryHandler.cs", "C#", 62, 0, 0, 0, 0, 0, 0, 12, 74
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\CreateStory\CreateStoryCommand.cs", "C#", 15, 0, 0, 0, 0, 0, 0, 3, 18
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\CreateStory\CreateStoryCommandHandler.cs", "C#", 47, 0, 0, 0, 0, 0, 0, 8, 55
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\DeleteStory\DeleteStoryCommand.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 4, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\DeleteStory\DeleteStoryCommandHandler.cs", "C#", 36, 0, 0, 0, 0, 0, 0, 8, 44
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\ToggleStoryLike\ToggleStoryLikeCommand.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 3, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\ToggleStoryLike\ToggleStoryLikeCommandHandler.cs", "C#", 63, 0, 0, 0, 0, 0, 0, 13, 76
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Commands\ToggleStoryLike\ToggleStoryLikeResponse.cs", "C#", 5, 0, 0, 0, 0, 0, 0, 2, 7
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Queries\GetStoriesByUserId\GetStoriesByUserIdQuery.cs", "C#", 7, 0, 0, 0, 0, 0, 0, 3, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Queries\GetStoriesByUserId\GetStoriesByUserIdQueryHandler.cs", "C#", 54, 0, 0, 0, 0, 0, 0, 11, 65
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Queries\GetStoryTimeline\GetStoryTimelineQuery.cs", "C#", 9, 0, 0, 0, 0, 0, 0, 3, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Stories\Queries\GetStoryTimeline\GetStoryTimelineQueryHandler.cs", "C#", 94, 0, 0, 0, 0, 0, 0, 20, 114
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\Users\Queries\GetPersonalInfo\GetPersonalInfoQueryHandler.cs", "C#", 44, 0, 0, 0, 0, 0, 0, 8, 52
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\obj\Application.csproj.nuget.dgspec.json", "JSON", 0, 4, 0, 0, 0, 0, 0, 0, 4
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\obj\Debug\net10.0\Application.AssemblyInfo.cs", "C#", 0, 0, 0, 0, 0, 0, 1, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Application\obj\project.assets.json", "JSON", 0, 2, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Common\BaseEntity.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 2, 3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\FriendRequest.cs", "C#", 4, 0, 0, 0, 0, 0, 0, 1, 5
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\Group.cs", "C#", -3, 0, 0, 0, 0, 0, -1, 0, -4
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\Post.cs", "C#", 0, 0, 0, 0, 0, 0, -1, -2, -3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\PostComment.cs", "C#", -1, 0, 0, 0, 0, 0, -1, -1, -3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\Reel.cs", "C#", 71, 0, 0, 0, 0, 0, 0, 11, 82
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\ReelComment.cs", "C#", 43, 0, 0, 0, 0, 0, 0, 9, 52
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\ReelReaction.cs", "C#", 18, 0, 0, 0, 0, 0, 0, 5, 23
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\Story.cs", "C#", 50, 0, 0, 0, 0, 0, 0, 9, 59
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\StoryReaction.cs", "C#", 16, 0, 0, 0, 0, 0, 0, 6, 22
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\StorySeen.cs", "C#", 22, 0, 0, 0, 0, 0, 0, 7, 29
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Entities\User.cs", "C#", 12, 0, 0, 0, 0, 0, 0, 0, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Enums\FriendRequestStatus.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Enums\PostApprovalStatus.cs", "C#", -1, 0, 0, 0, 0, 0, -1, -1, -3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Enums\ReelVisibility.cs", "C#", 9, 0, 0, 0, 0, 0, 0, 1, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Enums\StoryMediaType.cs", "C#", 6, 0, 0, 0, 0, 0, 0, 2, 8
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\Events\UnfriendedDomainEvent.cs", "C#", 10, 0, 0, 0, 0, 0, 0, 2, 12
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\obj\Debug\net10.0\Domain.AssemblyInfo.cs", "C#", 0, 0, 0, 0, 0, 0, 1, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\obj\Domain.csproj.nuget.dgspec.json", "JSON", 0, 2, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Domain\obj\project.assets.json", "JSON", 0, 2, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\DependencyInjection.cs", "C#", 3, 0, 0, 0, 0, 0, 0, 0, 3
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260604120513_updb18.Designer.cs", "C#", 1373, 0, 0, 0, 0, 0, 2, 557, 1932
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260604120513_updb18.cs", "C#", 32, 0, 0, 0, 0, 0, 3, 6, 41
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260605095716_updb19.Designer.cs", "C#", 1373, 0, 0, 0, 0, 0, 2, 557, 1932
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260605095716_updb19.cs", "C#", 26, 0, 0, 0, 0, 0, 3, 6, 35
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260605145532_updb20.Designer.cs", "C#", 1520, 0, 0, 0, 0, 0, 2, 618, 2140
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260605145532_updb20.cs", "C#", 542, 0, 0, 0, 0, 0, 3, 107, 652
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260606090017_updb21.Designer.cs", "C#", 1564, 0, 0, 0, 0, 0, 2, 636, 2202
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260606090017_updb21.cs", "C#", 74, 0, 0, 0, 0, 0, 3, 10, 87
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260606090018_updb22.Designer.cs", "C#", 122, 0, 0, 0, 0, 0, 2, 44, 168
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260606090018_updb22.cs", "C#", 75, 0, 0, 0, 0, 0, 5, 11, 91
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260607014653_updb23.Designer.cs", "C#", 1623, 0, 0, 0, 0, 0, 2, 660, 2285
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260607014653_updb23.cs", "C#", 851, 0, 0, 0, 0, 0, 3, 176, 1030
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260607015733_updb24.Designer.cs", "C#", 1666, 0, 0, 0, 0, 0, 2, 677, 2345
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\20260607015733_updb24.cs", "C#", 55, 0, 0, 0, 0, 0, 3, 6, 64
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Migrations\AppDbContextModelSnapshot.cs", "C#", 293, 0, 0, 0, 0, 0, 0, 120, 413
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\GroupConfiguration.cs", "C#", -3, 0, 0, 0, 0, 0, 0, -1, -4
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\PostConfiguration.cs", "C#", 4, 0, 0, 0, 0, 0, -1, 2, 5
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\ReelCommentConfiguration.cs", "C#", 49, 0, 0, 0, 0, 0, 0, 16, 65
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\ReelConfiguration.cs", "C#", 60, 0, 0, 0, 0, 0, 0, 20, 80
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\ReelReactionConfiguration.cs", "C#", 32, 0, 0, 0, 0, 0, 0, 10, 42
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\StoryConfiguration.cs", "C#", 59, 0, 0, 0, 0, 0, 0, 23, 82
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\StoryReactionConfiguration.cs", "C#", 30, 0, 0, 0, 0, 0, 0, 11, 41
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\StorySeenConfiguration.cs", "C#", 30, 0, 0, 0, 0, 0, 0, 11, 41
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Configurations\UserConfiguration.cs", "C#", 14, 0, 0, 0, 0, 0, 2, 4, 20
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Contexts\AppDbContext.cs", "C#", 11, 0, 0, 0, 0, 0, 0, -2, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\FeedRepository.cs", "C#", 14, 0, 0, 0, 0, 0, 0, 0, 14
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\FriendRequestRepository.cs", "C#", 12, 0, 0, 0, 0, 0, 0, 2, 14
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\FriendshipRepository.cs", "C#", 28, 0, 0, 0, 0, 0, 0, 4, 32
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\GroupListingRepository.cs", "C#", 89, 0, 0, 0, 0, 0, 4, 19, 112
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\GroupRepository.cs", "C#", 20, 0, 0, 0, 0, 0, 1, 3, 24
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\PostRepository.cs", "C#", 57, 0, 0, 0, 0, 0, 0, 11, 68
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\ReelRepository.cs", "C#", 108, 0, 0, 0, 0, 0, 0, 19, 127
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Persistence\Repositories\StoryRepository.cs", "C#", 160, 0, 0, 0, 0, 0, 0, 26, 186
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\Services\CloudinaryUploadService.cs", "C#", 29, 0, 0, 0, 0, 0, 0, 7, 36
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\obj\Debug\net10.0\Infrastructure.AssemblyInfo.cs", "C#", 0, 0, 0, 0, 0, 0, 1, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\obj\Infrastructure.csproj.nuget.dgspec.json", "JSON", 0, 6, 0, 0, 0, 0, 0, 0, 6
+"d:\SocialNetworkApp\SocialNetworkApp\src\Infrastructure\obj\project.assets.json", "JSON", 0, 2, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Contracts\Group\UpdateGroupRequest.cs", "C#", -1, 0, 0, 0, 0, 0, 0, 0, -1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Contracts\Post\CreatePostRequest.cs", "C#", 1, 0, 0, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Contracts\Reel\CreateReelRequest.cs", "C#", 12, 0, 0, 0, 0, 0, 0, 2, 14
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Contracts\Story\CreateStoryRequest.cs", "C#", 14, 0, 0, 0, 0, 0, 0, 3, 17
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\FriendController.cs", "C#", 53, 0, 0, 0, 0, 0, 1, 16, 70
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\GroupController.cs", "C#", 51, 0, 0, 0, 0, 0, 0, 9, 60
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\PostController.cs", "C#", 2, 0, 0, 0, 0, 0, 0, 0, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\ReelController.cs", "C#", 154, 0, 0, 0, 0, 0, 0, 37, 191
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\StoryController.cs", "C#", 98, 0, 0, 0, 0, 0, 0, 23, 121
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\Controllers\UserController.cs", "C#", 40, 0, 0, 0, 0, 0, -1, 12, 51
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\obj\Debug\net10.0\Presentation.AssemblyInfo.cs", "C#", 0, 0, 0, 0, 0, 0, 1, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Presentation\obj\Presentation.csproj.nuget.dgspec.json", "JSON", 0, 8, 0, 0, 0, 0, 0, 0, 8
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\.env", "Dotenv", 0, 0, 0, 0, 0, 1, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\App.css", "PostCSS", 0, 0, 0, 0, -3, 0, 0, 0, -3
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\App.jsx", "JavaScript JSX", 0, 0, 9, 0, 0, 0, 0, 0, 9
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\apis\friendApi.js", "JavaScript", 0, 0, 0, 30, 0, 0, 26, 6, 62
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\apis\groupApi.js", "JavaScript", 0, 0, 0, 50, 0, 0, 71, 10, 131
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\apis\postApi.js", "JavaScript", 0, 0, 0, 2, 0, 0, 2, 0, 4
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\apis\reelApi.js", "JavaScript", 0, 0, 0, 54, 0, 0, 0, 12, 66
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\apis\storyApi.js", "JavaScript", 0, 0, 0, 15, 0, 0, 0, 5, 20
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Feed\CreatePost.jsx", "JavaScript JSX", 0, 0, 1, 0, 0, 0, 0, 1, 2
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Feed\HomeReelsRail.jsx", "JavaScript JSX", 0, 0, 91, 0, 0, 0, 0, 9, 100
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Feed\PostCard.jsx", "JavaScript JSX", 0, 0, 219, 0, 0, 0, 10, 12, 241
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Feed\StoryBar.jsx", "JavaScript JSX", 0, 0, 64, 0, 0, 0, -1, 8, 71
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Navbar\Navbar.jsx", "JavaScript JSX", 0, 0, 1, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\CreatePostModal.jsx", "JavaScript JSX", 0, 0, 53, 0, 0, 0, 2, 4, 59
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\CreateReelModal.jsx", "JavaScript JSX", 0, 0, 448, 0, 0, 0, 0, 49, 497
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\FollowingTab.jsx", "JavaScript JSX", 0, 0, 0, 0, 0, 0, -1, 4, 3
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\FriendsTab.jsx", "JavaScript JSX", 0, 0, 19, 0, 0, 0, 1, 4, 24
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\MediaTab.jsx", "JavaScript JSX", 0, 0, 183, 0, 0, 0, 0, 14, 197
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\PhotosTab.jsx", "JavaScript JSX", 0, 0, -41, 0, 0, 0, -2, -3, -46
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\ProfileReelsTab.jsx", "JavaScript JSX", 0, 0, 218, 0, 0, 0, 2, 14, 234
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Profile\ProfileRelationshipActions.jsx", "JavaScript JSX", 0, 0, 440, 0, 0, 0, 16, 41, 497
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Reels\ReelView.jsx", "JavaScript JSX", 0, 0, 271, 0, 0, 0, 22, 27, 320
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Reels\ReelViewModal.jsx", "JavaScript JSX", 0, 0, 260, 0, 0, 0, 9, 19, 288
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Story\ProfileStoryRing.jsx", "JavaScript JSX", 0, 0, 75, 0, 0, 0, 0, 11, 86
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Story\UserStoryViewer.jsx", "JavaScript JSX", 0, 0, 359, 0, 0, 0, 9, 37, 405
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\Story\storyMappers.js", "JavaScript", 0, 0, 0, 73, 0, 0, 0, 10, 83
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\group\GroupAdminInsights.jsx", "JavaScript JSX", 0, 0, 211, 0, 0, 0, 4, 19, 234
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\group\GroupAdminManage.jsx", "JavaScript JSX", 0, 0, 863, 0, 0, 0, 10, 71, 944
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\components\group\GroupAdminSettings.jsx", "JavaScript JSX", 0, 0, 454, 0, 0, 0, 18, 27, 499
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\contexts\ReelsContext.jsx", "JavaScript JSX", 0, 0, 174, 0, 0, 0, 5, 27, 206
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\contexts\StoriesContext.jsx", "JavaScript JSX", 0, 0, 54, 0, 0, 0, 0, 13, 67
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\contexts\authContext.jsx", "JavaScript JSX", 0, 0, 1, 0, 0, 0, 0, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\contexts\friendContext.jsx", "JavaScript JSX", 0, 0, 78, 0, 0, 0, 0, 5, 83
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\data\groupMockData.js", "JavaScript", 0, 0, 0, -2, 0, 0, 0, 0, -2
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\data\mockData.js", "JavaScript", 0, 0, 0, 15, 0, 0, 2, 1, 18
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\data\reelsMockData.js", "JavaScript", 0, 0, 0, 136, 0, 0, 0, 0, 136
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useAllMembers.js", "JavaScript", 0, 0, 0, 124, 0, 0, 14, 18, 156
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useCreateStory.js", "JavaScript", 0, 0, 0, 27, 0, 0, 0, 5, 32
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useFollowees.js", "JavaScript", 0, 0, 0, 23, 0, 0, 0, 5, 28
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useGroup.js", "JavaScript", 0, 0, 0, 224, 0, 0, 0, 31, 255
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useGroupInsights.js", "JavaScript", 0, 0, 0, 58, 0, 0, 6, 9, 73
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useGroupPosts.js", "JavaScript", 0, 0, 0, 99, 0, 0, 9, 16, 124
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useMedias.js", "JavaScript", 0, 0, 0, 96, 0, 0, 0, 17, 113
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\usePendingPosts.js", "JavaScript", 0, 0, 0, 137, 0, 0, 11, 18, 166
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useProfileFriends.js", "JavaScript", 0, 0, 0, 24, 0, 0, 0, 6, 30
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useProfileReels.js", "JavaScript", 0, 0, 0, 148, 0, 0, 3, 19, 170
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useProfileStories.js", "JavaScript", 0, 0, 0, 49, 0, 0, 0, 8, 57
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useReportedContent.js", "JavaScript", 0, 0, 0, 155, 0, 0, 13, 17, 185
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useSearchGroups.js", "JavaScript", 0, 0, 0, 36, 0, 0, 3, 6, 45
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useStoriesTimeline.js", "JavaScript", 0, 0, 0, 42, 0, 0, 0, 6, 48
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useTag.js", "JavaScript", 0, 0, 0, 53, 0, 0, 5, 4, 62
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useUserMedias.js", "JavaScript", 0, 0, 0, 4, 0, 0, 4, 2, 10
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\hooks\useYourGroups.js", "JavaScript", 0, 0, 0, 36, 0, 0, 3, 6, 45
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\main.jsx", "JavaScript JSX", 0, 0, 6, 0, 0, 0, 0, 0, 6
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\BirthdaysPage.jsx", "JavaScript JSX", 0, 0, 258, 0, 0, 0, 0, 20, 278
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\CreateStoryPage.jsx", "JavaScript JSX", 0, 0, 587, 0, 0, 0, 0, 63, 650
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\FriendsPage.jsx", "JavaScript JSX", 0, 0, 52, 0, 0, 0, 1, 2, 55
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\GroupPage.jsx", "JavaScript JSX", 0, 0, 351, 0, 0, 0, 1, 32, 384
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\GroupsCreatePage.jsx", "JavaScript JSX", 0, 0, 11, 0, 0, 0, 0, 4, 15
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\GroupsPage.jsx", "JavaScript JSX", 0, 0, -41, 0, 0, 0, 1, 9, -31
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\HomePage.jsx", "JavaScript JSX", 0, 0, 3, 0, 0, 0, 0, 2, 5
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\ProfilePage.jsx", "JavaScript JSX", 0, 0, 41, 0, 0, 0, -2, 5, 44
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\ReelsPage.jsx", "JavaScript JSX", 0, 0, 86, 0, 0, 0, 16, 20, 122
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\SavedPage.jsx", "JavaScript JSX", 0, 0, 333, 0, 0, 0, 10, 17, 360
+"d:\SocialNetworkApp\SocialNetworkApp\src\ReactWeb\src\pages\StoryPage.jsx", "JavaScript JSX", 0, 0, 52, 0, 0, 0, 0, 8, 60
+"d:\SocialNetworkApp\SocialNetworkApp\src\Web\obj\Debug\net10.0\ApiEndpoints.json", "JSON", 0, 622, 0, 0, 0, 0, 0, 0, 622
+"d:\SocialNetworkApp\SocialNetworkApp\src\Web\obj\Debug\net10.0\EndpointInfo\Web.json", "JSON", 0, 1003, 0, 0, 0, 0, 0, 0, 1003
+"d:\SocialNetworkApp\SocialNetworkApp\src\Web\obj\Debug\net10.0\Web.MvcApplicationPartsAssemblyInfo.cs", "C#", 0, 0, 0, 0, 0, 0, 1, 0, 1
+"d:\SocialNetworkApp\SocialNetworkApp\src\Web\obj\Web.csproj.nuget.dgspec.json", "JSON", 0, 10, 0, 0, 0, 0, 0, 0, 10
+"Total", "-", 14452, 1661, 6244, 1708, -3, 1, 371, 5702, 30136

@@ -1,9 +1,9 @@
 using Application.Abstractions;
 using Application.Abstractions.Repositories;
-using Application.Abstractions.Security;
+using Application.Abstractions.SignalR;
 using Infrastructure.Persistence.Repositories;
-using Infrastructure.Security;
 using Infrastructure.Services;
+using Infrastructure.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Neo4j.Driver;
@@ -16,7 +16,7 @@ namespace Infrastructure
         public static IServiceCollection AddInfrastructureDependencies(this IServiceCollection services)
         {
             services.AddScoped<ITokenService, Authentication.TokenService>();
-            services.AddScoped<IBlindIndexService, BlindIndexService>();
+            services.AddSingleton<IPresenceTracker, PresenceTracker>();
             services.AddScoped<IFeedGenerator, FeedGenerator>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();

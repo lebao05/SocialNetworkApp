@@ -1,7 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
-using Application.Abstractions.Security;
 using Domain.Entities;
 using Domain.Shared;
 
@@ -12,18 +11,15 @@ internal sealed class ForwardMessageCommandHandler
 {
     private readonly IMessageRepository _messageRepository;
     private readonly IConversationRepository _conversationRepository;
-    private readonly IBlindIndexService _blindIndexService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ForwardMessageCommandHandler(
         IMessageRepository messageRepository,
         IConversationRepository conversationRepository,
-        IBlindIndexService blindIndexService,
         IUnitOfWork unitOfWork)
     {
         _messageRepository = messageRepository;
         _conversationRepository = conversationRepository;
-        _blindIndexService = blindIndexService;
         _unitOfWork = unitOfWork;
     }
 
@@ -38,10 +34,7 @@ internal sealed class ForwardMessageCommandHandler
             return Result.Failure<List<long>>(new Error("Message.NotFound", "Source message not found"));
         }
 
-        // 2. Prepare search content
-        var searchContent = _blindIndexService.GenerateSearchContent(originalMessage.Content);
-
-        // 3. Process targets
+        // 2. Process targets
         foreach (var conversationId in request.TargetConversationIds)
         {
             var conversation = await _conversationRepository.GetByIdAsync(conversationId, cancellationToken);
@@ -56,7 +49,6 @@ internal sealed class ForwardMessageCommandHandler
                 originalMessage.Content
             );
 
-            newMessage.UpdateSearchContent(searchContent);
             newMessage.SetForwardedFrom(originalMessage.Id); // Track origin
             
             _messageRepository.Add(newMessage);

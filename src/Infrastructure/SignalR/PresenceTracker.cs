@@ -1,148 +1,172 @@
-﻿using Microsoft.Extensions.Logging;
+using Application.Abstractions.SignalR;
+using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.SignalR
+namespace Infrastructure.SignalR;
+
+public class PresenceTracker : IPresenceTracker
 {
-    public class PresenceTracker
+    // userId → [connectionIds]  — tracks online status (multi-device support)
+    private static readonly Dictionary<string, HashSet<string>> _onlineUsers = new();
+
+    // groupName → [userIds]  — "who is in this group"
+    private static readonly Dictionary<string, HashSet<string>> _groups = new();
+
+    private static readonly object _lock = new();
+    private readonly ILogger<PresenceTracker> _logger;
+
+    public PresenceTracker(ILogger<PresenceTracker> logger)
     {
-        // userId -> connectionIds
-        private static readonly Dictionary<string, List<string>> _onlineUsers = new();
+        _logger = logger;
+    }
 
-        // groupName (conversationId) -> userIds
-        private static readonly Dictionary<string, HashSet<string>> _groups = new();
+    // =============================
+    // USER ONLINE / OFFLINE
+    // =============================
 
-        // userId -> groupNames
-        private static readonly Dictionary<string, HashSet<string>> _userGroups = new();
-
-        private static readonly object _lock = new object();
-        private readonly ILogger<PresenceTracker> _logger;
-
-        public PresenceTracker(ILogger<PresenceTracker> logger)
+    public bool UserConnected(string userId, string connectionId)
+    {
+        lock (_lock)
         {
-            _logger = logger;
-        }
-
-        // =============================
-        // USER ONLINE / OFFLINE
-        // =============================
-
-        public bool UserConnected(string userId, string connectionId)
-        {
-            lock (_lock)
+            if (_onlineUsers.TryGetValue(userId, out var connections))
             {
-                if (_onlineUsers.ContainsKey(userId))
-                {
-                    _onlineUsers[userId].Add(connectionId);
-                    return false; // already online
-                }
-
-                _onlineUsers[userId] = new List<string> { connectionId };
-                return true; // first connection
-            }
-        }
-
-        public bool UserDisconnected(string userId, string connectionId)
-        {
-            lock (_lock)
-            {
-                if (!_onlineUsers.ContainsKey(userId))
-                    return false;
-
-                _onlineUsers[userId].Remove(connectionId);
-
-                if (_onlineUsers[userId].Count == 0)
-                {
-                    _onlineUsers.Remove(userId);
-                    return true; // fully offline
-                }
-
+                connections.Add(connectionId);
                 return false;
             }
-        }
 
-        public List<string> GetOnlineUsers()
+            _onlineUsers[userId] = new HashSet<string> { connectionId };
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Removes a connection. Returns true only when the user has no remaining connections (fully offline).
+    /// </summary>
+    public bool UserDisconnected(string userId, string connectionId)
+    {
+        lock (_lock)
         {
-            lock (_lock)
+            if (!_onlineUsers.TryGetValue(userId, out var connections))
+                return false;
+
+            connections.Remove(connectionId);
+
+            if (connections.Count == 0)
             {
-                return _onlineUsers.Keys.ToList();
+                _onlineUsers.Remove(userId);
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+
+    public bool IsOnline(string userId)
+    {
+        lock (_lock)
+        {
+            return _onlineUsers.ContainsKey(userId);
+        }
+    }
+
+    public List<string> GetOnlineUsers()
+    {
+        lock (_lock)
+        {
+            return _onlineUsers.Keys.ToList();
+        }
+    }
+
+    public List<string> GetConnections(string userId)
+    {
+        lock (_lock)
+        {
+            return _onlineUsers.TryGetValue(userId, out var connections)
+                ? connections.ToList()
+                : new List<string>();
+        }
+    }
+
+
+    /// <summary>
+    /// Adds a user to a group. Used by JoinConversation hub method.
+    /// </summary>
+    public void AddToGroup(string userId, string groupName)
+    {
+        lock (_lock)
+        {
+            if (!_groups.ContainsKey(groupName))
+                _groups[groupName] = new HashSet<string>();
+
+            _groups[groupName].Add(userId);
+        }
+    }
+
+    /// <summary>
+    /// Removes a user from a group. Used by LeaveConversation hub method.
+    /// </summary>
+    public void RemoveFromGroup(string userId, string groupName)
+    {
+        lock (_lock)
+        {
+            if (_groups.TryGetValue(groupName, out var groupUsers))
+            {
+                groupUsers.Remove(userId);
+                if (groupUsers.Count == 0)
+                    _groups.Remove(groupName);
             }
         }
+    }
 
-        public bool IsOnline(string userId)
+    public List<string> GetGroupUsers(string groupName)
+    {
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                return _onlineUsers.ContainsKey(userId);
-            }
+            return _groups.TryGetValue(groupName, out var users)
+                ? users.ToList()
+                : new List<string>();
         }
+    }
 
-        public List<string> GetConnections(string userId)
+
+    // =============================
+    // AUTO-JOIN ON CONNECT
+    // =============================
+
+    /// <summary>
+    /// Adds a user to all conversation groups on connect.
+    /// </summary>
+    public Task UserConnectedToGroups(string userId, string connectionId, IReadOnlyList<long> conversationIds)
+    {
+        lock (_lock)
         {
-            lock (_lock)
+            foreach (var conversationId in conversationIds)
             {
-                return _onlineUsers.TryGetValue(userId, out var connections)
-                    ? connections
-                    : new List<string>();
-            }
-        }
+                var groupName = conversationId.ToString();
 
-        // =============================
-        // GROUP MANAGEMENT
-        // =============================
-
-        public void AddToGroup(string userId, string groupName)
-        {
-            lock (_lock)
-            {
                 if (!_groups.ContainsKey(groupName))
                     _groups[groupName] = new HashSet<string>();
 
                 _groups[groupName].Add(userId);
-
-                if (!_userGroups.ContainsKey(userId))
-                    _userGroups[userId] = new HashSet<string>();
-
-                _userGroups[userId].Add(groupName);
             }
         }
 
-        public void RemoveFromGroup(string userId, string groupName)
-        {
-            lock (_lock)
-            {
-                if (_groups.ContainsKey(groupName))
-                {
-                    _groups[groupName].Remove(userId);
-                    if (_groups[groupName].Count == 0)
-                        _groups.Remove(groupName);
-                }
+        _logger.LogInformation("User {UserId} connected, registered {Count} groups", userId, conversationIds.Count);
+        return Task.CompletedTask;
+    }
 
-                if (_userGroups.ContainsKey(userId))
-                {
-                    _userGroups[userId].Remove(groupName);
-                    if (_userGroups[userId].Count == 0)
-                        _userGroups.Remove(userId);
-                }
-            }
-        }
+    // =============================
+    // CLEANUP ON DISCONNECT
+    // =============================
 
-        public List<string> GetUserGroups(string userId)
+    /// <summary>
+    /// Returns all groups. Used to remove a user from every group on disconnect.
+    /// </summary>
+    public ICollection<HashSet<string>> GetGroups()
+    {
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                return _userGroups.TryGetValue(userId, out var groups)
-                    ? groups.ToList()
-                    : new List<string>();
-            }
-        }
-
-        public List<string> GetGroupUsers(string groupName)
-        {
-            lock (_lock)
-            {
-                return _groups.TryGetValue(groupName, out var users)
-                    ? users.ToList()
-                    : new List<string>();
-            }
+            return _groups.Values.ToList();
         }
     }
 }

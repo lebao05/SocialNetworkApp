@@ -69,6 +69,15 @@ namespace Infrastructure.Persistence.Repositories
             return new List<Conversation>(items);
         }
 
+        public async Task<List<long>> GetAllConversationIdsAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ConversationMembers
+                .AsNoTracking()
+                .Where(m => m.UserId == userId)
+                .Select(m => m.ConversationId)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<Conversation?> GetOneToOneConversationAsync(
             Guid userId1,
             Guid userId2,
