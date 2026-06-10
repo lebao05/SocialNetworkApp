@@ -8,7 +8,6 @@ export async function createConversationApi({ participantIds, name }) {
         participantIds,
         name
     });
-
     return response.data;
 }
 
@@ -22,7 +21,6 @@ export async function getConversationsApi(pageNumber = 1, pageSize = 20) {
             pageSize
         }
     });
-
     return response.data;
 }
 
@@ -41,8 +39,7 @@ export async function toggleNotificationsApi(conversationId) {
     const response = await axios.patch(
         `/conversation/${conversationId}/notifications`
     );
-
-    return response.data; // boolean
+    return response.data;
 }
 
 /**
@@ -64,5 +61,15 @@ export async function searchConversationsApi(searchTerm, pageNumber = 1, pageSiz
  */
 export async function getConversationByUserIdApi(targetUserId) {
     const response = await axios.get(`/conversation/user/${targetUserId}`);
+    return response.data;
+}
+
+/**
+ * Get members of a conversation (for MemberCount)
+ */
+export async function getConversationMembersApi(conversationId, pageNumber = 1, pageSize = 20) {
+    const response = await axios.get(`/conversation/${conversationId}/members`, {
+        params: { pageNumber, pageSize },
+    });
     return response.data;
 }

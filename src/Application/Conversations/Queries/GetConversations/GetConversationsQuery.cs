@@ -7,5 +7,5 @@ namespace Application.Conversations.Queries.GetConversations
     public sealed record GetConversationsQuery(
         Guid UserId,
         int PageSize = 20,
-        int PageNumber = 1) : IQuery<List<ConversationResponse>>;
+        int PageNumber = 1) : IQuery<List<ConversationDetailDto>>;
 }

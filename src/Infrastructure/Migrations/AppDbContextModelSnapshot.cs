@@ -115,6 +115,9 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Theme")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -439,50 +442,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("GroupRules", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.MemberMessage", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ConversationMemberId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Emotion")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsInvoked")
-                        .HasColumnType("boolean");
-
-                    b.Property<long>("MessageId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConversationMemberId");
-
-                    b.HasIndex("MessageId");
-
-                    b.ToTable("MemberMessages", (string)null);
-                });
-
             modelBuilder.Entity("Domain.Entities.Message", b =>
                 {
                     b.Property<long>("Id")
@@ -490,10 +449,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Ciphertext")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Content")
                         .HasMaxLength(2000)
@@ -523,11 +478,14 @@ namespace Infrastructure.Migrations
                     b.Property<int>("MessageType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Reaction")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ReactionUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<long?>("ReplyToMessageId")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("SearchContent")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1195,12 +1153,12 @@ namespace Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TextPositionX")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("TextPositionY")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("TextStyle")
                         .HasMaxLength(50)
@@ -1784,25 +1742,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Group");
                 });
 
-            modelBuilder.Entity("Domain.Entities.MemberMessage", b =>
-                {
-                    b.HasOne("Domain.Entities.ConversationMember", "ConversationMember")
-                        .WithMany("MemberMessages")
-                        .HasForeignKey("ConversationMemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.Message", "Message")
-                        .WithMany("MemberMessages")
-                        .HasForeignKey("MessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ConversationMember");
-
-                    b.Navigation("Message");
-                });
-
             modelBuilder.Entity("Domain.Entities.Message", b =>
                 {
                     b.HasOne("Domain.Entities.Conversation", "Conversation")
@@ -2124,7 +2063,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.StorySeen", b =>
                 {
                     b.HasOne("Domain.Entities.Story", "Story")
-                        .WithMany()
+                        .WithMany("SeenByUsers")
                         .HasForeignKey("StoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -2225,11 +2164,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Messages");
                 });
 
-            modelBuilder.Entity("Domain.Entities.ConversationMember", b =>
-                {
-                    b.Navigation("MemberMessages");
-                });
-
             modelBuilder.Entity("Domain.Entities.Group", b =>
                 {
                     b.Navigation("Members");
@@ -2244,8 +2178,6 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Message", b =>
                 {
                     b.Navigation("Attachment");
-
-                    b.Navigation("MemberMessages");
 
                     b.Navigation("Replies");
                 });
@@ -2287,6 +2219,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Story", b =>
                 {
                     b.Navigation("Reactions");
+
+                    b.Navigation("SeenByUsers");
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>

@@ -14,9 +14,6 @@ public class ConversationMember : BaseEntity
     public long? LastReadMessageId { get; private set; }
     public bool IsNotificationOn { get; private set; }
 
-    private readonly List<MemberMessage> _memberMessages = new();
-    public IReadOnlyCollection<MemberMessage> MemberMessages => _memberMessages;
-
     public Conversation Conversation { get; private set; } = null!;
     public User User { get; private set; } = null!;
 
@@ -42,5 +39,10 @@ public class ConversationMember : BaseEntity
     public void ToggleNotifications()
     {
         IsNotificationOn = !IsNotificationOn;
+    }
+
+    public void MarkAsSeen(long lastReadMessageId)
+    {
+        LastReadMessageId = lastReadMessageId;
     }
 }

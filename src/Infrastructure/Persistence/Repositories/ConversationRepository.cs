@@ -48,25 +48,57 @@ namespace Infrastructure.Persistence.Repositories
                 int pageSize,
                 CancellationToken cancellationToken = default)
         {
-            // 1. Create the base query with Eager Loading (Includes)
-            // We MUST include Members, the User identity for those members, and Messages
-            var query = _context.Conversations
-                .AsNoTracking() // Recommended for Read-Only Queries
-                .Include(c => c.Members)
-                    .ThenInclude(m => m.User)
-                .Include(c => c.Messages)
-                .Where(c => c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
-                .OrderByDescending(c => c.Messages.Max(m => m.CreatedAt));
-
-            // 2. Execute pagination logic
-            var totalCount = await query.CountAsync(cancellationToken);
-
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+            // 1. Paginated conversations — no messages loaded yet
+            var conversationIds = await _context.ConversationMembers
+                .AsNoTracking()
+                .Where(m => m.UserId == userId)
+                .Select(m => m.ConversationId)
                 .ToListAsync(cancellationToken);
 
-            return new List<Conversation>(items);
+            var paginatedIds = conversationIds
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            if (!paginatedIds.Any())
+                return new List<Conversation>();
+
+            // 2. Load conversations with members (no bloated messages include)
+            var conversations = await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Members).ThenInclude(m => m.User)
+                .Where(c => c.DeletedAt == null && paginatedIds.Contains(c.Id))
+                .ToListAsync(cancellationToken);
+
+            // 3. Attach only the latest message per conversation via EF change tracker
+            var latestMessages = await _context.Messages
+                .Where(m => paginatedIds.Contains(m.ConversationId))
+                .GroupBy(m => m.ConversationId)
+                .Select(g => new { ConversationId = g.Key, LatestMessageId = g.Max(m => m.Id) })
+                .ToListAsync(cancellationToken);
+
+            var latestMsgIds = latestMessages.Select(x => x.LatestMessageId).ToList();
+
+            var latestMessagesByConv = await _context.Messages
+                .Where(m => latestMsgIds.Contains(m.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var conv in conversations)
+            {
+                var latest = latestMessagesByConv.FirstOrDefault(m =>
+                    latestMessages.Any(x => x.ConversationId == conv.Id && x.LatestMessageId == m.Id));
+
+                if (latest != null)
+                {
+                    var entry = _context.Entry(conv);
+                    if (!entry.Collection("_messages").IsLoaded)
+                        entry.Collection("_messages").CurrentValue = new List<Message> { latest };
+                }
+            }
+
+            return conversations
+                .OrderByDescending(c => c.Messages.FirstOrDefault()?.CreatedAt ?? c.CreatedAt)
+                .ToList();
         }
 
         public async Task<Conversation?> GetOneToOneConversationAsync(
@@ -127,6 +159,28 @@ namespace Infrastructure.Persistence.Repositories
                 .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<long>> GetAllConversationIdsAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return await _context.ConversationMembers
+                .AsNoTracking()
+                .Where(m => m.UserId == userId)
+                .Select(m => m.ConversationId)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Guid>> GetMemberIdsAsync(
+            long conversationId,
+            CancellationToken cancellationToken)
+        {
+            return await _context.ConversationMembers
+                .AsNoTracking()
+                .Where(m => m.ConversationId == conversationId)
+                .Select(m => m.UserId)
                 .ToListAsync(cancellationToken);
         }
     }

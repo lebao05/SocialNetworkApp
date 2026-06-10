@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions.Messaging;
+using Application.DTOs.Messages;
 
 namespace Application.Messages.Commands.UpdateMessage
 {
@@ -6,5 +7,5 @@ namespace Application.Messages.Commands.UpdateMessage
         long MessageId,
         Guid UserId,
         string NewContent
-    ) : ICommand<long>;
+    ) : ICommand<MessageDto>;
 }

@@ -23,18 +23,31 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
-        public async Task<List<Message>> SearchMessagesAsync(long conversationId, string searchHash, CancellationToken cancellationToken)
+        public async Task<Message?> GetByIdWithIncludesAsync(long id, CancellationToken cancellationToken)
         {
             return await _context.Messages
-                .Where(m => m.ConversationId == conversationId && 
-                            m.DeletedAt == null && 
-                            m.SearchContent != null && 
-                            m.SearchContent.Contains(searchHash))
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
-                .Include(m => m.MemberMessages)
-                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        }
+
+        public async Task<List<Message>> SearchMessagesAsync(long conversationId, string searchTerm, int pageNumber, int pageSize, CancellationToken cancellationToken)
+        {
+            return await _context.Messages
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT m.*
+                    FROM "Messages" m
+                    WHERE m."ConversationId" = {conversationId}
+                      AND m."DeletedAt" IS NULL
+                      AND m."SearchVector" @@ plainto_tsquery('english', {searchTerm})
+                    ORDER BY m."CreatedAt" DESC
+                    LIMIT {pageSize} OFFSET {((pageNumber - 1) * pageSize)}
+                    """)
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
 
@@ -49,8 +62,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Where(m => m.ConversationId == conversationId && m.DeletedAt == null)
                 .AsNoTracking()
                 .Include(m => m.Creator)
-                .Include(m => m.Attachment)
-                .Include(m => m.MemberMessages);
+                .Include(m => m.Attachment);
 
             if (direction.ToLower() == "up")
             {
@@ -104,6 +116,37 @@ namespace Infrastructure.Persistence.Repositories
         public void Update(Message message)
         {
             _context.Messages.Update(message);
+        }
+
+        public async Task<List<Message>> GetFilesByConversationIdAsync(
+            long conversationId,
+            bool isMedia,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            IQueryable<Message> query = _context.Messages
+                .Where(m => m.ConversationId == conversationId && m.DeletedAt == null && m.Attachment != null)
+                .AsNoTracking()
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .OrderByDescending(m => m.CreatedAt);
+
+            if (isMedia)
+            {
+                query = query.Where(m => m.MessageType == Domain.Enums.MessageType.Image || m.MessageType == Domain.Enums.MessageType.Video);
+            }
+            else
+            {
+                query = query.Where(m => m.MessageType != Domain.Enums.MessageType.Image &&
+                                         m.MessageType != Domain.Enums.MessageType.Video &&
+                                         m.MessageType != Domain.Enums.MessageType.Audio);
+            }
+
+            return await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
         }
     }
 }

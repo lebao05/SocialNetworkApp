@@ -18,9 +18,6 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(m => m.Content)
                 .HasMaxLength(2000)
                 .IsRequired(false);
-
-            builder.Property(m => m.SearchContent)
-                .IsRequired(false);
      
             // Creator
             builder.HasOne(m => m.Creator)
@@ -45,13 +42,7 @@ namespace Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ✅ MemberMessages
-            builder.HasMany(m => m.MemberMessages)
-                .WithOne(mm => mm.Message)
-                .HasForeignKey(mm => mm.MessageId);
-
-            builder.Navigation(m => m.MemberMessages)
-                .HasField("_memberMessages")   // 👈 REQUIRED
-                .UsePropertyAccessMode(PropertyAccessMode.Field);
+            // Removed — replaced by Reaction on Message entity
 
             // Forwarded From
             builder.HasOne(m => m.ForwardFromMessage)

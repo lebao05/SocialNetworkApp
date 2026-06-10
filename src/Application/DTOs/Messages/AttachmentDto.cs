@@ -1,6 +1,8 @@
 ﻿namespace Application.DTOs.Messages
 {
     public sealed record AttachmentDto(
+        long Id,
+        long MessageId,
         string FileUrl,
         string FileType,
         long FileSize
@@ -11,6 +13,8 @@
             if (attachment is null) return null;
 
             return new AttachmentDto(
+                attachment.Id,
+                attachment.MessageId,
                 attachment.FileUrl,
                 attachment.FileType,
                 attachment.FileSize

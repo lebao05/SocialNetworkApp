@@ -8,15 +8,15 @@ public class Message : AggregateRoot
 {
     public long ConversationId { get; private set; }
     public Guid CreatorId { get; private set; }
-    public string Ciphertext { get; set; } = string.Empty;
     public string? Content { get; private set; }
     public long? ReplyToMessageId { get; private set; }
     public long? ForwardFromMessageId { get; private set; }
     public MessageType MessageType { get; private set; }
-    public string? SearchContent { get; private set; }
 
     public bool IsSystemMessage { get; private set; }
     public bool IsPinned { get; private set; }
+    public string? Reaction { get; private set; }
+    public Guid? ReactionUserId { get; private set; }
 
     // Navigation properties
     public Conversation Conversation { get; private set; } = null!;
@@ -27,9 +27,6 @@ public class Message : AggregateRoot
 
     private readonly List<Message> _replies = new();
     public IReadOnlyCollection<Message> Replies => _replies;
-
-    private readonly List<MemberMessage> _memberMessages = new();
-    public IReadOnlyCollection<MemberMessage> MemberMessages => _memberMessages;
 
     private Message(long Id):base(Id) { }
 
@@ -62,11 +59,6 @@ public class Message : AggregateRoot
         return Result.Success();
     }
 
-    public void UpdateSearchContent(string? searchContent)
-    {
-        SearchContent = searchContent;
-    }
-
     public void SetForwardedFrom(long originalMessageId)
     {
         ForwardFromMessageId = originalMessageId;
@@ -82,7 +74,24 @@ public class Message : AggregateRoot
         }
 
         Content = "This message was revoked.";
-        SearchContent = null;
         return Result.Success();
+    }
+
+    public void SetMessageType(MessageType type) { MessageType = type; }
+
+    public void AttachFile(MessageAttachment attachment) { Attachment = attachment; }
+
+    public void ToggleReaction(string? reactionType, Guid userId)
+    {
+        if (ReactionUserId == userId && Reaction == reactionType)
+        {
+            Reaction = null;
+            ReactionUserId = null;
+        }
+        else
+        {
+            Reaction = reactionType;
+            ReactionUserId = userId;
+        }
     }
 }

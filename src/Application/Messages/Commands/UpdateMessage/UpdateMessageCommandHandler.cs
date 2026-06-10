@@ -1,12 +1,13 @@
 ﻿using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.DTOs.Messages;
 using Domain.Shared;
+
 namespace Application.Messages.Commands.UpdateMessage
 {
-
     internal sealed class UpdateMessageCommandHandler
-        : ICommandHandler<UpdateMessageCommand, long>
+        : ICommandHandler<UpdateMessageCommand, MessageDto>
     {
         private readonly IMessageRepository _messageRepository;
         private readonly IUnitOfWork _unitOfWork;
@@ -19,7 +20,7 @@ namespace Application.Messages.Commands.UpdateMessage
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<Result<long>> Handle(
+        public async Task<Result<MessageDto>> Handle(
             UpdateMessageCommand request,
             CancellationToken cancellationToken)
         {
@@ -29,19 +30,19 @@ namespace Application.Messages.Commands.UpdateMessage
 
             if (message is null)
             {
-                return Result.Failure<long>(
+                return Result.Failure<MessageDto>(
                     new Error("Message.NotFound", "Message not found"));
             }
 
             var result = message.UpdateContent(request.UserId, request.NewContent);
 
             if (result.IsFailure)
-                return Result.Failure<long>(result.Error);
+                return Result.Failure<MessageDto>(result.Error);
 
             _messageRepository.Update(message);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result.Success(message.ConversationId);
+            return Result.Success(MessageDto.FromDomain(message));
         }
     }
 }

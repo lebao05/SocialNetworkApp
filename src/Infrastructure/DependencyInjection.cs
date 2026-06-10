@@ -2,7 +2,6 @@ using Application.Abstractions;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Security;
 using Infrastructure.Persistence.Repositories;
-using Infrastructure.Security;
 using Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

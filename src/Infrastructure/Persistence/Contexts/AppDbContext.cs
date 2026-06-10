@@ -23,7 +23,6 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<BlockChat> BlockChats { get; set; }
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<ConversationMember> ConversationMembers { get; set; }
-        public DbSet<MemberMessage> MemberMessages { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<MessageAttachment> MessageAttachments { get; set; }
         public DbSet<FriendRequest> FriendRequests { get; set; }
@@ -58,7 +57,6 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new BlockChatConfiguration());
             builder.ApplyConfiguration(new ConversationConfiguration());
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
-            builder.ApplyConfiguration(new MemberMessageConfiguration());
             builder.ApplyConfiguration(new MessageConfiguration());
             builder.ApplyConfiguration(new MessageAttachmentConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());

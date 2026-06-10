@@ -1,17 +1,21 @@
 using Domain.Entities;
+using Domain.Enums;
 
 namespace Application.DTOs.Conversations
 {
-
     public sealed record ConversationDetailDto(
         long Id,
         string? Name,
         bool IsOneToOne,
+        bool IsVirtual,
         string? Theme,
         bool IsNotificationOn,
         int UnreadCount,
+        long? LastReadMessageId,
         bool IsNotInAConversation,
-        List<ConversationMemberDto> Members
+        Guid? OwnerId,
+        Guid? OtherUserId,
+        int MemberCount
     )
     {
         public static ConversationDetailDto FromDomain(
@@ -24,6 +28,7 @@ namespace Application.DTOs.Conversations
             var lastReadId = currentMember.LastReadMessageId ?? 0;
 
             string displayName = conversation.Name ?? string.Empty;
+            Guid? otherUserId = null;
 
             if (conversation.IsOneToOne)
             {
@@ -33,19 +38,23 @@ namespace Application.DTOs.Conversations
                 displayName = other != null
                     ? $"{other.User.FirstName} {other.User.LastName}"
                     : "Unknown User";
+
+                otherUserId = other?.UserId;
             }
 
             return new ConversationDetailDto(
                 Id: conversation.Id,
                 Name: displayName,
                 IsOneToOne: conversation.IsOneToOne,
+                IsVirtual: false,
                 Theme: conversation.Theme,
                 IsNotificationOn: currentMember.IsNotificationOn,
                 UnreadCount: conversation.Messages.Count(m => m.Id > lastReadId),
+                LastReadMessageId: currentMember.LastReadMessageId,
                 IsNotInAConversation: false,
-                Members: conversation.Members
-                    .Select(ConversationMemberDto.FromDomain)
-                    .ToList()
+                OwnerId: conversation.OwnerId,
+                OtherUserId: otherUserId,
+                MemberCount: conversation.Members.Count
             );
         }
 
@@ -55,15 +64,34 @@ namespace Application.DTOs.Conversations
                 Id: 0,
                 Name: $"{targetUser.FirstName} {targetUser.LastName}".Trim(),
                 IsOneToOne: true,
+                IsVirtual: true,
                 Theme: null,
                 IsNotificationOn: true,
                 UnreadCount: 0,
+                LastReadMessageId: null,
                 IsNotInAConversation: true,
-                Members: new List<ConversationMemberDto>
-                {
-                    new ConversationMemberDto(currentUser.Id, $"{currentUser.FirstName} {currentUser.LastName}", currentUser.AvatarUrl, "Admin"),
-                    new ConversationMemberDto(targetUser.Id, $"{targetUser.FirstName} {targetUser.LastName}", targetUser.AvatarUrl, "Member")
-                }
+                OwnerId: currentUser.Id,
+                OtherUserId: targetUser.Id,
+                MemberCount: 1
+            );
+        }
+    }
+
+    public sealed record ConversationMemberDto(
+        Guid UserId,
+        string FullName,
+        string? AvatarUrl,
+        string Role,
+        long? LastReadMessageId)
+    {
+        public static ConversationMemberDto FromDomain(ConversationMember member)
+        {
+            return new ConversationMemberDto(
+                UserId: member.UserId,
+                FullName: $"{member.User.FirstName} {member.User.LastName}".Trim(),
+                AvatarUrl: member.User.AvatarUrl,
+                Role: member.Role.ToString(),
+                LastReadMessageId: member.LastReadMessageId
             );
         }
     }

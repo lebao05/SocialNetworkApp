@@ -1,11 +1,15 @@
 using Application.Messages.Commands.InvokeMessage;
+using Application.Messages.Commands.MarkMessagesAsSeen;
+using Application.Messages.Commands.ReactToMessage;
 using Application.Messages.Commands.SendMessage;
 using Application.Messages.Commands.UpdateMessage;
 using Application.Messages.Queries.GetMessagesAround;
+using Application.Messages.Queries.GetFilesByConversationId;
 using Application.Messages.Queries.SearchMessages;
 using Infrastructure.SignalR;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Presentation.Abstractions;
@@ -26,21 +30,51 @@ namespace Presentation.Controllers
             _hubContext = hubContext;
         }
 
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchMessages(
+        [HttpGet]
+        public async Task<IActionResult> GetMessages(
             [FromQuery] long conversationId,
-            [FromQuery] string query,
-            CancellationToken cancellationToken)
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
         {
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
 
-            var userId = Guid.Parse(userIdString);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageNumber = Math.Max(pageNumber, 1);
+
+            var query = new GetMessagesAroundQuery(
+                Guid.Parse(userIdString),
+                conversationId,
+                null,
+                "down",
+                pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(result.Error);
+
+            return Ok(result.Value);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchMessages(
+            [FromQuery] long conversationId,
+            [FromQuery] string query,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
 
             var searchQuery = new SearchMessagesQuery(
-                userId,
+                Guid.Parse(userIdString),
                 conversationId,
-                query);
+                query,
+                pageNumber,
+                pageSize);
 
             var result = await _sender.Send(searchQuery, cancellationToken);
 
@@ -61,10 +95,8 @@ namespace Presentation.Controllers
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
 
-            var userId = Guid.Parse(userIdString);
-
             var query = new GetMessagesAroundQuery(
-                userId,
+                Guid.Parse(userIdString),
                 conversationId,
                 anchorMessageId,
                 direction,
@@ -74,6 +106,85 @@ namespace Presentation.Controllers
 
             if (result.IsFailure)
                 return BadRequest(result.Error);
+
+            return Ok(result.Value);
+        }
+
+        [HttpGet("{conversationId:long}/files")]
+        public async Task<IActionResult> GetFilesByConversation(
+            long conversationId,
+            [FromQuery] bool isMedia = true,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            pageSize = Math.Clamp(pageSize, 1, 50);
+            pageNumber = Math.Max(pageNumber, 1);
+
+            var query = new GetFilesByConversationIdQuery(
+                Guid.Parse(userIdString),
+                conversationId,
+                isMedia,
+                pageNumber,
+                pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpPost("{conversationId:long}/mark-seen")]
+        public async Task<IActionResult> MarkMessagesAsSeen(
+            long conversationId,
+            [FromBody] MarkMessagesAsSeenRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            var command = new MarkMessagesAsSeenCommand(
+                conversationId,
+                Guid.Parse(userIdString),
+                request.LastReadMessageId);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            if (result.IsFailure) return HandleFailure(result);
+
+            await _hubContext.Clients.Group(conversationId.ToString())
+                .SendAsync("MessagesSeen", new
+                {
+                    conversationId,
+                    userId = userIdString,
+                    lastReadMessageId = request.LastReadMessageId
+                }, cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpPost("{messageId}/react")]
+        public async Task<IActionResult> ReactToMessage(
+            long messageId,
+            [FromBody] ReactToMessageRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            var command = new ReactToMessageCommand(
+                messageId,
+                Guid.Parse(userIdString),
+                request.ReactionType);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            if (result.IsFailure) return HandleFailure(result);
+
+            await _hubContext.Clients.Group(result.Value.ConversationId.ToString())
+                .SendAsync("MessageReactionUpdated", result.Value, cancellationToken);
 
             return Ok(result.Value);
         }
@@ -96,28 +207,47 @@ namespace Presentation.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request, CancellationToken cancellationToken)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SendMessage(
+            [FromForm] long conversationId,
+            [FromForm] string? content,
+            IFormFileCollection? files,
+            CancellationToken cancellationToken)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+            List<SendMessageFile>? sendFiles = null;
+            if (files?.Any() == true)
+            {
+                sendFiles = files.Select(f => new SendMessageFile(
+                    f.OpenReadStream(),
+                    f.FileName,
+                    f.ContentType,
+                    f.Length
+                )).ToList();
+            }
+
             var command = new SendMessageCommand(
-                request.ConversationId,
+                conversationId,
                 Guid.Parse(userId),
-                request.Content
+                content,
+                sendFiles
             );
 
             var result = await _sender.Send(command, cancellationToken);
 
             if (result.IsFailure) return BadRequest(result.Error);
 
-            // Notify the conversation group via SignalR
-            await _hubContext.Clients.Group(request.ConversationId.ToString())
-                .SendAsync("ReceiveMessage", result.Value, cancellationToken);
+            foreach (var msg in result.Value)
+            {
+                await _hubContext.Clients.Group(conversationId.ToString())
+                    .SendAsync("ReceiveMessage", msg, cancellationToken);
+            }
 
             return Ok(result.Value);
         }
+
         [HttpPut("{messageId}")]
         public async Task<IActionResult> UpdateMessage(
             long messageId,
@@ -139,12 +269,38 @@ namespace Presentation.Controllers
             if (result.IsFailure) return BadRequest(result.Error);
 
             var updatedMessage = result.Value;
-            // 🔥 Broadcast update to all users in conversation
-            await _hubContext.Clients
-                .Group(updatedMessage.ToString()) // ❌ WRONG (see fix below)
+            await _hubContext.Clients.Group(updatedMessage.ConversationId.ToString())
                 .SendAsync("MessageUpdated", updatedMessage, cancellationToken);
 
             return Ok(updatedMessage);
+        }
+
+        [HttpPost("typing")]
+        public async Task<IActionResult> Typing(
+            [FromQuery] long conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _hubContext.Clients.Group(conversationId.ToString())
+                .SendAsync("UserTyping", new { userId, conversationId }, cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpPost("untyping")]
+        public async Task<IActionResult> UntypingEnded(
+            [FromQuery] long conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _hubContext.Clients.Group(conversationId.ToString())
+                .SendAsync("UserUntyping", new { userId, conversationId }, cancellationToken);
+
+            return NoContent();
         }
     }
 }

@@ -7,7 +7,7 @@ using Domain.Shared;
 namespace Application.Conversations.Queries.GetConversations
 {
     internal sealed class GetConversationsQueryHandler
-        : IQueryHandler<GetConversationsQuery, List<ConversationResponse>>
+        : IQueryHandler<GetConversationsQuery, List<ConversationDetailDto>>
     {
         private readonly IConversationRepository _conversationRepository;
 
@@ -17,7 +17,7 @@ namespace Application.Conversations.Queries.GetConversations
             _conversationRepository = conversationRepository;
         }
 
-        public async Task<Result<List<ConversationResponse>>> Handle(
+        public async Task<Result<List<ConversationDetailDto>>> Handle(
             GetConversationsQuery request,
             CancellationToken cancellationToken)
         {
@@ -28,7 +28,7 @@ namespace Application.Conversations.Queries.GetConversations
                 cancellationToken);
 
             var dtos = pagedConversations
-                .Select(conv => ConversationResponse.FromDomain(conv, request.UserId))
+                .Select(conv => ConversationDetailDto.FromDomain(conv, request.UserId))
                 .ToList();
 
             return Result.Success(dtos);

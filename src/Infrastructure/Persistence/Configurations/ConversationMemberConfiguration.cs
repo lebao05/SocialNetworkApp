@@ -15,16 +15,6 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany(u => u.Conversations)
                 .HasForeignKey(cm => cm.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // ✅ Correct mapping (use property, not string field)
-            builder.HasMany(cm => cm.MemberMessages)
-                .WithOne(mm => mm.ConversationMember)
-                .HasForeignKey(mm => mm.ConversationMemberId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Navigation(cm => cm.MemberMessages)
-                .HasField("_memberMessages")   // 👈 REQUIRED
-                .UsePropertyAccessMode(PropertyAccessMode.Field);
         }
     }
 }

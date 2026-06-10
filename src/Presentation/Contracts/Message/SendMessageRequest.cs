@@ -1,6 +1,4 @@
-﻿
-namespace Presentation.Contracts.Message
+﻿namespace Presentation.Contracts.Message
 {
-    public record SendMessageRequest(long ConversationId, string Content);
-
+    public record SendMessageRequest(string? Content);
 }

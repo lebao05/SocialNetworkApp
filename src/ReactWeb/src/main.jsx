@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./contexts/authContext.jsx";
-import { ConversationProvider } from "./contexts/conversationContext.jsx";
+import { ChatProvider } from "./contexts/ChatContext.jsx";
 import { FriendProvider } from "./contexts/friendContext.jsx";
 import { ReelsProvider } from "./contexts/ReelsContext.jsx";
 import { StoriesProvider } from "./contexts/StoriesContext.jsx";
@@ -13,7 +13,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <ConversationProvider>
+        <ChatProvider>
           <FriendProvider>
             <ReelsProvider>
               <StoriesProvider>
@@ -21,7 +21,7 @@ createRoot(document.getElementById("root")).render(
               </StoriesProvider>
             </ReelsProvider>
           </FriendProvider>
-        </ConversationProvider>
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

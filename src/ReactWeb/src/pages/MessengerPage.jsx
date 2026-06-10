@@ -1,7 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useParams } from "react-router-dom";
 import MessengerFull from "../components/Messenger/MessengerFull";
+import { useChat } from "../contexts/ChatContext";
 
 export default function MessengerPage() {
-  // MessengerFull tự render Navbar bên trong rồi
+  const { userId } = useParams();
+  const { selectConversation } = useChat();
+
+  useEffect(() => {
+    if (userId) {
+      selectConversation(userId, true);
+    }
+  }, [userId]);
+
   return <MessengerFull />;
 }

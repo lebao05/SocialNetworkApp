@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.Abstractions.SignalR;
 using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
@@ -8,10 +9,12 @@ namespace Infrastructure.Persistence.Repositories
     public class UserRepository : IUserRepository
     {
         private readonly AppDbContext _context;
+        private readonly IPresenceTracker _presenceTracker;
 
-        public UserRepository(AppDbContext context)
+        public UserRepository(AppDbContext context, IPresenceTracker presenceTracker)
         {
             _context = context;
+            _presenceTracker = presenceTracker;
         }
 
         public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -37,7 +40,6 @@ namespace Infrastructure.Persistence.Repositories
         {
             var query = _context.Users.AsNoTracking();
 
-            // Filter by search query (FirstName or LastName)
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var lowerQuery = searchQuery.ToLower();
@@ -46,17 +48,21 @@ namespace Infrastructure.Persistence.Repositories
                     u.LastName.ToLower().Contains(lowerQuery));
             }
 
-            // Filter by group if groupId is provided
             if (groupId.HasValue)
             {
                 query = query.Where(u =>
                     u.GroupMemberships.Any(gm => gm.GroupId == groupId.Value));
             }
 
-            // Order by FirstName, then LastName
             query = query.OrderBy(u => u.FirstName).ThenBy(u => u.LastName);
 
             return await PagedList<User>.CreateAsync(query, pageNumber, pageSize, cancellationToken);
+        }
+
+        public Task<List<string>> GetConnectionsAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            var connections = _presenceTracker.GetConnections(userId.ToString());
+            return Task.FromResult(connections);
         }
     }
 }

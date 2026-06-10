@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Messages\Commands\FowardMessage\**" />
+    <EmbeddedResource Remove="Messages\Commands\FowardMessage\**" />
+    <None Remove="Messages\Commands\FowardMessage\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
   </ItemGroup>
 
@@ -17,7 +23,6 @@
   <ItemGroup>
     <Folder Include="Conversations\Commands\AddMemberIntoConversation\" />
     <Folder Include="Messages\Commands\InvokeMessage\" />
-    <Folder Include="Messages\Commands\FowardMessage\" />
     <Folder Include="Messages\Commands\ReactToMessage\" />
     <Folder Include="Posts\Commands\CreatePost\" />
     <Folder Include="Posts\Queries\" />

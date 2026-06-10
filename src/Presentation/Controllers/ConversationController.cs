@@ -1,7 +1,14 @@
+using Application.Abstractions.Repositories;
+using Application.Abstractions.SignalR;
 using Application.Conversations.Commands.CreateConversation;
 using Application.Conversations.Commands.RemoveMemberFromConversation;
 using Application.Conversations.Commands.ToggleNotifications;
+using Application.Conversations.Commands.LeaveConversation;
+using Application.Conversations.Commands.AssignAdminRole;
+using Application.Conversations.Commands.RevokeAdminRole;
+using Application.Conversations.Commands.KickMemberOut;
 using Application.Conversations.Queries.GetConversationDetail;
+using Application.Conversations.Queries.GetConversationMembers;
 using Application.Conversations.Queries.SearchConversationsAndFriends;
 using Application.Conversations.Queries.GetConversationDetailByUserId;
 using Application.Conversations.Queries.GetConversations;
@@ -22,8 +29,22 @@ namespace Presentation.Controllers;
 [Authorize]
 public class ConversationController : ApiController
 {
-    public ConversationController(ISender sender) : base(sender)
+    private readonly IConversationRepository _conversationRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IPresenceTracker _presenceTracker;
+    private readonly IChatHubNotifier _hubNotifier;
+
+    public ConversationController(
+        ISender sender,
+        IConversationRepository conversationRepository,
+        IUserRepository userRepository,
+        IPresenceTracker presenceTracker,
+        IChatHubNotifier hubNotifier) : base(sender)
     {
+        _conversationRepository = conversationRepository;
+        _userRepository = userRepository;
+        _presenceTracker = presenceTracker;
+        _hubNotifier = hubNotifier;
     }
 
     [HttpPost]
@@ -39,11 +60,27 @@ public class ConversationController : ApiController
             request.Name
         );
 
-        Result<ConversationResponse> result = await _sender.Send(command, cancellationToken);
+        Result<ConversationDetailDto> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
             return HandleFailure(result);
+        }
+
+        // Notify members that creator is online
+        bool creatorOnline = _presenceTracker.IsOnline(userIdClaim.ToString());
+        if (creatorOnline)
+        {
+            var memberIds = await _conversationRepository.GetMemberIdsAsync(result.Value.Id, cancellationToken);
+
+            foreach (var memberId in memberIds)
+            {
+                var connections = await _userRepository.GetConnectionsAsync(memberId, cancellationToken);
+                foreach (var connectionId in connections)
+                {
+                    await _hubNotifier.NotifyUserOnlineToConnectionAsync(connectionId, userIdClaim.ToString(), cancellationToken);
+                }
+            }
         }
 
         return Ok(result.Value);
@@ -84,7 +121,7 @@ public class ConversationController : ApiController
 
         var query = new GetConversationsQuery(userId, pageSize, pageNumber);
 
-        Result<List<ConversationResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<List<ConversationDetailDto>> result = await _sender.Send(query, cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
     }
@@ -155,5 +192,82 @@ public class ConversationController : ApiController
         var result = await _sender.Send(command, cancellationToken);
 
         return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpDelete("{conversationId:long}/leave")]
+    public async Task<IActionResult> LeaveConversation(
+        long conversationId,
+        CancellationToken cancellationToken)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new LeaveConversationCommand(conversationId, userId);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpPatch("{conversationId:long}/members/{targetUserId:guid}/assign-admin")]
+    public async Task<IActionResult> AssignAdminRole(
+        long conversationId,
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var ownerId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new AssignAdminRoleCommand(conversationId, ownerId, targetUserId);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpPatch("{conversationId:long}/members/{targetUserId:guid}/revoke-admin")]
+    public async Task<IActionResult> RevokeAdminRole(
+        long conversationId,
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var ownerId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new RevokeAdminRoleCommand(conversationId, ownerId, targetUserId);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpDelete("{conversationId:long}/kick/{userIdToKick:guid}")]
+    public async Task<IActionResult> KickMemberOut(
+        long conversationId,
+        Guid userIdToKick,
+        CancellationToken cancellationToken)
+    {
+        var requesterId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new KickMemberOutCommand(conversationId, requesterId, userIdToKick);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? NoContent() : HandleFailure(result);
+    }
+
+    [HttpGet("{conversationId:long}/members")]
+    public async Task<IActionResult> GetConversationMembers(
+        long conversationId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new GetConversationMembersQuery(userId, conversationId, pageNumber, pageSize);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(new { results = result.Value, totalCount = result.Value.Count })
+            : HandleFailure(result);
     }
 }

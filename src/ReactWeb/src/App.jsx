@@ -34,6 +34,7 @@ export default function App() {
       <Route path="/stories/create" element={<ProtectedRoute><CreateStoryPage /></ProtectedRoute>} />
       <Route path="/profile/:userId/stories" element={<ProtectedRoute><StoryPage /></ProtectedRoute>} />
       <Route path="/messenger" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
+      <Route path="/messenger/t/:userId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/messenger/:convId" element={<ProtectedRoute><MessengerPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/profile/:userId" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
