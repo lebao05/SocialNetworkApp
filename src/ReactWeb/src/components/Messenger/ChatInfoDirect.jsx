@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChat } from "../../contexts/ChatContext";
+import ViewPinnedMessagesModal from "./ViewPinnedMessagesModal";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -47,6 +48,7 @@ export default function ChatInfoDirect({ conv, isOnline }) {
     media: false,
     privacy: false,
   });
+  const [showPinned, setShowPinned] = useState(false);
 
   const toggle = (key) => setSections((s) => ({ ...s, [key]: !s[key] }));
 
@@ -100,46 +102,58 @@ export default function ChatInfoDirect({ conv, isOnline }) {
           <svg className="w-3.5 h-3.5 text-fb-subtext" fill="currentColor" viewBox="0 0 24 24">
             <path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z" />
           </svg>
-          <span className="text-xs text-fb-subtext font-medium">End-to-end encrypted</span>
         </div>
 
         {/* Quick actions */}
         <div className="flex gap-6 mt-4">
-          {[
-            {
-              icon: (
+          <button
+            onClick={handleAvatarClick}
+            className="flex flex-col items-center gap-1.5"
+          >
+            <div className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center transition-colors">
+              <svg className="w-[18px] h-[18px] text-fb-text" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-              ),
-              label: "View\nProfile",
-              onClick: handleAvatarClick,
-            },
-            {
-              icon: (
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-              ),
-              label: conv.isNotificationOn === false ? "Unmute" : "Mute",
-              onClick: handleMute,
-            },
-            {
-              icon: (
-                <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              ),
-              label: "Search",
-            },
-          ].map(({ icon, label, onClick }, i) => (
-            <button
-              key={i}
-              onClick={onClick}
-              className="flex flex-col items-center gap-1.5"
-            >
-              <div className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center transition-colors">
-                <svg className="w-[18px] h-[18px] text-fb-text" fill="currentColor" viewBox="0 0 24 24">
-                  {icon}
+              </svg>
+            </div>
+            <span className="text-[11px] text-fb-subtext text-center leading-tight">View Profile</span>
+          </button>
+
+          <button
+            onClick={handleMute}
+            className="flex flex-col items-center gap-1.5"
+          >
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+              conv.isNotificationOn === false
+                ? "bg-[#FFF3CD] hover:bg-[#FFE69C]"
+                : "bg-[#E4E6EB] hover:bg-[#D8DADF]"
+            }`}>
+              {conv.isNotificationOn === false ? (
+                <svg className="w-[18px] h-[18px] text-amber-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
                 </svg>
-              </div>
-              <span className="text-[11px] text-fb-subtext text-center leading-tight whitespace-pre-line">{label}</span>
-            </button>
-          ))}
+              ) : (
+                <svg className="w-[18px] h-[18px] text-fb-text" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01C3.42 10.4 2 12.5 2 15.5 2 19.99 5.58 23 10 23c.37 0 .73-.02 1.09-.08L15 21.01l2.31 2.31c-.44.02-.89.08-1.34.13 0 0 .01 0 .01-.01 0 0 .01 0 .02-.01l-.01-.01c0 0 0-.01-.01-.02.37-.06.72-.14 1.06-.24l-.03-.09zM10 19c-2.76 0-5-2.24-5-5s2.24-5 5-5c.28 0 .55.03.81.07l-3.34 3.34c-.02.2-.03.39-.03.59 0 2.03.94 3.84 2.41 4.87V14h9v-1.5c1.47-1.03 2.41-2.84 2.41-4.87 0-.2-.01-.39-.03-.59L20.19 5.93c-.01.03-.02.06-.04.09.35.1.69.18 1.06.24.02.01.03.01.03.01l.04-.04.19.2.07.08L12 20.31l-.5.5c-.01-.01-.03-.02-.04-.03-.08.01-.16.01-.23.02-.05 0-.11.01-.16.01-.09 0-.18-.01-.27-.01l.2.04c.25.03.5.07.75.07z" />
+                </svg>
+              )}
+            </div>
+            <span className={`text-[11px] text-center leading-tight ${
+              conv.isNotificationOn === false ? "text-amber-600 font-medium" : "text-fb-subtext"
+            }`}>
+              {conv.isNotificationOn === false ? "Unmute" : "Mute"}
+            </span>
+          </button>
+
+          <button
+            className="flex flex-col items-center gap-1.5"
+          >
+            <div className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center transition-colors">
+              <svg className="w-[18px] h-[18px] text-fb-text" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+            </div>
+            <span className="text-[11px] text-fb-subtext text-center leading-tight">Search</span>
+          </button>
         </div>
       </div>
 
@@ -153,6 +167,7 @@ export default function ChatInfoDirect({ conv, isOnline }) {
               <InfoRow
                 iconPath={<path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />}
                 label="View pinned messages"
+                onClick={() => setShowPinned(true)}
               />
             </div>
           )}
@@ -174,12 +189,6 @@ export default function ChatInfoDirect({ conv, isOnline }) {
                   <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
                 }
                 label="Change emoji"
-              />
-              <InfoRow
-                iconPath={
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                }
-                label="Edit nickname"
               />
             </div>
           )}
@@ -206,12 +215,6 @@ export default function ChatInfoDirect({ conv, isOnline }) {
                 }
                 label="Files"
               />
-              <InfoRow
-                iconPath={
-                  <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
-                }
-                label="Links"
-              />
             </div>
           )}
         </div>
@@ -221,47 +224,17 @@ export default function ChatInfoDirect({ conv, isOnline }) {
           <SectionHeader title="Privacy and support" open={sections.privacy} onToggle={() => toggle("privacy")} />
           {sections.privacy && (
             <div className="pb-2 flex flex-col">
-              {/* Mute */}
+              {/* Notifications */}
               <InfoRow
                 iconPath={
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                  conv.isNotificationOn === false ? (
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
+                  ) : (
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                  )
                 }
-                label="Notifications"
+                label={conv.isNotificationOn === false ? "Turn on notifications" : "Turn off notifications"}
                 onClick={handleMute}
-              />
-              {/* Messaging permissions */}
-              <InfoRow
-                iconPath={
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" />
-                }
-                label="Messaging permissions"
-              />
-              {/* Disappearing messages */}
-              <InfoRow
-                iconPath={<path d="M6 2v6l2 2-2 2v6l7-5-3-2 3-2-7-7zm10 0l-3 3 3 3V2zm0 10l-3 3 3 3v-6z" />}
-                label="Disappearing messages"
-              />
-              {/* Read receipts */}
-              <InfoRow
-                iconPath={
-                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                }
-                label="Read receipts"
-                sublabel="Off"
-              />
-              {/* Verify E2E */}
-              <InfoRow
-                iconPath={
-                  <path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z" />
-                }
-                label="Verify end-to-end encryption"
-              />
-              {/* Restricted */}
-              <InfoRow
-                iconPath={
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.68L5.68 16.9A7.902 7.902 0 014 12zm8 8c-1.85 0-3.55-.63-4.9-1.68L18.32 7.1A7.902 7.902 0 0120 12c0 4.42-3.58 8-8 8z" />
-                }
-                label="Restricted"
               />
               {/* Block */}
               <InfoRow
@@ -271,18 +244,18 @@ export default function ChatInfoDirect({ conv, isOnline }) {
                 label="Block"
                 danger={true}
               />
-              {/* Report */}
-              <InfoRow
-                iconPath={
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                }
-                label="Report"
-                sublabel="Give feedback and report this conversation"
-              />
             </div>
           )}
         </div>
       </div>
+      {showPinned && (
+        <ViewPinnedMessagesModal
+          conv={conv}
+          isOnline={isOnline}
+          onlineUsers={null}
+          onClose={() => setShowPinned(false)}
+        />
+      )}
     </div>
   );
 }

@@ -29,6 +29,7 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
+                .Include(m => m.Reactions).ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
@@ -47,6 +48,7 @@ namespace Infrastructure.Persistence.Repositories
                     """)
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
+                .Include(m => m.Reactions).ThenInclude(r => r.User)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
@@ -62,13 +64,14 @@ namespace Infrastructure.Persistence.Repositories
                 .Where(m => m.ConversationId == conversationId && m.DeletedAt == null)
                 .AsNoTracking()
                 .Include(m => m.Creator)
-                .Include(m => m.Attachment);
+                .Include(m => m.Attachment)
+                .Include(m => m.Reactions).ThenInclude(r => r.User);
 
             if (direction.ToLower() == "up")
             {
                 if (anchorMessageId.HasValue)
                     query = query.Where(m => m.Id < anchorMessageId.Value);
-                
+
                 return await query
                     .OrderBy(m => m.Id)
                     .Take(size)
@@ -76,8 +79,8 @@ namespace Infrastructure.Persistence.Repositories
             }
             else if (direction.ToLower() == "down")
             {
-                // If anchor is null for "down", it doesn't make much sense (where is the start?), 
-                // so we'll just return empty or from start. 
+                // If anchor is null for "down", it doesn't make much sense (where is the start?),
+                // so we'll just return empty or from start.
                 if (!anchorMessageId.HasValue) return new List<Message>();
 
                 return await query
@@ -91,9 +94,9 @@ namespace Infrastructure.Persistence.Repositories
                 if (!anchorMessageId.HasValue) return await GetMessagesAroundAsync(conversationId, null, "up", size, cancellationToken);
 
                 var anchorMessage = await query.FirstOrDefaultAsync(m => m.Id == anchorMessageId.Value, cancellationToken);
-                
+
                 var half = size / 2;
-                
+
                 var up = await query
                     .Where(m => m.Id < anchorMessageId.Value)
                     .Take(half)
@@ -106,7 +109,7 @@ namespace Infrastructure.Persistence.Repositories
 
                 var result = up.Concat(down).ToList();
                 if (anchorMessage != null) result.Add(anchorMessage);
-                
+
                 return result.OrderBy(m => m.Id).ToList();
             }
         }
@@ -128,6 +131,7 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
+                .Include(m => m.Reactions).ThenInclude(r => r.User)
                 .OrderByDescending(m => m.CreatedAt);
 
             if (isMedia)
@@ -158,6 +162,7 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
+                .Include(m => m.Reactions).ThenInclude(r => r.User)
                 .OrderByDescending(m => m.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)

@@ -144,7 +144,6 @@ export function ChatProvider({ children }) {
 
         const receiveMessage = async (message) => {
             const convId = message.conversationId;
-            console.log("receiveMessage", message);
             setMessages((prev) => {
                 if (prev.some((m) => m.id === message.id)) return prev;
                 return [...prev, message];
@@ -612,7 +611,10 @@ export function ChatProvider({ children }) {
 
     const reactToMessage = async (messageId, reactionType) => {
         try {
-            await reactToMessageApi(messageId, reactionType);
+            const updated = await reactToMessageApi(messageId, reactionType);
+            setMessages((prev) =>
+                prev.map((m) => m.id === messageId ? { ...m, reactions: updated.reactions } : m)
+            );
         } catch (err) {
             console.error("Failed to react to message:", err);
         }

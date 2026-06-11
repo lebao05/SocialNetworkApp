@@ -15,8 +15,8 @@ public class Message : AggregateRoot
 
     public bool IsSystemMessage { get; private set; }
     public bool IsPinned { get; private set; }
-    public string? Reaction { get; private set; }
-    public Guid? ReactionUserId { get; private set; }
+    private readonly List<MessageReaction> _reactions = new();
+    public IReadOnlyCollection<MessageReaction> Reactions => _reactions;
 
     // Navigation properties
     public Conversation Conversation { get; private set; } = null!;
@@ -81,17 +81,29 @@ public class Message : AggregateRoot
 
     public void AttachFile(MessageAttachment attachment) { Attachment = attachment; }
 
-    public void ToggleReaction(string? reactionType, Guid userId)
+    public void ToggleReaction(Guid userId, Domain.Enums.ReactionType reactionType)
     {
-        if (ReactionUserId == userId && Reaction == reactionType)
+        var existing = _reactions.FirstOrDefault(r => r.UserId == userId);
+
+        if (existing is not null)
         {
-            Reaction = null;
-            ReactionUserId = null;
+            if (existing.ReactionType == reactionType)
+            {
+                _reactions.Remove(existing);
+            }
+            else
+            {
+                existing.UpdateReaction(reactionType);
+            }
         }
         else
         {
-            Reaction = reactionType;
-            ReactionUserId = userId;
+            var reaction = new MessageReaction(
+                userId: userId,
+                messageId: Id,
+                reactionType: reactionType
+            );
+            _reactions.Add(reaction);
         }
     }
 

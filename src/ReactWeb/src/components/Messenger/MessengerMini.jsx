@@ -19,15 +19,6 @@ function NameDropdown({ conv, onClose }) {
     {
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z" />
-        </svg>
-      ),
-      label: "End-to-end encrypted",
-      dividerAfter: false,
-    },
-    {
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.836 1.396 5.372 3.584 7.04V22l3.26-1.79c.87.24 1.79.37 2.745.37C17.523 20.58 22 16.435 22 11.337 22 6.238 17.523 2 12 2zm1.2 12.23l-3.048-3.25-5.952 3.25 6.55-6.95 3.12 3.25 5.88-3.25-6.55 6.95z" />
         </svg>
       ),

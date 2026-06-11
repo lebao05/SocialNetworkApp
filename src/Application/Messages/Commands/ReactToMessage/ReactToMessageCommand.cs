@@ -1,5 +1,6 @@
 using Application.Abstractions.Messaging;
 using Application.DTOs.Messages;
+using Domain.Enums;
 
 namespace Application.Messages.Commands.ReactToMessage;
 

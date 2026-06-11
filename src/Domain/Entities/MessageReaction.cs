@@ -23,6 +23,15 @@ public class MessageReaction : BaseEntity
         ReactionType = reactionType;
     }
 
+    // EF Core–compatible constructor: id = 0 triggers database-generated value
+    public MessageReaction(Guid userId, long messageId, ReactionType reactionType)
+        : base(0)
+    {
+        UserId = userId;
+        MessageId = messageId;
+        ReactionType = reactionType;
+    }
+
     public void UpdateReaction(ReactionType newReactionType)
     {
         ReactionType = newReactionType;

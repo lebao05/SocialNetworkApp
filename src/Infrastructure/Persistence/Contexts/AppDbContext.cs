@@ -25,6 +25,7 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<ConversationMember> ConversationMembers { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<MessageAttachment> MessageAttachments { get; set; }
+        public DbSet<MessageReaction> MessageReactions { get; set; }
         public DbSet<FriendRequest> FriendRequests { get; set; }
         public DbSet<Friendship> Friendships { get; set; }        
         public DbSet<Group> Groups { get; set; }
@@ -59,6 +60,7 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new ConversationMemberConfiguration());
             builder.ApplyConfiguration(new MessageConfiguration());
             builder.ApplyConfiguration(new MessageAttachmentConfiguration());
+            builder.ApplyConfiguration(new MessageReactionConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
             builder.ApplyConfiguration(new GroupConfiguration());
             builder.ApplyConfiguration(new GroupMemberConfiguration());

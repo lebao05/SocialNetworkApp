@@ -3,18 +3,29 @@ import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../Navbar/Navbar";
 import ChatInfoGroup from "./ChatInfoGroup";
 import ChatInfoDirect from "./ChatInfoDirect";
+import CreateGroupModal from "./CreateGroupModal";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
+const REACTION_TYPES = [
+  { label: "Like",  emoji: "\u2764\uFE0F", value: "Like" },
+  { label: "Love",  emoji: "\uD83D\uDE0D", value: "Love" },
+  { label: "Haha",  emoji: "\uD83D\uDE02", value: "Haha" },
+  { label: "Wow",   emoji: "\uD83D\uDE2E", value: "Wow" },
+  { label: "Sad",   emoji: "\uD83D\uDE22", value: "Sad" },
+  { label: "Angry", emoji: "\uD83D\uDE20", value: "Angry" },
+];
+
 // ══════════════════════════════════════════════════════════════════
 // Panel 1 — Conversation List
 // ══════════════════════════════════════════════════════════════════
-function ConvList({ selected, onSelect, onSelectUser }) {
+function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
   const { conversations, searchResults, isSearching, performSearch, fetchConversations, isOnline } = useChat();
   const [tab, setTab] = useState("all");
   const [searchVal, setSearchVal] = useState("");
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   useEffect(() => { fetchConversations(); }, []);
 
@@ -43,9 +54,13 @@ function ConvList({ selected, onSelect, onSelectUser }) {
                 <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
               </svg>
             </button>
-            <button className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center transition-colors">
-              <svg className="w-5 h-5 text-fb-text" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="w-9 h-9 bg-[#E4E6EB] hover:bg-[#D8DADF] rounded-full flex items-center justify-center text-fb-blue transition-colors"
+              title="Create Group"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </button>
           </div>
@@ -151,6 +166,16 @@ function ConvList({ selected, onSelect, onSelectUser }) {
           </div>
         ))}
       </div>
+
+      {showCreateGroup && (
+        <CreateGroupModal
+          onClose={() => setShowCreateGroup(false)}
+          onCreated={(conv) => {
+            setShowCreateGroup(false);
+            onCreateGroup(conv);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -176,7 +201,7 @@ function formatTimeLabel(date) {
 // ══════════════════════════════════════════════════════════════════
 function ChatWindow({ conv, isOnline }) {
   const { user } = useAuth();
-  const { messages, messagesLoading, loadMessages, sendMessage, markAsSeen } = useChat();
+  const { messages, messagesLoading, loadMessages, sendMessage, markAsSeen, reactToMessage } = useChat();
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -266,8 +291,8 @@ function ChatWindow({ conv, isOnline }) {
           const showTimeLabel = prevMsg
             && (new Date(m.createdAt) - new Date(prevMsg.createdAt)) > 10 * 60 * 1000;
 
-          // In group chats: show avatar on last message of a sender's sequence (seen indicator position)
-          const showAvatar = isGroup && !isMe && isLast && m.senderAvatarUrl;
+          // In group chats: always show avatar to the left of every received message
+          const showAvatar = isGroup && !isMe && m.senderAvatarUrl;
 
           return (
             <React.Fragment key={m.id}>
@@ -279,23 +304,40 @@ function ChatWindow({ conv, isOnline }) {
                 </div>
               )}
               <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"} ${isFirst ? "mt-3" : "mt-0.5"}`}>
-                {!isMe && (
+                {isGroup && !isMe && (
                   <div className="w-7 flex-shrink-0 self-end mb-0.5">
                     {showAvatar ? (
                       <img
                         src={m.senderAvatarUrl}
                         className="w-7 h-7 rounded-full object-cover"
                         alt={m.senderName ?? ""}
-                        onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+                        onError={(e) => { e.target.style.display = "none"; }}
                       />
                     ) : (
-                      <div className="w-7" />
+                      <img
+                        src={DEFAULT_AVATAR}
+                        className="w-7 h-7 rounded-full object-cover"
+                        alt=""
+                      />
                     )}
                   </div>
                 )}
-                <div className={`max-w-[65%] px-3 py-2 text-sm leading-relaxed ${isMe ? "bg-fb-blue text-white rounded-2xl" : "bg-[#F0F2F5] text-fb-text rounded-2xl"}`}>
-                  {m.content}
-                  {m.reaction && <span className="ml-1 text-xs">{m.reaction}</span>}
+                <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                  <div className="relative group">
+                    <div className={`max-w-[65%] px-3 py-2 text-sm leading-relaxed ${isMe ? "bg-fb-blue text-white rounded-2xl" : "bg-[#F0F2F5] text-fb-text rounded-2xl"}`}>
+                      {m.content}
+                    </div>
+                    <MessageReactionButton
+                      messageId={m.id}
+                      reactions={m.reactions ?? []}
+                      currentUserId={user?.id}
+                      onReact={reactToMessage}
+                      isMe={isMe}
+                    />
+                  </div>
+                  {m.reactions?.length > 0 && (
+                    <MessageReactionSummary reactions={m.reactions} currentUserId={user?.id} />
+                  )}
                 </div>
               </div>
             </React.Fragment>
@@ -305,6 +347,86 @@ function ChatWindow({ conv, isOnline }) {
       </div>
 
       <MessageInput />
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Message reaction picker + summary display
+// ══════════════════════════════════════════════════════════════════
+function MessageReactionButton({ messageId, reactions, currentUserId, onReact, isMe }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const userReact = reactions.find((r) => r.userId === currentUserId);
+  const displayEmoji = userReact
+    ? REACTION_TYPES.find((r) => r.value === userReact.reactionType)?.emoji
+    : null;
+
+  return (
+    <div ref={ref} className={`absolute top-1/2 -translate-y-1/2 ${isMe ? "-left-8" : "-right-8"}`}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all
+          ${displayEmoji ? "bg-[#E4E6EB] scale-110" : "bg-[#E4E6EB] opacity-0 group-hover:opacity-100"}`}
+      >
+        {displayEmoji ? <span className="text-sm leading-none">{displayEmoji}</span> : (
+          <svg className="w-4 h-4 text-fb-subtext" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+      </button>
+      {open && (
+        <div className="absolute bottom-7 left-0 bg-white rounded-full shadow-lg border border-[#E4E6EB] flex px-1 py-1 gap-0.5 z-50">
+          {REACTION_TYPES.map((r) => (
+            <button
+              key={r.value}
+              onClick={() => { onReact(messageId, r.value); setOpen(false); }}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F0F2F5] transition-colors text-lg leading-none"
+              title={r.label}
+            >
+              {r.emoji}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MessageReactionSummary({ reactions, currentUserId }) {
+  if (!reactions || reactions.length === 0) return null;
+
+  const grouped = reactions.reduce((acc, r) => {
+    if (!acc[r.reactionType]) acc[r.reactionType] = [];
+    acc[r.reactionType].push(r);
+    return acc;
+  }, {});
+
+  const isDarkBg = false;
+
+  return (
+    <div className="flex flex-wrap gap-1 mt-0.5 ml-1">
+      {Object.entries(grouped).map(([type, users]) => {
+        const emoji = REACTION_TYPES.find((r) => r.value === type)?.emoji ?? "\u2764\uFE0F";
+        const isActive = users.some((u) => u.userId === currentUserId);
+        return (
+          <div
+            key={type}
+            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors
+              ${isActive ? "border-fb-blue bg-blue-50" : "border-[#E4E6EB] bg-[#F0F2F5]"}`}
+          >
+            <span className="text-sm leading-none">{emoji}</span>
+            <span className="font-medium">{users.length}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -384,7 +506,7 @@ function ChatInfo({ conv, isOnline }) {
 export default function MessengerFull() {
   const { convId } = useParams();
   const navigate = useNavigate();
-  const { selectedConversation, selectConversation, isOnline } = useChat();
+  const { selectedConversation, selectConversation, createGroup, isOnline } = useChat();
 
   useEffect(() => {
     if (convId) selectConversation(convId, false);
@@ -400,12 +522,17 @@ export default function MessengerFull() {
     navigate(`/profile/${userId}`);
   };
 
+  const handleCreateGroup = (conv) => {
+    const target = `/messenger/${conv.id}`;
+    navigate(target, { replace: true });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#F0F2F5]">
       <Navbar />
       <div className="flex flex-1 overflow-hidden pt-14 p-2 gap-2">
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-          <ConvList selected={selectedConversation} onSelect={handleSelect} onSelectUser={handleSelectUser} />
+          <ConvList selected={selectedConversation} onSelect={handleSelect} onSelectUser={handleSelectUser} onCreateGroup={handleCreateGroup} />
         </div>
         <div className="flex-1 min-w-0 rounded-xl overflow-hidden bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
           <ChatWindow key={selectedConversation?.id || selectedConversation?.otherUserId} conv={selectedConversation} isOnline={isOnline} />

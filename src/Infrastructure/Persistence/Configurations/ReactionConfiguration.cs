@@ -74,4 +74,41 @@ namespace Infrastructure.Persistence.Configurations
                 .IsUnique();
         }
     }
+
+    public class MessageReactionConfiguration : IEntityTypeConfiguration<MessageReaction>
+    {
+        public void Configure(EntityTypeBuilder<MessageReaction> builder)
+        {
+            builder.ToTable("MessageReactions");
+
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.Id).ValueGeneratedOnAdd();
+
+            builder.Property(r => r.UserId)
+                .IsRequired();
+
+            builder.Property(r => r.MessageId)
+                .IsRequired();
+
+            builder.Property(r => r.ReactionType)
+                .IsRequired()
+                .HasColumnType("SMALLINT");
+
+            builder.Property(r => r.CreatedAt)
+                .IsRequired();
+
+            builder.HasOne(r => r.Message)
+                .WithMany(m => m.Reactions)
+                .HasForeignKey(r => r.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(r => new { r.UserId, r.MessageId })
+                .IsUnique();
+        }
+    }
 }
