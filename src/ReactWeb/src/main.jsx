@@ -8,6 +8,8 @@ import { ChatProvider } from "./contexts/ChatContext.jsx";
 import { FriendProvider } from "./contexts/friendContext.jsx";
 import { ReelsProvider } from "./contexts/ReelsContext.jsx";
 import { StoriesProvider } from "./contexts/StoriesContext.jsx";
+import IncomingCallModal from "./components/Messenger/IncomingCallModal.jsx";
+import ActiveCallUI from "./components/Messenger/ActiveCallUI.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -18,6 +20,8 @@ createRoot(document.getElementById("root")).render(
             <ReelsProvider>
               <StoriesProvider>
                 <App />
+                <IncomingCallModal />
+                <ActiveCallUI />
               </StoriesProvider>
             </ReelsProvider>
           </FriendProvider>

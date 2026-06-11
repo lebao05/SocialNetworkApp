@@ -17,17 +17,20 @@ public sealed record MessageDto(
 {
     public static MessageDto FromDomain(Domain.Entities.Message message)
     {
+        var creator = message.Creator;
         return new MessageDto(
             Id: message.Id,
             ConversationId: message.ConversationId,
             SenderId: message.CreatorId,
-            SenderName: $"{message.Creator.FirstName} {message.Creator.LastName}",
-            SenderAvatarUrl: message.Creator.AvatarUrl,
+            SenderName: creator is not null ? $"{creator.FirstName} {creator.LastName}" : "Unknown User",
+            SenderAvatarUrl: creator?.AvatarUrl,
             Content: message.Content,
             MessageType: message.MessageType.ToString(),
             CreatedAt: message.CreatedAt,
             IsPinned: message.IsPinned,
-            Reactions: message.Reactions.Select(MessageReactionDto.FromDomain).ToList(),
+            Reactions: message.Reactions
+                .Select(r => MessageReactionDto.FromDomain(r)!)
+                .ToList(),
             Attachment: AttachmentDto.FromDomain(message.Attachment),
             ForwardFromMessageId: message.ForwardFromMessageId
         );

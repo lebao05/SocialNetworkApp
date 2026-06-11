@@ -7,8 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Conversations\Commands\AddMemberIntoConversation\**" />
     <Compile Remove="Messages\Commands\FowardMessage\**" />
+    <EmbeddedResource Remove="Conversations\Commands\AddMemberIntoConversation\**" />
     <EmbeddedResource Remove="Messages\Commands\FowardMessage\**" />
+    <None Remove="Conversations\Commands\AddMemberIntoConversation\**" />
     <None Remove="Messages\Commands\FowardMessage\**" />
   </ItemGroup>
 
@@ -21,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Conversations\Commands\AddMemberIntoConversation\" />
     <Folder Include="Messages\Commands\InvokeMessage\" />
     <Folder Include="Messages\Commands\ReactToMessage\" />
     <Folder Include="Posts\Commands\CreatePost\" />

@@ -478,12 +478,6 @@ namespace Infrastructure.Migrations
                     b.Property<int>("MessageType")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Reaction")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("ReactionUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<long?>("ReplyToMessageId")
                         .HasColumnType("bigint");
 
@@ -541,6 +535,42 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("MessageAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MessageReaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("MessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("ReactionType")
+                        .HasColumnType("SMALLINT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.HasIndex("UserId", "MessageId")
+                        .IsUnique();
+
+                    b.ToTable("MessageReactions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Notification", b =>
@@ -1786,6 +1816,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("Message");
                 });
 
+            modelBuilder.Entity("Domain.Entities.MessageReaction", b =>
+                {
+                    b.HasOne("Domain.Entities.Message", "Message")
+                        .WithMany("Reactions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.Notification", b =>
                 {
                     b.HasOne("Domain.Entities.User", "ActorUser")
@@ -2178,6 +2227,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Message", b =>
                 {
                     b.Navigation("Attachment");
+
+                    b.Navigation("Reactions");
 
                     b.Navigation("Replies");
                 });

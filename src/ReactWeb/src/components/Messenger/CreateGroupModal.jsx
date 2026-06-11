@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Search, Loader2 } from "lucide-react";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
@@ -7,7 +7,7 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function CreateGroupModal({ onClose, onCreated }) {
   const { user } = useAuth();
-  const { friends, friendsLoading, fetchFriends, createGroup } = useChat();
+  const { friends, friendsLoading, friendsSearchTerm, fetchFriends, createGroup } = useChat();
 
   const [groupName, setGroupName] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -15,15 +15,21 @@ export default function CreateGroupModal({ onClose, onCreated }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
+  const searchTimerRef = useRef(null);
+
   useEffect(() => {
     fetchFriends(null);
   }, []);
 
-  const friendsList = Array.isArray(friends) ? friends : (friends?.results ?? []);
+  useEffect(() => {
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      fetchFriends(searchVal || null);
+    }, 300);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchVal]);
 
-  const filteredFriends = friendsList.filter((f) =>
-    f.name?.toLowerCase().includes(searchVal.toLowerCase())
-  );
+  const friendsList = Array.isArray(friends) ? friends : (friends?.results ?? []);
 
   const toggleFriend = (id) => {
     setSelectedIds((prev) => {
@@ -119,13 +125,15 @@ export default function CreateGroupModal({ onClose, onCreated }) {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 text-fb-blue animate-spin" />
             </div>
-          ) : filteredFriends.length === 0 ? (
+          ) : friendsList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <p className="text-sm text-fb-subtext">No friends found</p>
+              <p className="text-sm text-fb-subtext">
+                {friendsSearchTerm ? `No friends matching "${friendsSearchTerm}"` : "No friends found"}
+              </p>
             </div>
           ) : (
             <div className="space-y-1">
-              {filteredFriends.map((friend) => {
+              {friendsList.map((friend) => {
                 const selected = selectedIds.has(friend.id);
                 return (
                   <div
@@ -140,7 +148,7 @@ export default function CreateGroupModal({ onClose, onCreated }) {
                       <img
                         src={friend.avatar || DEFAULT_AVATAR}
                         className="w-10 h-10 rounded-full object-cover"
-                        alt={friend.name}
+                        alt={friend.fullName}
                         onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
                       />
                     </div>
@@ -148,11 +156,8 @@ export default function CreateGroupModal({ onClose, onCreated }) {
                     {/* Name */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm truncate ${selected ? "font-semibold text-fb-blue" : "font-medium text-fb-text"}`}>
-                        {friend.name}
+                        {friend.fullName}
                       </p>
-                      {friend.status && (
-                        <p className="text-xs text-fb-subtext truncate">{friend.status}</p>
-                      )}
                     </div>
 
                     {/* Checkbox */}

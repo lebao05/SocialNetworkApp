@@ -10,13 +10,15 @@ public sealed record MessageReactionDto(
     string ReactionType
 )
 {
-    public static MessageReactionDto FromDomain(MessageReaction reaction)
+    public static MessageReactionDto? FromDomain(MessageReaction? reaction)
     {
+        if (reaction is null) return null;
+        var user = reaction.User;
         return new MessageReactionDto(
             Id: reaction.Id,
             UserId: reaction.UserId,
-            UserName: $"{reaction.User.FirstName} {reaction.User.LastName}",
-            UserAvatarUrl: reaction.User.AvatarUrl,
+            UserName: user is not null ? $"{user.FirstName} {user.LastName}" : "Unknown User",
+            UserAvatarUrl: user?.AvatarUrl,
             ReactionType: reaction.ReactionType.ToString()
         );
     }

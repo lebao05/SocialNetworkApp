@@ -100,3 +100,14 @@ export async function revokeAdminApi(conversationId, targetUserId) {
 export async function kickMemberApi(conversationId, userIdToKick) {
     await axios.delete(`/conversation/${conversationId}/kick/${userIdToKick}`);
 }
+
+/**
+ * Add a member to a group conversation (admin/owner only)
+ * Returns ConversationMemberDto on success
+ */
+export async function addMemberApi(conversationId, userIdToAdd) {
+    const response = await axios.post(`/conversation/${conversationId}/members`, {
+        userIdToAdd
+    });
+    return response.data;
+}

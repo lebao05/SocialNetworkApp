@@ -6,7 +6,6 @@ import CreatePost from "../components/Feed/CreatePost";
 import HomeReelsRail from "../components/Feed/HomeReelsRail";
 import PostCard from "../components/Feed/PostCard";
 import RightSidebar from "../components/RightSidebar/RightSidebar";
-import { MiniChatBox } from "../components/Messenger/MessengerMini";
 import { useAuth } from "../contexts/authContext";
 import { useFeed } from "../hooks/useFeed";
 import CreatePostModal from "../components/Profile/CreatePostModal";
@@ -15,7 +14,6 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function HomePage() {
   const { user: currentUser } = useAuth();
-  const [openChats, setOpenChats] = useState([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const markedFeedIdsRef = useRef(new Set());
 
@@ -57,18 +55,6 @@ export default function HomePage() {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [markUnseenFeedItems]);
-
-  const handleContactClick = (contact) => {
-    if (openChats.find((c) => c.id === contact.id)) return;
-    setOpenChats((prev) => {
-      const next = [...prev, contact];
-      return next.length > 3 ? next.slice(next.length - 3) : next;
-    });
-  };
-
-  const handleCloseChat = (contactId) => {
-    setOpenChats((prev) => prev.filter((c) => c.id !== contactId));
-  };
 
   const displayUser = {
     name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "You",
@@ -138,16 +124,8 @@ export default function HomePage() {
         </div>
 
         <LeftSidebar />
-        <RightSidebar onContactClick={handleContactClick} />
+        <RightSidebar />
       </div>
-
-      {openChats.length > 0 && (
-        <div className="fixed bottom-0 right-4 flex items-end gap-3 z-50 sm:right-2 sm:gap-2">
-          {openChats.map((contact) => (
-            <MiniChatBox key={contact.id} contact={contact} onClose={() => handleCloseChat(contact.id)} />
-          ))}
-        </div>
-      )}
 
       {/* Create Post Modal */}
       <CreatePostModal

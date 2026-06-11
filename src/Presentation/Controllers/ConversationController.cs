@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
+using Application.Conversations.Commands.AddMemberToConversation;
 using Application.Conversations.Commands.CreateConversation;
 using Application.Conversations.Commands.RemoveMemberFromConversation;
 using Application.Conversations.Commands.ToggleNotifications;
@@ -68,6 +69,25 @@ public class ConversationController : ApiController
         }
 
         return Ok(result.Value);
+    }
+
+    [HttpPost("{conversationId:long}/members")]
+    public async Task<IActionResult> AddMember(
+        long conversationId,
+        [FromBody] AddMemberToConversationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var adminId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new AddMemberToConversationCommand(
+            conversationId,
+            adminId,
+            request.UserIdToAdd
+        );
+
+       var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(result) : HandleFailure(result);
     }
 
     [HttpPatch("{conversationId:long}/notifications")]

@@ -1,7 +1,9 @@
 "use client";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
+import axios from "../apis/axios";
 import { useAuth } from "./authContext";
+import { CallProvider } from "./CallContext";
 import {
     getConversationsApi,
     getConversationDetailApi,
@@ -15,6 +17,7 @@ import {
     assignAdminApi,
     revokeAdminApi,
     kickMemberApi,
+    addMemberApi,
 } from "../apis/conversationApi";
 import {
     getMessagesAroundApi,
@@ -28,10 +31,14 @@ import {
     markMessagesAsSeenApi,
 } from "../apis/messageApi";
 import { getFriendsApi } from "../apis/friendApi";
+import { playNotificationSound } from "../utils/notificationSound";
 
 const ChatContext = createContext(null);
 
-export function ChatProvider({ children }) {
+// ──────────────────────────────────────────────────────────────────────────────
+// Inner component that builds the ChatContext value (has access to connection)
+// ──────────────────────────────────────────────────────────────────────────────
+function ChatContextInner({ children }) {
     const { token, user } = useAuth();
 
     // ── SignalR state ──
@@ -81,6 +88,7 @@ export function ChatProvider({ children }) {
     // ── Typing state ──
     const [typingUsers, setTypingUsers] = useState({});
     const typingTimerRef = useRef({});
+    const typingDebounceRef = useRef({});
 
     // ── Online presence state ──
     const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -88,6 +96,7 @@ export function ChatProvider({ children }) {
     // ── Friends state (for group creation) ──
     const [friends, setFriends] = useState([]);
     const [friendsLoading, setFriendsLoading] = useState(false);
+    const [friendsSearchTerm, setFriendsSearchTerm] = useState("");
 
     // ─────────────────────────────────────────────────────────────────────────
     // SIGNALR SETUP
@@ -144,6 +153,13 @@ export function ChatProvider({ children }) {
 
         const receiveMessage = async (message) => {
             const convId = message.conversationId;
+            const isCurrentUser = message.senderId === user?.id;
+            const conv = convsRef.current.find((c) => c.id === convId);
+            const notificationOn = conv?.isNotificationOn !== false;
+
+            if (!isCurrentUser && notificationOn) {
+                playNotificationSound();
+            }
             setMessages((prev) => {
                 if (prev.some((m) => m.id === message.id)) return prev;
                 return [...prev, message];
@@ -274,6 +290,28 @@ export function ChatProvider({ children }) {
         connection.on("UserOnline", onUserOnline);
         connection.on("UserOffline", onUserOffline);
         connection.on("MessagesSeen", onMessagesSeen);
+        connection.on("MemberAdded", ({ conversationId, member }) => {
+            if (selectedConversation?.id?.toString() === conversationId?.toString()) {
+                setConversationMembers((prev) => {
+                    if (prev.some((m) => m.userId === member.userId)) return prev;
+                    return [...prev, member];
+                });
+            }
+            // Refresh conversation list so member count is up to date
+            getConversationsApi()
+                .then((data) => setConversations(data ?? []))
+                .catch(() => {});
+        });
+        connection.on("MemberRemoved", ({ conversationId, removedUserId }) => {
+            if (selectedConversation?.id?.toString() === conversationId?.toString()) {
+                setConversationMembers((prev) =>
+                    prev.filter((m) => m.userId !== removedUserId)
+                );
+            }
+            getConversationsApi()
+                .then((data) => setConversations(data ?? []))
+                .catch(() => {});
+        });
 
         return () => {
             connection.off("ReceiveMessage", receiveMessage);
@@ -284,6 +322,8 @@ export function ChatProvider({ children }) {
             connection.off("UserOnline", onUserOnline);
             connection.off("UserOffline", onUserOffline);
             connection.off("MessagesSeen", onMessagesSeen);
+            connection.off("MemberAdded");
+            connection.off("MemberRemoved");
         };
     }, [connection, user, selectedConversation]);
 
@@ -323,12 +363,24 @@ export function ChatProvider({ children }) {
             if (detail.id && !detail.isVirtual) {
                 try {
                     const membersData = await getConversationMembersApi(detail.id, 1, 1);
+                    const otherMember = membersData.results?.find(
+                        (m) => m.userId !== user?.id
+                    );
                     enriched = {
                         ...detail,
-                        memberCount: membersData.totalCount ?? 0
+                        memberCount: membersData.totalCount ?? 0,
+                        otherUserAvatarUrl: otherMember?.avatarUrl ?? null,
                     };
                 } catch {
                     enriched = { ...detail, memberCount: 0 };
+                }
+            } else if (detail.isOneToOne && detail.otherUserId) {
+                // For virtual conversations, fetch user profile to get avatar
+                try {
+                    const profileRes = await axios.get(`/auth/user/${detail.otherUserId}`);
+                    enriched = { ...detail, otherUserAvatarUrl: profileRes.data?.avatarUrl ?? null };
+                } catch {
+                    enriched = { ...detail, otherUserAvatarUrl: null };
                 }
             }
 
@@ -376,10 +428,12 @@ export function ChatProvider({ children }) {
     };
 
     const fetchFriends = async (searchTerm = null) => {
+        setFriendsSearchTerm(searchTerm ?? "");
         setFriendsLoading(true);
         try {
             const data = await getFriendsApi(1, searchTerm);
-            setFriends(data.results ?? data ?? []);
+            console.log("[fetchFriends] API response:", data);
+            setFriends(data.items);
         } catch (err) {
             console.error("Failed to fetch friends:", err);
         } finally {
@@ -488,6 +542,21 @@ export function ChatProvider({ children }) {
         }
     };
 
+    const addMember = async (conversationId, userIdToAdd) => {
+        try {
+            const member = await addMemberApi(conversationId, userIdToAdd);
+            setConversationMembers((prev) => {
+                if (prev.some((m) => m.userId === member.userId)) return prev;
+                return [...prev, member];
+            });
+            setMembersTotalCount((prev) => prev + 1);
+            return member;
+        } catch (err) {
+            console.error("Failed to add member:", err);
+            throw err;
+        }
+    };
+
     // ─────────────────────────────────────────────────────────────────────────
     // MESSAGE METHODS
     // ─────────────────────────────────────────────────────────────────────────
@@ -503,6 +572,7 @@ export function ChatProvider({ children }) {
         try {
             const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
             setMessages(data ?? []);
+            console.log(data);
             setHasMoreMessages((data ?? []).length === PAGE_SIZE);
         } catch (err) {
             console.error("Failed to load messages:", err);
@@ -545,8 +615,10 @@ export function ChatProvider({ children }) {
         }
     };
 
-    const sendMessage = async (content) => {
-        if (!selectedConversation || !content?.trim()) return null;
+    const sendMessage = async (content, files = []) => {
+        const hasContent = content?.trim();
+        const hasFiles = files.length > 0;
+        if (!selectedConversation || (!hasContent && !hasFiles)) return null;
 
         let targetConv = selectedConversation;
         if (selectedConversation.isVirtual) {
@@ -558,7 +630,8 @@ export function ChatProvider({ children }) {
         try {
             const newMessage = await sendMessageApi({
                 conversationId: targetConv.id,
-                content
+                content,
+                files,
             });
             setMessages((prev) => [...prev, newMessage]);
             return newMessage;
@@ -694,9 +767,19 @@ export function ChatProvider({ children }) {
 
     const startTyping = async () => {
         if (!connection || !selectedConversation || selectedConversation.isVirtual) return;
+        const convId = selectedConversation.id.toString();
+
+        // Debounce: only invoke hub once per "typing session" (within 3s)
+        if (typingDebounceRef.current[convId]) return;
+        typingDebounceRef.current[convId] = true;
+
         try {
-            await connection.invoke("Typing", selectedConversation.id.toString());
+            await connection.invoke("Typing", convId);
         } catch (_) { /* non-critical */ }
+
+        setTimeout(() => {
+            delete typingDebounceRef.current[convId];
+        }, 3000);
     };
 
     const endTyping = async () => {
@@ -749,6 +832,7 @@ export function ChatProvider({ children }) {
         assignAdmin,
         revokeAdmin,
         kickMember,
+        addMember,
 
         // Messages
         messages,
@@ -802,16 +886,25 @@ export function ChatProvider({ children }) {
         // Friends (for group creation)
         friends,
         friendsLoading,
+        friendsSearchTerm,
         fetchFriends,
         createGroup,
+
+        // SignalR connection (for CallProvider)
+        connection,
     };
 
     return (
         <ChatContext.Provider value={value}>
-            {children}
+            <CallProvider connection={connection}>
+                {children}
+            </CallProvider>
         </ChatContext.Provider>
     );
 }
+
+// Named export for ChatProvider (same as the inner)
+export { ChatContextInner as ChatProvider };
 
 export function useChat() {
     const context = useContext(ChatContext);

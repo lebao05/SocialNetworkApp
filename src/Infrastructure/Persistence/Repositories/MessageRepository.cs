@@ -72,10 +72,11 @@ namespace Infrastructure.Persistence.Repositories
                 if (anchorMessageId.HasValue)
                     query = query.Where(m => m.Id < anchorMessageId.Value);
 
-                return await query
-                    .OrderBy(m => m.Id)
+                var res = await query
+                    .OrderByDescending(m => m.Id)
                     .Take(size)
                     .ToListAsync(cancellationToken);
+                return res.OrderBy(m => m.Id).ToList();
             }
             else if (direction.ToLower() == "down")
             {
@@ -99,11 +100,13 @@ namespace Infrastructure.Persistence.Repositories
 
                 var up = await query
                     .Where(m => m.Id < anchorMessageId.Value)
+                    .OrderByDescending( m => m.Id)
                     .Take(half)
                     .ToListAsync(cancellationToken);
 
                 var down = await query
                     .Where(m => m.Id > anchorMessageId.Value)
+                    .OrderBy(m=>m.Id)
                     .Take(half)
                     .ToListAsync(cancellationToken);
 

@@ -9,13 +9,15 @@ namespace Application.DTOs.Conversations
         bool IsOneToOne,
         bool IsVirtual,
         string? Theme,
+        string? ImageUrl,
         bool IsNotificationOn,
         int UnreadCount,
         long? LastReadMessageId,
         bool IsNotInAConversation,
         Guid? OwnerId,
         Guid? OtherUserId,
-        int MemberCount
+        int MemberCount,
+        string? OtherUserAvatarUrl
     )
     {
         public static ConversationDetailDto FromDomain(
@@ -29,6 +31,7 @@ namespace Application.DTOs.Conversations
 
             string displayName = conversation.Name ?? string.Empty;
             Guid? otherUserId = null;
+            string? otherUserAvatarUrl = null;
 
             if (conversation.IsOneToOne)
             {
@@ -40,6 +43,7 @@ namespace Application.DTOs.Conversations
                     : "Unknown User";
 
                 otherUserId = other?.UserId;
+                otherUserAvatarUrl = other?.User.AvatarUrl;
             }
 
             return new ConversationDetailDto(
@@ -48,13 +52,15 @@ namespace Application.DTOs.Conversations
                 IsOneToOne: conversation.IsOneToOne,
                 IsVirtual: false,
                 Theme: conversation.Theme,
+                ImageUrl: conversation.ImageUrl,
                 IsNotificationOn: currentMember.IsNotificationOn,
                 UnreadCount: conversation.Messages.Count(m => m.Id > lastReadId),
                 LastReadMessageId: currentMember.LastReadMessageId,
                 IsNotInAConversation: false,
                 OwnerId: conversation.OwnerId,
                 OtherUserId: otherUserId,
-                MemberCount: conversation.Members.Count
+                MemberCount: conversation.Members.Count,
+                OtherUserAvatarUrl: otherUserAvatarUrl
             );
         }
 
@@ -66,13 +72,15 @@ namespace Application.DTOs.Conversations
                 IsOneToOne: true,
                 IsVirtual: true,
                 Theme: null,
+                ImageUrl: null,
                 IsNotificationOn: true,
                 UnreadCount: 0,
                 LastReadMessageId: null,
                 IsNotInAConversation: true,
                 OwnerId: currentUser.Id,
                 OtherUserId: targetUser.Id,
-                MemberCount: 1
+                MemberCount: 1,
+                OtherUserAvatarUrl: targetUser.AvatarUrl
             );
         }
     }

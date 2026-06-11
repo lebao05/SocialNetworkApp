@@ -1,7 +1,6 @@
 ﻿using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
 using Application.Conversations.Queries.GetConversations;
-using Application.Messages.Commands.SendMessage;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -15,15 +14,18 @@ public class ChatHub : Hub
     private readonly IMediator _mediator;
     private readonly IPresenceTracker _presence;
     private readonly IConversationRepository _conversationRepository;
+    private readonly IUserRepository _userRepository;
 
     public ChatHub(
         IMediator mediator,
         IPresenceTracker presence,
-        IConversationRepository conversationRepository)
+        IConversationRepository conversationRepository,
+        IUserRepository userRepository)
     {
         _mediator = mediator;
         _presence = presence;
         _conversationRepository = conversationRepository;
+        _userRepository = userRepository;
     }
 
     private Guid GetUserId()
@@ -68,6 +70,81 @@ public class ChatHub : Hub
         var userId = GetUserId();
         await Clients.Group(conversationId)
             .SendAsync("UserUntyping", new { userId = userId.ToString(), conversationId });
+    }
+
+    // ── Audio Call ────────────────────────────────────────────────────────────
+
+    /// <summary>Initiate a 1:1 audio call. Notifies the callee via SignalR.</summary>
+    public async Task StartCall(string targetUserId)
+    {
+        var callerId = GetUserId();
+        var callerConnections = _presence.GetConnections(targetUserId);
+
+        if (callerConnections.Count == 0)
+        {
+            throw new HubException("User is not online.");
+        }
+
+        var caller = await _userRepository.GetByIdAsync(callerId, CancellationToken.None);
+
+        await Clients.Clients(callerConnections)
+            .SendAsync("IncomingCall", new
+            {
+                callerId = callerId.ToString(),
+                callerName = caller?.DisplayName ?? Context.User?.Identity?.Name ?? "Someone",
+                callerAvatar = caller?.AvatarUrl ?? (string?)null
+            });
+    }
+
+    /// <summary>Callee accepts — notifies the caller to send the WebRTC offer.</summary>
+    public async Task AcceptCall(string callerUserId)
+    {
+        var calleeId = GetUserId();
+        var callerConnections = _presence.GetConnections(callerUserId);
+
+        if (callerConnections.Count == 0) return;
+
+        await Clients.Clients(callerConnections)
+            .SendAsync("CallAccepted", new { calleeId = calleeId.ToString() });
+    }
+
+    /// <summary>Callee rejects the call.</summary>
+    public async Task RejectCall(string callerUserId)
+    {
+        var calleeId = GetUserId();
+        var callerConnections = _presence.GetConnections(callerUserId);
+
+        if (callerConnections.Count == 0) return;
+
+        await Clients.Clients(callerConnections)
+            .SendAsync("CallRejected", new { calleeId = calleeId.ToString() });
+    }
+
+    /// <summary>Relay a WebRTC signaling message (offer/answer/ICE candidate) to a specific user.</summary>
+    public async Task SendSignal(string targetUserId, string signalType, string signalData)
+    {
+        var senderId = GetUserId();
+        var targetConnections = _presence.GetConnections(targetUserId);
+
+        if (targetConnections.Count == 0)
+        {
+            throw new HubException("Target user is not online.");
+        }
+
+        await Clients.Clients(targetConnections)
+            .SendAsync("ReceiveSignal", new
+            {
+                senderId = senderId.ToString(),
+                signalType,
+                signalData
+            });
+    }
+
+    /// <summary>Notify participants that a call has ended.</summary>
+    public async Task EndCall(string conversationId)
+    {
+        await Clients.Group(conversationId)
+            .SendAsync("CallEnded", new { conversationId });
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

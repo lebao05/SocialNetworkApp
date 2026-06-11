@@ -1,7 +1,7 @@
 import React from "react";
 import { contacts, ads, birthdays } from "../../data/mockData";
 
-export default function RightSidebar({ onContactClick }) {
+export default function RightSidebar() {
   return (
     <aside className="hidden xl:flex fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white z-10 flex-col">
       {/* Birthday */}
@@ -64,7 +64,7 @@ export default function RightSidebar({ onContactClick }) {
       {contacts.map((c) => (
         <div
           key={c.id}
-          onClick={() => onContactClick && onContactClick(c)}
+          onClick={() => {}}
           className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-fb-hover"
         >
           <div className="relative flex-shrink-0">

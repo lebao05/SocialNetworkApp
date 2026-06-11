@@ -1,5 +1,6 @@
 using Application.Abstractions.SignalR;
 using Microsoft.AspNetCore.SignalR;
+using Application.DTOs.Conversations;
 
 namespace Infrastructure.SignalR;
 
@@ -30,5 +31,43 @@ public class ChatHubNotifier : IChatHubNotifier
                 await _hubContext.Groups.AddToGroupAsync(connectionId, groupName, cancellationToken);
             }
         }
+    }
+
+    public async Task NotifyMemberAddedAsync(
+        long conversationId,
+        ConversationMemberDto member,
+        IReadOnlyList<Guid> recipientUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        var groupName = conversationId.ToString();
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync(
+                "MemberAdded",
+                new
+                {
+                    conversationId,
+                    member
+                },
+                cancellationToken);
+    }
+
+    public async Task NotifyMemberRemovedAsync(
+        long conversationId,
+        Guid removedUserId,
+        IReadOnlyList<Guid> recipientUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        var groupName = conversationId.ToString();
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync(
+                "MemberRemoved",
+                new
+                {
+                    conversationId,
+                    removedUserId
+                },
+                cancellationToken);
     }
 }
