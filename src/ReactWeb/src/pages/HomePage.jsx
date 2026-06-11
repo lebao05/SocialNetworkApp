@@ -71,7 +71,7 @@ export default function HomePage() {
   };
 
   const displayUser = {
-    name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Bạn",
+    name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "You",
     avatar: currentUser?.avatarUrl || DEFAULT_AVATAR,
   };
 
@@ -131,7 +131,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">
-                Chưa có bài viết nào trên bảng tin của bạn. Hãy kết bạn hoặc tạo bài viết mới nhé!
+                Your feed is empty. Add friends or create a post to get started!
               </div>
             )}
           </main>

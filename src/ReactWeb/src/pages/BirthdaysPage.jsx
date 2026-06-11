@@ -10,7 +10,7 @@ import { birthdays as birthdayData } from "../data/mockData";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const MAX_PER_MONTH = 10;
-const MONTH_LABELS = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
+const MONTH_LABELS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const YEARLY_BIRTHDAYS = [
   { id: 101, name: "Hà Linh", avatar: "https://i.pravatar.cc/150?img=44", month: 1, day: 18, mutualFriends: 18, age: 22 },
@@ -51,7 +51,7 @@ const YEARLY_BIRTHDAYS = [
   { id: 136, name: "Trọng Nhân", avatar: "https://i.pravatar.cc/150?img=26", month: 12, day: 14, mutualFriends: 7, age: 25 },
 ];
 
-function BirthdayListItem({ person, note, actionLabel = "Nhắn tin" }) {
+function BirthdayListItem({ person, note, actionLabel = "Send message" }) {
   return (
     <article className="flex flex-col gap-4 rounded-2xl border border-[#e4e6eb] bg-white p-4 transition hover:shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
@@ -107,7 +107,7 @@ function MonthSection({ monthLabel, friends, totalCount }) {
         <div>
           <h3 className="text-[20px] font-bold text-[#050505]">{monthLabel}</h3>
           <p className="mt-1 text-[14px] text-[#65676b]">
-            Hiển thị {friends.length}/{Math.min(totalCount, MAX_PER_MONTH)} người, tối đa {MAX_PER_MONTH} mỗi tháng
+            Showing {friends.length}/{Math.min(totalCount, MAX_PER_MONTH)} of {MAX_PER_MONTH} max per month
           </p>
         </div>
         <div className="rounded-full bg-[#f0f2f5] px-3 py-1 text-xs font-semibold text-[#65676b]">{totalCount}</div>
@@ -117,8 +117,8 @@ function MonthSection({ monthLabel, friends, totalCount }) {
           <BirthdayListItem
             key={person.id}
             person={person}
-            note={`Ngày ${person.day} • Tròn ${person.age} tuổi • ${person.mutualFriends} bạn chung`}
-            actionLabel="Nhắn trước"
+            note={`Day ${person.day} • Turning ${person.age} • ${person.mutualFriends} mutual friends`}
+            actionLabel="Send early wish"
           />
         ))}
       </div>
@@ -177,15 +177,15 @@ export default function BirthdaysPage() {
           <div className="mb-6 rounded-2xl border border-[#e4e6eb] bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h1 className="text-[28px] font-bold leading-tight text-[#050505]">Sinh nhật</h1>
-                <p className="mt-1 text-[14px] text-[#65676b]">Xem sinh nhật bạn bè trong cả 12 tháng</p>
+                <h1 className="text-[28px] font-bold leading-tight text-[#050505]">Birthdays</h1>
+                <p className="mt-1 text-[14px] text-[#65676b]">View friends' birthdays throughout the year</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="rounded-full bg-[#e7f3ff] px-3 py-1.5 text-xs font-semibold text-[#1877f2]">
-                  {todayBirthdays.length} hôm nay
+                  {todayBirthdays.length} today
                 </div>
                 <div className="rounded-full bg-[#f0f2f5] px-3 py-1.5 text-xs font-semibold text-[#65676b]">
-                  {monthlyBirthdays.length} tháng có sinh nhật
+                  {monthlyBirthdays.length} months with birthdays
                 </div>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function BirthdaysPage() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm kiếm sinh nhật"
+                placeholder="Search birthdays"
                 className="w-full rounded-full border border-transparent bg-[#f0f2f5] py-2.5 pl-10 pr-4 text-[15px] text-[#050505] outline-none transition focus:border-[#1877f2] focus:bg-white"
               />
             </div>
@@ -203,11 +203,11 @@ export default function BirthdaysPage() {
 
           <div className="space-y-6">
             <SectionCard
-              title="Sinh nhật hôm nay"
-              subtitle={`${filteredTodayBirthdays.length} người bạn đang có sinh nhật hôm nay`}
+              title="Birthdays today"
+              subtitle={`${filteredTodayBirthdays.length} friends having birthdays today`}
               rightNode={
                 <div className="rounded-full bg-[#fff4df] px-3 py-1.5 text-xs font-semibold text-[#b7791f]">
-                  Đừng bỏ lỡ lời chúc nào
+                  Don't miss a wish
                 </div>
               }
             >
@@ -217,8 +217,8 @@ export default function BirthdaysPage() {
                     <BirthdayListItem
                       key={person.id}
                       person={person}
-                      note={`Hôm nay ${person.name} tròn ${person.age} tuổi • ${person.mutualFriends} bạn chung`}
-                      actionLabel="Gửi lời chúc"
+                      note={`Today ${person.name} turns ${person.age} • ${person.mutualFriends} mutual friends`}
+                      actionLabel="Send wish"
                     />
                   ))}
                 </div>
@@ -227,19 +227,19 @@ export default function BirthdaysPage() {
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f2f5] text-[#65676b]">
                     <Search size={22} />
                   </div>
-                  <h3 className="text-lg font-bold text-[#050505]">Không tìm thấy sinh nhật hôm nay</h3>
-                  <p className="mt-2 text-sm text-[#65676b]">Thử tên khác hoặc xoá từ khoá tìm kiếm.</p>
+                  <h3 className="text-lg font-bold text-[#050505]">No birthdays found today</h3>
+                  <p className="mt-2 text-sm text-[#65676b]">Try a different name or clear the search.</p>
                 </div>
               )}
             </SectionCard>
 
             <SectionCard
-              title="Sinh nhật bạn bè trong 12 tháng"
-              subtitle="Danh sách sinh nhật được nhóm theo từng tháng, tối đa 10 người mỗi tháng"
+              title="Friends' birthdays this year"
+              subtitle="Birthdays grouped by month, up to 10 people per month"
               rightNode={
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#f0f2f5] px-3 py-1.5 text-xs font-semibold text-[#65676b]">
                   <ChevronDown size={14} />
-                  {monthlyBirthdays.length} tháng có sinh nhật
+                  {monthlyBirthdays.length} months with birthdays
                 </div>
               }
             >
@@ -258,14 +258,14 @@ export default function BirthdaysPage() {
             <section className="rounded-2xl border border-[#e4e6eb] bg-white px-5 py-4 shadow-sm sm:px-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-[20px] font-bold text-[#050505]">Tất cả sinh nhật</h2>
-                  <p className="mt-1 text-[14px] text-[#65676b]">{allBirthdays.length} người trong danh sách sinh nhật của bạn</p>
+                  <h2 className="text-[20px] font-bold text-[#050505]">All birthdays</h2>
+                  <p className="mt-1 text-[14px] text-[#65676b]">{allBirthdays.length} people in your birthday list</p>
                 </div>
                 <button
                   type="button"
                   className="inline-flex cursor-pointer items-center justify-center rounded-full bg-[#e7f3ff] px-4 py-2 text-sm font-semibold text-[#1877f2] transition hover:bg-[#dbeeff]"
                 >
-                  Quản lý thông báo
+                  Manage notifications
                 </button>
               </div>
             </section>

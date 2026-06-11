@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSignalR } from "../contexts/signalRContext";
 import {
-    getMessagesApi,
+    getMessagesAroundApi,
     sendMessageApi,
     updateMessageApi
 } from "../apis/messageApi";
@@ -20,7 +20,7 @@ export const useChat = (conversationId) => {
         if (!conversationId) return;
 
         try {
-            const data = await getMessagesApi(conversationId, pageNumber, pageSize);
+            const data = await getMessagesAroundApi(conversationId, null, "up", pageSize);
 
             if (data.length < pageSize) {
                 setHasMore(false);

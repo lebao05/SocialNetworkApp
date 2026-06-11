@@ -32,9 +32,9 @@ function SidebarTab({ tab, active, onClick }) {
 function SearchSidebar({ activeTab, onTabChange }) {
   return (
     <aside className="fixed left-0 top-14 z-20 hidden h-[calc(100vh-56px)] w-[280px] overflow-y-auto border-r border-[#dddfe2] bg-white p-2 lg:block">
-      <h1 className="px-1 py-2 text-[22px] font-bold">Kết quả tìm kiếm</h1>
+      <h1 className="px-1 py-2 text-[22px] font-bold">Search results</h1>
       <div className="my-2 border-t border-[#dddfe2]" />
-      <div className="px-1 pb-2 text-[13px] font-semibold text-[#65676b]">Bộ lọc</div>
+      <div className="px-1 pb-2 text-[13px] font-semibold text-[#65676b]">Filters</div>
       <div className="space-y-1">
         {searchTabs.map((tab) => (
           <SidebarTab key={tab.key} tab={tab} active={activeTab === tab.key} onClick={() => onTabChange(tab.key)} />
@@ -58,7 +58,7 @@ function GroupResult({ group }) {
         {group.mutual && <p className="mt-1 text-[12px] text-[#65676b]">{group.mutual}</p>}
       </div>
       <button type="button" className="self-center rounded-md bg-[#e7f3ff] px-4 py-2 text-[13px] font-semibold text-[#0866ff] hover:bg-[#dbeeff]">
-        Tham gia
+        Join
       </button>
     </article>
   );
@@ -67,14 +67,14 @@ function GroupResult({ group }) {
 function GroupsCard() {
   return (
     <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-      <h2 className="text-[18px] font-bold">Nhóm</h2>
+      <h2 className="text-[18px] font-bold">Groups</h2>
       <div className="mt-2 divide-y divide-[#f0f2f5]">
         {searchGroups.map((group) => (
           <GroupResult key={group.id} group={group} />
         ))}
       </div>
       <button type="button" className="mt-3 h-9 w-full rounded-md bg-[#e4e6eb] text-[13px] font-semibold hover:bg-[#d8dadf]">
-        Xem tất cả
+        See all
       </button>
     </section>
   );
@@ -100,14 +100,14 @@ function PostCard({ post }) {
     <article className="rounded-lg border border-[#dddfe2] bg-white shadow-sm">
       <div className="p-4">
         <div className="mb-2 text-[13px]">
-          <span className="font-bold">{post.actor}</span> là thành viên.
+          <span className="font-bold">{post.actor}</span> is a member.
         </div>
         <div className="flex items-start gap-2">
           <img src={post.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-[14px] font-bold">{post.group} · <span className="text-[#0866ff]">Tham gia</span></h3>
+                <h3 className="truncate text-[14px] font-bold">{post.group} · <span className="text-[#0866ff]">Join</span></h3>
                 <p className="text-[12px] text-[#65676b]">{post.time}</p>
               </div>
               <MoreHorizontal size={20} className="text-[#65676b]" />
@@ -146,7 +146,7 @@ function PostsResults() {
 function PeopleResults() {
   return (
     <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-      <h2 className="text-[18px] font-bold">Mọi người</h2>
+      <h2 className="text-[18px] font-bold">People</h2>
       <div className="mt-2 divide-y divide-[#f0f2f5]">
         {searchPeople.map((person) => (
           <article key={person.id} className="grid grid-cols-[56px_1fr_auto] gap-3 py-3">
@@ -156,7 +156,7 @@ function PeopleResults() {
               <p className="text-[13px] text-[#65676b]">{person.note}</p>
             </div>
             <button type="button" className="self-center rounded-md bg-[#e4e6eb] px-4 py-2 text-[13px] font-semibold hover:bg-[#d8dadf]">
-              Xem
+              See
             </button>
           </article>
         ))}
@@ -172,7 +172,7 @@ function GroupsResults() {
 function ReelsResults() {
   return (
     <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-      <h2 className="text-[18px] font-bold">Thước phim</h2>
+      <h2 className="text-[18px] font-bold">Reels</h2>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {searchReels.map((reel) => (
           <article key={reel.id} className="overflow-hidden rounded-lg border border-[#dddfe2]">
@@ -191,7 +191,7 @@ function ReelsResults() {
 
 export default function SearchPage() {
   const [activeTab, setActiveTab] = useState("posts");
-  const title = useMemo(() => searchTabs.find((tab) => tab.key === activeTab)?.label || "Bài viết", [activeTab]);
+  const title = useMemo(() => searchTabs.find((tab) => tab.key === activeTab)?.label || "Posts", [activeTab]);
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] text-[#050505]">

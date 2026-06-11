@@ -78,17 +78,17 @@ export default function LeftSidebar() {
   ];
 
   const userShortcuts = [
-    { id: "group-1", name: "Diễn Đàn Kết Nối Đam Mê Phân Khối Lớn Trên Cung Đàn S.", icon: FaMotorcycle },
-    { id: "group-2", name: "Cung Đường Phượt Bụi ( Biker Việt Nam )", icon: Mountain },
+    { id: "group-1", name: "Big Bike Enthusiasts Forum", icon: FaMotorcycle },
+    { id: "group-2", name: "Adventure Riders Community", icon: Mountain },
     { id: "group-3", name: "EC-23HTTT", icon: MdOutlineComputer },
-    { id: "group-4", name: "Cờ vua", icon: FaChessPawn },
-    { id: "group-5", name: "Thiết kế phần mềm 23KTPM1", icon: MdOutlineDesignServices },
-    { id: "group-6", name: "Tuyển dụng NodeJS/ReactJS VietNam", icon: BriefcaseBusiness },
-    { id: "group-7", name: "Tài liệu - HCMUS", icon: GiSchoolBag },
-    { id: "group-8", name: "TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN - ĐHQG TP. HCM", icon: IoPeople },
-    { id: "group-9", name: "Chợ PKL Việt Nam", icon: GiFinishLine },
-    { id: "group-10", name: "Đi phượt bằng xe máy", icon: FaMotorcycle },
-    { id: "group-11", name: "The Forum IELTS Community", icon: FileText },
+    { id: "group-4", name: "Chess Club", icon: FaChessPawn },
+    { id: "group-5", name: "Software Design 23KTPM1", icon: MdOutlineDesignServices },
+    { id: "group-6", name: "NodeJS/ReactJS Jobs Vietnam", icon: BriefcaseBusiness },
+    { id: "group-7", name: "HCMUS Documents", icon: GiSchoolBag },
+    { id: "group-8", name: "University of Science - VNUH HCM", icon: IoPeople },
+    { id: "group-9", name: "Vietnam Big Bike Market", icon: GiFinishLine },
+    { id: "group-10", name: "Motorbike Travel Group", icon: FaMotorcycle },
+    { id: "group-11", name: "IELTS Forum Community", icon: FileText },
     { id: "group-12", name: "8 Ball Pool", icon: GiEightBall },
   ];
 
@@ -100,7 +100,7 @@ export default function LeftSidebar() {
           alt="avatar"
           className="h-9 w-9 rounded-full border border-black/10 object-cover shadow-sm"
         />
-        <span className="truncate text-[15px] font-semibold text-[#050505]">{currentUser?.name || "Lê Bảo"}</span>
+        <span className="truncate text-[15px] font-semibold text-[#050505]">{currentUser?.name || "User"}</span>
       </Link>
 
       {primaryMenu.map((item) => (
@@ -146,7 +146,7 @@ export default function LeftSidebar() {
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E4E6EB] text-black shadow-sm">
           <ChevronUp size={18} />
         </div>
-        <span className="text-[14.5px] font-medium">Ẩn bớt</span>
+        <span className="text-[14.5px] font-medium">See less</span>
       </button>
 
       <div className="mt-2 border-t border-[#ced0d4]/60 px-2 py-4 text-[12px] leading-normal tracking-wide text-[#65676B]">

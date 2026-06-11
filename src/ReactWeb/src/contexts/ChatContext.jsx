@@ -9,16 +9,23 @@ import {
     getConversationMembersApi,
     searchConversationsApi,
     createConversationApi,
-    toggleNotificationsApi
+    toggleNotificationsApi,
+    leaveConversationApi,
+    removeMemberApi,
+    assignAdminApi,
+    revokeAdminApi,
+    kickMemberApi,
 } from "../apis/conversationApi";
 import {
-    getMessagesApi,
+    getMessagesAroundApi,
+    searchMessagesApi,
+    getFilesByConversationApi,
     sendMessageApi,
     updateMessageApi,
     revokeMessageApi,
     togglePinMessageApi,
     reactToMessageApi,
-    markMessagesAsSeenApi
+    markMessagesAsSeenApi,
 } from "../apis/messageApi";
 import { getFriendsApi } from "../apis/friendApi";
 
@@ -35,6 +42,27 @@ export function ChatProvider({ children }) {
     const [conversations, setConversations] = useState([]);
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [conversationsLoading, setConversationsLoading] = useState(false);
+
+    // ── Members state (for ChatInfo sidebar) ──
+    const [conversationMembers, setConversationMembers] = useState([]);
+    const [membersTotalCount, setMembersTotalCount] = useState(0);
+    const [membersLoading, setMembersLoading] = useState(false);
+    const [membersHasMore, setMembersHasMore] = useState(true);
+
+    // ── Pinned messages state ──
+    const [pinnedMessages, setPinnedMessages] = useState([]);
+    const [pinnedLoading, setPinnedLoading] = useState(false);
+
+    // ── Files/media state ──
+    const [conversationFiles, setConversationFiles] = useState([]);
+    const [filesLoading, setFilesLoading] = useState(false);
+    const [filesHasMore, setFilesHasMore] = useState(true);
+    const [filesPage, setFilesPage] = useState(1);
+    const [filesMode, setFilesMode] = useState("media"); // "media" | "files"
+
+    // ── Message search state ──
+    const [messageSearchResults, setMessageSearchResults] = useState([]);
+    const [messageSearchLoading, setMessageSearchLoading] = useState(false);
 
     const convsRef = useRef(conversations);
     useEffect(() => { convsRef.current = conversations; }, [conversations]);
@@ -89,7 +117,6 @@ export function ChatProvider({ children }) {
                 setIsConnected(true);
                 setConnection(newConnection);
 
-                // Conversations loaded via HTTP (groups auto-joined on hub OnConnected)
                 try {
                     const data = await getConversationsApi();
                     setConversations(data ?? []);
@@ -115,7 +142,6 @@ export function ChatProvider({ children }) {
     useEffect(() => {
         if (!connection) return;
 
-        // Receive a new message
         const receiveMessage = async (message) => {
             const convId = message.conversationId;
 
@@ -166,14 +192,12 @@ export function ChatProvider({ children }) {
             });
         };
 
-        // Message was edited
         const updateMessage = (updatedMessage) => {
             setMessages((prev) =>
                 prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
             );
         };
 
-        // User started typing — payload is { userId, conversationId }
         const onTyping = ({ userId, conversationId }) => {
             if (userId === user?.id?.toString()) return;
             const convId = selectedConversation?.id?.toString();
@@ -198,7 +222,6 @@ export function ChatProvider({ children }) {
             }, 4000);
         };
 
-        // User online
         const onUserOnline = (userId) => {
             setOnlineUsers((prev) => {
                 const next = new Set(prev);
@@ -207,7 +230,6 @@ export function ChatProvider({ children }) {
             });
         };
 
-        // User offline
         const onUserOffline = (userId) => {
             setOnlineUsers((prev) => {
                 const next = new Set(prev);
@@ -216,7 +238,6 @@ export function ChatProvider({ children }) {
             });
         };
 
-        // Other user's messages were marked as seen
         const onMessagesSeen = ({ conversationId, userId: seenByUserId, lastReadMessageId }) => {
             if (seenByUserId === user?.id?.toString()) return;
             setConversations((prev) =>
@@ -228,8 +249,15 @@ export function ChatProvider({ children }) {
             );
         };
 
+        const onMessageReactionUpdated = (updatedMessage) => {
+            setMessages((prev) =>
+                prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+            );
+        };
+
         connection.on("ReceiveMessage", receiveMessage);
         connection.on("MessageUpdated", updateMessage);
+        connection.on("MessageReactionUpdated", onMessageReactionUpdated);
         connection.on("UserTyping", onTyping);
         connection.on("UserUntyping", ({ userId, conversationId }) => {
             if (userId === user?.id?.toString()) return;
@@ -251,6 +279,7 @@ export function ChatProvider({ children }) {
         return () => {
             connection.off("ReceiveMessage", receiveMessage);
             connection.off("MessageUpdated", updateMessage);
+            connection.off("MessageReactionUpdated", onMessageReactionUpdated);
             connection.off("UserTyping", onTyping);
             connection.off("UserUntyping");
             connection.off("UserOnline", onUserOnline);
@@ -280,6 +309,12 @@ export function ChatProvider({ children }) {
         setMessages([]);
         setPageNumber(1);
         setHasMoreMessages(true);
+        setConversationMembers([]);
+        setMembersTotalCount(0);
+        setPinnedMessages([]);
+        setConversationFiles([]);
+        setFilesPage(1);
+        setFilesHasMore(true);
         try {
             const detail = byUserId
                 ? await getConversationByUserIdApi(idOrUserId)
@@ -371,6 +406,89 @@ export function ChatProvider({ children }) {
         }
     };
 
+    // ── Conversation actions ──
+
+    const toggleNotifications = async (conversationId) => {
+        try {
+            const newState = await toggleNotificationsApi(conversationId);
+            setConversations((prev) =>
+                prev.map((c) =>
+                    c.id === conversationId ? { ...c, isNotificationOn: newState } : c
+                )
+            );
+            if (selectedConversation?.id === conversationId) {
+                setSelectedConversation((prev) => ({ ...prev, isNotificationOn: newState }));
+            }
+            return newState;
+        } catch (err) {
+            console.error("Failed to toggle notifications:", err);
+            return null;
+        }
+    };
+
+    const leaveConversation = async (conversationId) => {
+        try {
+            await leaveConversationApi(conversationId);
+            setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+            if (selectedConversation?.id === conversationId) {
+                setSelectedConversation(null);
+            }
+        } catch (err) {
+            console.error("Failed to leave conversation:", err);
+            throw err;
+        }
+    };
+
+    const removeMember = async (conversationId, userIdToRemove) => {
+        try {
+            await removeMemberApi(conversationId, userIdToRemove);
+            setConversationMembers((prev) => prev.filter((m) => m.userId !== userIdToRemove));
+            setMembersTotalCount((prev) => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error("Failed to remove member:", err);
+            throw err;
+        }
+    };
+
+    const assignAdmin = async (conversationId, targetUserId) => {
+        try {
+            await assignAdminApi(conversationId, targetUserId);
+            setConversationMembers((prev) =>
+                prev.map((m) =>
+                    m.userId === targetUserId ? { ...m, role: "Admin" } : m
+                )
+            );
+        } catch (err) {
+            console.error("Failed to assign admin:", err);
+            throw err;
+        }
+    };
+
+    const revokeAdmin = async (conversationId, targetUserId) => {
+        try {
+            await revokeAdminApi(conversationId, targetUserId);
+            setConversationMembers((prev) =>
+                prev.map((m) =>
+                    m.userId === targetUserId ? { ...m, role: "Member" } : m
+                )
+            );
+        } catch (err) {
+            console.error("Failed to revoke admin:", err);
+            throw err;
+        }
+    };
+
+    const kickMember = async (conversationId, userIdToKick) => {
+        try {
+            await kickMemberApi(conversationId, userIdToKick);
+            setConversationMembers((prev) => prev.filter((m) => m.userId !== userIdToKick));
+            setMembersTotalCount((prev) => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error("Failed to kick member:", err);
+            throw err;
+        }
+    };
+
     // ─────────────────────────────────────────────────────────────────────────
     // MESSAGE METHODS
     // ─────────────────────────────────────────────────────────────────────────
@@ -384,7 +502,7 @@ export function ChatProvider({ children }) {
         }
         setMessagesLoading(true);
         try {
-            const data = await getMessagesApi(selectedConversation.id, 1, PAGE_SIZE);
+            const data = await getMessagesAroundApi(selectedConversation.id, null, "down", PAGE_SIZE);
             setMessages(data ?? []);
             setHasMoreMessages((data ?? []).length === PAGE_SIZE);
         } catch (err) {
@@ -399,7 +517,7 @@ export function ChatProvider({ children }) {
         const nextPage = pageNumber + 1;
         setMessagesLoading(true);
         try {
-            const data = await getMessagesApi(selectedConversation.id, nextPage, PAGE_SIZE);
+            const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
             if (!data?.length) {
                 setHasMoreMessages(false);
             } else {
@@ -411,6 +529,20 @@ export function ChatProvider({ children }) {
             console.error("Failed to load more messages:", err);
         } finally {
             setMessagesLoading(false);
+        }
+    };
+
+    const searchMessagesInConversation = async (query, pageNumber = 1, pageSize = 20) => {
+        if (!selectedConversation || !query?.trim()) return;
+        setMessageSearchLoading(true);
+        try {
+            const data = await searchMessagesApi(selectedConversation.id, query, pageNumber, pageSize);
+            return data;
+        } catch (err) {
+            console.error("Failed to search messages:", err);
+            return [];
+        } finally {
+            setMessageSearchLoading(false);
         }
     };
 
@@ -487,6 +619,74 @@ export function ChatProvider({ children }) {
     };
 
     // ─────────────────────────────────────────────────────────────────────────
+    // MEMBERS, PINNED MESSAGES, FILES (for ChatInfo sidebar)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const loadConversationMembers = async (reset = true) => {
+        if (!selectedConversation || !selectedConversation.id || selectedConversation.isVirtual) return;
+        if (reset) {
+            setConversationMembers([]);
+            setMembersTotalCount(0);
+            setMembersHasMore(true);
+        }
+        const nextPage = reset ? 1 : Math.floor(conversationMembers.length / 20) + 1;
+        setMembersLoading(true);
+        try {
+            const data = await getConversationMembersApi(selectedConversation.id, nextPage, 20);
+            const results = data?.results ?? data ?? [];
+            const total = data?.totalCount ?? 0;
+            setConversationMembers((prev) => reset ? results : [...prev, ...results]);
+            setMembersTotalCount(total);
+            setMembersHasMore(results.length === 20);
+        } catch (err) {
+            console.error("Failed to load members:", err);
+        } finally {
+            setMembersLoading(false);
+        }
+    };
+
+    const loadPinnedMessages = async () => {
+        if (!selectedConversation || !selectedConversation.id || selectedConversation.isVirtual) return;
+        setPinnedLoading(true);
+        try {
+            const data = await getMessagesAroundApi(selectedConversation.id, null, "around", 100);
+            const pinned = (data ?? []).filter((m) => m.isPinned);
+            setPinnedMessages(pinned);
+        } catch (err) {
+            console.error("Failed to load pinned messages:", err);
+        } finally {
+            setPinnedLoading(false);
+        }
+    };
+
+    const loadConversationFiles = async (reset = true, mode = filesMode) => {
+        if (!selectedConversation || !selectedConversation.id || selectedConversation.isVirtual) return;
+        if (reset) {
+            setConversationFiles([]);
+            setFilesPage(1);
+            setFilesHasMore(true);
+            setFilesMode(mode);
+        }
+        setFilesLoading(true);
+        try {
+            const data = await getFilesByConversationApi(selectedConversation.id, mode === "media", filesPage, 20);
+            const results = data ?? [];
+            setConversationFiles((prev) => reset ? results : [...prev, ...results]);
+            setFilesHasMore(results.length === 20);
+        } catch (err) {
+            console.error("Failed to load files:", err);
+        } finally {
+            setFilesLoading(false);
+        }
+    };
+
+    const loadMoreFiles = async () => {
+        if (filesLoading || !filesHasMore) return;
+        setFilesPage((prev) => prev + 1);
+        await loadConversationFiles(false, filesMode);
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
     // TYPING INDICATORS (via hub)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -540,6 +740,14 @@ export function ChatProvider({ children }) {
         startConversation,
         setSelectedConversation,
 
+        // Conversation actions
+        toggleNotifications,
+        leaveConversation,
+        removeMember,
+        assignAdmin,
+        revokeAdmin,
+        kickMember,
+
         // Messages
         messages,
         messagesLoading,
@@ -552,6 +760,28 @@ export function ChatProvider({ children }) {
         togglePin,
         reactToMessage,
         markAsSeen,
+        searchMessagesInConversation,
+        messageSearchResults,
+        messageSearchLoading,
+
+        // Members (for ChatInfo)
+        conversationMembers,
+        membersTotalCount,
+        membersLoading,
+        membersHasMore,
+        loadConversationMembers,
+
+        // Pinned messages
+        pinnedMessages,
+        pinnedLoading,
+        loadPinnedMessages,
+
+        // Files/media
+        conversationFiles,
+        filesLoading,
+        filesHasMore,
+        loadConversationFiles,
+        loadMoreFiles,
 
         // Typing
         typingUsers: (typingUsers[selectedConversation?.id] ?? new Set()),
@@ -571,7 +801,7 @@ export function ChatProvider({ children }) {
         friends,
         friendsLoading,
         fetchFriends,
-        createGroup
+        createGroup,
     };
 
     return (

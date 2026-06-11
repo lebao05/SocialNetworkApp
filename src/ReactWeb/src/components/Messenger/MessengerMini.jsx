@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { conversations } from "../../data/mockData";
 
-// ── Dropdown khi click vào tên trong MiniChatBox ──────────────────────────────
+// ── Name dropdown when clicking on name in MiniChatBox ──────────────────────────────
 function NameDropdown({ conv, onClose }) {
   const navigate = useNavigate();
   const ref = useRef(null);
@@ -22,7 +22,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z" />
         </svg>
       ),
-      label: "Được mã hóa đầu cuối",
+      label: "End-to-end encrypted",
       dividerAfter: false,
     },
     {
@@ -31,7 +31,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.836 1.396 5.372 3.584 7.04V22l3.26-1.79c.87.24 1.79.37 2.745.37C17.523 20.58 22 16.435 22 11.337 22 6.238 17.523 2 12 2zm1.2 12.23l-3.048-3.25-5.952 3.25 6.55-6.95 3.12 3.25 5.88-3.25-6.55 6.95z" />
         </svg>
       ),
-      label: "Mở trong Messenger",
+      label: "Open in Messenger",
       action: () => {
         navigate(`/messenger/${conv.id}`);
         onClose();
@@ -43,7 +43,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
         </svg>
       ),
-      label: "Xem trang cá nhân",
+      label: "View profile",
       dividerAfter: true,
     },
     {
@@ -52,7 +52,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
         </svg>
       ),
-      label: "Đổi chủ đề",
+      label: "Change theme",
       blue: true,
     },
     {
@@ -61,7 +61,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
         </svg>
       ),
-      label: "Biểu tượng cảm xúc",
+      label: "Emoji",
       blue: true,
     },
     {
@@ -70,7 +70,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
         </svg>
       ),
-      label: "Biệt danh",
+      label: "Nickname",
       dividerAfter: true,
     },
     {
@@ -79,7 +79,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
         </svg>
       ),
-      label: "Tạo nhóm",
+      label: "Create group",
     },
     {
       icon: (
@@ -87,7 +87,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
         </svg>
       ),
-      label: "Tắt thông báo",
+      label: "Mute",
     },
     {
       icon: (
@@ -95,7 +95,7 @@ function NameDropdown({ conv, onClose }) {
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z" />
         </svg>
       ),
-      label: "Chặn",
+      label: "Block",
     },
   ];
 
@@ -123,7 +123,7 @@ function NameDropdown({ conv, onClose }) {
 }
 
 // ── Mini Chat Box ─────────────────────────────────────────────────────────────
-// ✅ Dùng key={contact.id} ở nơi render để tự reset — không cần useEffect sync state
+// Uses key={contact.id} to auto-reset — no useEffect sync needed
 export function MiniChatBox({ contact, onClose }) {
   const conv = conversations.find((c) => c.name.toLowerCase() === contact.name.toLowerCase()) || {
     id: contact.id,
@@ -132,20 +132,20 @@ export function MiniChatBox({ contact, onClose }) {
     messages: [],
   };
 
-  // ✅ Khởi tạo trực tiếp từ prop, không dùng useEffect để sync
+  // Initialize directly from prop — no useEffect sync needed
   const [messages, setMessages] = useState(conv.messages || []);
   const [msg, setMsg] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const bottomRef = useRef(null);
 
-  // Chỉ dùng useEffect để scroll xuống cuối
+  // Only use useEffect for scroll-to-bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const send = () => {
     if (!msg.trim()) return;
-    setMessages((prev) => [...prev, { id: Date.now(), senderId: 1, text: msg, time: "Vừa xong" }]);
+    setMessages((prev) => [...prev, { id: Date.now(), senderId: 1, text: msg, time: "Just now" }]);
     setMsg("");
   };
 
@@ -156,7 +156,7 @@ export function MiniChatBox({ contact, onClose }) {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-fb-sidebar flex-shrink-0">
-        {/* Tên — click → dropdown */}
+        {/* Name — click for dropdown */}
         <div
           className="relative flex items-center gap-2 cursor-pointer flex-1 min-w-0"
           onClick={() => setShowDropdown((v) => !v)}

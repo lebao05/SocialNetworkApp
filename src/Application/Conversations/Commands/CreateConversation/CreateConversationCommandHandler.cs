@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.SignalR;
 using Application.DTOs.Conversations;
 using Domain.Entities;
 using Domain.Enums;
@@ -14,15 +15,18 @@ namespace Application.Conversations.Commands.CreateConversation
         private readonly IConversationRepository _conversationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IChatHubNotifier _chatHubNotifier;
 
         public CreateConversationCommandHandler(
             IConversationRepository conversationRepository,
             IUserRepository userRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IChatHubNotifier chatHubNotifier)
         {
             _conversationRepository = conversationRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
+            _chatHubNotifier = chatHubNotifier;
         }
 
         public async Task<Result<ConversationDetailDto>> Handle(
@@ -65,6 +69,11 @@ namespace Application.Conversations.Commands.CreateConversation
 
             await _conversationRepository.AddAsync(conversation, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var allMemberIds = new List<Guid> { request.CreatorId };
+            allMemberIds.AddRange(request.ParticipantIds);
+
+            await _chatHubNotifier.AddConnectionsToGroupAsync(conversation.Id, allMemberIds, cancellationToken);
 
             var createdConversation = await _conversationRepository.GetByIdAsync(conversation.Id, cancellationToken);
 

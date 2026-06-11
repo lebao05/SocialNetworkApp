@@ -17,12 +17,14 @@ import {
 } from "lucide-react";
 import { GrGroup } from "react-icons/gr";
 import { useAuth } from "../../contexts/authContext";
+import { useChat } from "../../contexts/ChatContext";
 
-import { conversations } from "../../data/mockData";
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 // ── Messenger Dropdown Panel ───────────────────────────────────────────────────
 function MessengerDropdown({ onClose }) {
   const navigate = useNavigate();
+  const { conversations, isOnline } = useChat();
 
   const handleOpenAll = () => {
     navigate("/messenger");
@@ -30,8 +32,25 @@ function MessengerDropdown({ onClose }) {
   };
 
   const handleOpenConv = (conv) => {
-    navigate(`/messenger/${conv.id}`);
+    const idToUse = conv.isNotInAConversation ? conv.otherUserId : conv.id;
+    navigate(`/messenger/${idToUse}`);
     onClose();
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return "Yesterday";
+    } else if (diffDays < 7) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
   };
 
   return (
@@ -41,7 +60,7 @@ function MessengerDropdown({ onClose }) {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <h2 className="text-[22px] font-bold text-fb-text">Đoạn chat</h2>
+        <h2 className="text-[22px] font-bold text-fb-text">Chats</h2>
         <div className="flex items-center gap-1">
           <button className="w-9 h-9 bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors">
             <MoreHorizontal size={18} />
@@ -49,7 +68,7 @@ function MessengerDropdown({ onClose }) {
           <button
             onClick={handleOpenAll}
             className="w-9 h-9 bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors"
-            title="Mở Messenger"
+            title="Open Messenger"
           >
             <Maximize2 size={16} />
           </button>
@@ -65,14 +84,14 @@ function MessengerDropdown({ onClose }) {
           <Search size={14} className="text-fb-subtext flex-shrink-0" />
           <input
             className="bg-transparent outline-none text-sm flex-1 placeholder-fb-subtext"
-            placeholder="Tìm kiếm trên Messenger"
+            placeholder="Search on Messenger"
           />
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 px-4 pb-2">
-        {["Tất cả", "Chưa đọc", "Nhóm"].map((tab, i) => (
+        {["All", "Unread", "Groups"].map((tab, i) => (
           <button
             key={tab}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
@@ -85,6 +104,9 @@ function MessengerDropdown({ onClose }) {
 
       {/* Conversation list */}
       <div className="overflow-y-auto max-h-[400px]">
+        {conversations.length === 0 && (
+          <p className="text-sm text-fb-subtext text-center py-8">No conversations yet</p>
+        )}
         {conversations.map((conv) => (
           <div
             key={conv.id}
@@ -92,36 +114,47 @@ function MessengerDropdown({ onClose }) {
             className="flex items-center gap-3 px-4 py-2.5 hover:bg-fb-hover cursor-pointer transition-colors"
           >
             <div className="relative flex-shrink-0">
-              <img src={conv.avatar} className="w-14 h-14 rounded-full object-cover" alt={conv.name} />
-              {conv.online && !conv.isGroup && (
+              <img
+                src={conv.imageUrl || DEFAULT_AVATAR}
+                className="w-14 h-14 rounded-full object-cover"
+                alt={conv.name}
+              />
+              {conv.isOneToOne && conv.otherUserId && isOnline(conv.otherUserId) && (
                 <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+              )}
+              {!conv.isOneToOne && (
+                <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-fb-blue rounded-full border-2 border-white flex items-center justify-center">
+                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                  </svg>
+                </span>
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p
                   className={`text-[15px] truncate
-                  ${conv.unread ? "font-bold text-fb-text" : "font-medium text-fb-text"}`}
+                  ${(conv.unreadCount ?? 0) > 0 ? "font-bold text-fb-text" : "font-medium text-fb-text"}`}
                 >
                   {conv.name}
                 </p>
                 <span
                   className={`text-xs flex-shrink-0 ml-2
-                  ${conv.unread ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
+                  ${(conv.unreadCount ?? 0) > 0 ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
                 >
-                  {conv.time}
+                  {formatTime(conv.lastMessageSentAt)}
                 </span>
               </div>
               <p
                 className={`text-sm truncate
-                ${conv.unread ? "font-semibold text-fb-text" : "text-fb-subtext"}`}
+                ${(conv.unreadCount ?? 0) > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}
               >
-                {conv.lastMessage}
+                {conv.lastMessageContent || (conv.isNotInAConversation ? "Start a conversation" : "")}
               </p>
             </div>
-            {conv.unread > 0 && (
+            {(conv.unreadCount ?? 0) > 0 && (
               <span className="w-5 h-5 bg-fb-blue rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-                {conv.unread}
+                {conv.unreadCount}
               </span>
             )}
           </div>
@@ -134,7 +167,7 @@ function MessengerDropdown({ onClose }) {
           onClick={handleOpenAll}
           className="w-full py-3 text-center text-sm font-semibold text-fb-blue hover:bg-fb-hover transition-colors"
         >
-          Xem tất cả trong Messenger
+          See all in Messenger
         </button>
       </div>
     </div>
@@ -182,13 +215,14 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  const { conversations } = useChat();
   const [showMessenger, setShowMessenger] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const messengerRef = useRef(null);
 
   const isMessengerPage = location.pathname.startsWith("/messenger");
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread || 0), 0);
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
 
   useEffect(() => {
     const handler = (e) => {
@@ -233,7 +267,7 @@ export default function Navbar() {
           <Search size={15} className="text-fb-subtext flex-shrink-0" />
           <input
             className="bg-transparent outline-none text-sm w-44 placeholder-fb-subtext"
-            placeholder="Tìm kiếm trên Facebook"
+            placeholder="Search on Facebook"
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -255,7 +289,7 @@ export default function Navbar() {
           <Grid3X3 size={18} />
         </ActionBtn>
 
-        {/* Messenger — ẩn khi đang ở trang /messenger */}
+        {/* Messenger — hidden when on /messenger page */}
         {!isMessengerPage && (
           <div className="relative" ref={messengerRef}>
             <ActionBtn badge={totalUnread} active={showMessenger} onClick={() => setShowMessenger((v) => !v)}>

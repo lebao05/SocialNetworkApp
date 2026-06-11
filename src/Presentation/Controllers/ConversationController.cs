@@ -67,22 +67,6 @@ public class ConversationController : ApiController
             return HandleFailure(result);
         }
 
-        // Notify members that creator is online
-        bool creatorOnline = _presenceTracker.IsOnline(userIdClaim.ToString());
-        if (creatorOnline)
-        {
-            var memberIds = await _conversationRepository.GetMemberIdsAsync(result.Value.Id, cancellationToken);
-
-            foreach (var memberId in memberIds)
-            {
-                var connections = await _userRepository.GetConnectionsAsync(memberId, cancellationToken);
-                foreach (var connectionId in connections)
-                {
-                    await _hubNotifier.NotifyUserOnlineToConnectionAsync(connectionId, userIdClaim.ToString(), cancellationToken);
-                }
-            }
-        }
-
         return Ok(result.Value);
     }
 

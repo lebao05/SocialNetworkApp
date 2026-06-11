@@ -82,8 +82,8 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
   }, [schools]);
 
   const menuItems = [
-    { id: 'Personal Information', label: 'Thông tin cá nhân' },
-    { id: 'Education', label: 'Học vấn' },
+    { id: 'Personal Information', label: 'Personal Information' },
+    { id: 'Education', label: 'Education' },
   ];
 
   const handleSavePersonal = (field) => {
@@ -160,7 +160,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
   };
 
   const handleDeleteSchool = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa trường học này?")) {
+    if (window.confirm("Are you sure you want to delete this school?")) {
       try {
         await deleteSchoolApi(id);
         setIsEditingSchool(false);
@@ -231,16 +231,16 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
         <div className="flex items-center gap-2 ml-4">
           {isEditing ? (
             <div className="flex items-center gap-2">
-              <button onClick={() => handleSavePersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500" title="Lưu">
+              <button onClick={() => handleSavePersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500" title="Save">
                 <Check size={16} />
               </button>
-              <button onClick={() => handleCancelPersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500" title="Hủy">
+              <button onClick={() => handleCancelPersonal(fieldName)} className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500" title="Cancel">
                 <X size={16} />
               </button>
             </div>
           ) : (
             hasValue && editable && (
-              <button onClick={() => setEditingField(fieldName)} className={`w-8 h-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 ${theme.btnGray}`} title="Chỉnh sửa">
+              <button onClick={() => setEditingField(fieldName)} className={`w-8 h-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 ${theme.btnGray}`} title="Edit">
                 <Edit2 size={14} />
               </button>
             )
@@ -254,7 +254,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
     <div className={`${theme.card} rounded-xl shadow p-6 flex flex-col md:flex-row gap-6 transition-colors duration-200`}>
       {/* Left Side Menu */}
       <div className={`md:w-1/3 flex flex-col gap-1 border-r ${theme.border} pr-4`}>
-        <h3 className={`text-xl font-bold mb-4 ${theme.text}`}>Giới thiệu</h3>
+        <h3 className={`text-xl font-bold mb-4 ${theme.text}`}>About</h3>
         {menuItems.map((item) => (
           <button
             key={item.id}
@@ -270,24 +270,24 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
       <div className="flex-1 flex flex-col gap-6">
         {activeSubTab === 'Personal Information' && (
           <div>
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Vị trí</h4>
-            {renderField('Tỉnh/Thành phố hiện tại', editValues.currentCity, 'currentCity', <Home />)}
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Location</h4>
+            {renderField('Current city', editValues.currentCity, 'currentCity', <Home />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Quê quán</h4>
-            {renderField('Quê quán', editValues.hometown, 'hometown', <MapPin />)}
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Hometown</h4>
+            {renderField('Hometown', editValues.hometown, 'hometown', <MapPin />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Sinh nhật</h4>
-            {renderField('Ngày sinh', profileDetails?.birthDate && profileDetails?.birthYear ? `${profileDetails.birthDate}, ${profileDetails.birthYear}` : (profileDetails?.birthDate || profileDetails?.birthYear || ''), 'birthDate', <Cake />)}
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Birthday</h4>
+            {renderField('Date of birth', profileDetails?.birthDate && profileDetails?.birthYear ? `${profileDetails.birthDate}, ${profileDetails.birthYear}` : (profileDetails?.birthDate || profileDetails?.birthYear || ''), 'birthDate', <Cake />)}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Trạng thái</h4>
-            {renderField('Tình trạng mối quan hệ', editValues.relationship, 'relationship', <Heart />, ['Độc thân', 'Đang hẹn hò', 'Đã đính hôn', 'Đã kết hôn', 'Trong một mối quan hệ mở', 'Có mối quan hệ phức tạp', 'Đã ly thân', 'Đã ly hôn', 'Góa', 'Chưa cập nhật'])}
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Status</h4>
+            {renderField('Relationship status', editValues.relationship, 'relationship', <Heart />, ['Single', 'In a relationship', 'Engaged', 'Married', 'In an open relationship', 'It\'s complicated', 'Separated', 'Divorced', 'Widowed', 'Not specified'])}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
-            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Giới tính</h4>
-            {renderField('Giới tính', editValues.gender, 'gender', <Smile />, ['Nam', 'Nữ'])}
+            <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Gender</h4>
+            {renderField('Gender', editValues.gender, 'gender', <Smile />, ['Male', 'Female'])}
             <hr className={`${theme.sidebarHr} mb-4`} />
 
             <h4 className={`text-base font-bold mb-4 ${theme.text}`}>Website</h4>
@@ -298,13 +298,13 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
         {activeSubTab === 'Education' && (
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h4 className={`text-base font-bold ${theme.text}`}>Quá trình học tập</h4>
+              <h4 className={`text-base font-bold ${theme.text}`}>Education history</h4>
               {canEdit && !isEditingSchool && (
                 <button 
                   onClick={handleOpenAddForm} 
                   className="flex items-center gap-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 text-xs font-bold text-[#1877f2] hover:underline px-3 py-1 rounded-lg transition-colors"
                 >
-                  <Plus size={14} /> Thêm trường học
+                  <Plus size={14} /> Add school
                 </button>
               )}
             </div>
@@ -313,12 +313,12 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
             {isEditingSchool && (
               <div className="border border-gray-200 rounded-lg p-4 mb-6 bg-white shadow-sm text-gray-900">
                 <h5 className="text-sm font-bold mb-3 text-gray-900">
-                  {editingSchoolId ? "Cập nhật trường học" : "Thêm mới trường học"}
+                  {editingSchoolId ? "Update school" : "Add new school"}
                 </h5>
                 <div className="flex flex-col gap-4">
                   {/* School Type Selection */}
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-1">Cấp học</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Grade level</label>
                     <select
                       value={schoolForm.type}
                       onChange={(e) => handleSchoolTypeChange(e.target.value)}
@@ -332,13 +332,13 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
 
                   {/* School Name */}
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-1">Tên trường học</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">School name</label>
                     <input
                       type="text"
                       value={schoolForm.name}
                       onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
                       className="w-full rounded-lg p-2 text-sm bg-white border border-gray-300 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nhập tên trường..."
+                      placeholder="Enter school name..."
                     />
                   </div>
 
@@ -346,7 +346,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                   {SCHOOL_TYPES[schoolForm.type].supportsDegree && (
                     <>
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Bằng cấp</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">Degree</label>
                         <select
                           value={schoolForm.degree ?? 0}
                           onChange={(e) => setSchoolForm({ ...schoolForm, degree: parseInt(e.target.value, 10) })}
@@ -374,7 +374,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                   {/* Years */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 block mb-1">Năm bắt đầu</label>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">Start year</label>
                       <input
                         type="number"
                         value={schoolForm.startYear}
@@ -383,7 +383,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 block mb-1">Năm kết thúc</label>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">End year</label>
                       <input
                         type="number"
                         value={schoolForm.endYear}
@@ -400,7 +400,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                         onClick={() => handleDeleteSchool(editingSchoolId)} 
                         className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors flex items-center gap-1"
                       >
-                        <Trash2 size={14} /> Xóa trường
+                        <Trash2 size={14} /> Delete school
                       </button>
                     ) : <div />}
                     
@@ -409,10 +409,10 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                         onClick={() => setIsEditingSchool(false)} 
                         className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                       >
-                        Hủy
+                        Cancel
                       </button>
                       <button onClick={handleSaveSchool} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#1877f2] text-white hover:bg-blue-600 transition-colors">
-                        Lưu thay đổi
+                        Save changes
                       </button>
                     </div>
                   </div>
@@ -434,16 +434,16 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
                         <div>
                           <p className={`font-semibold ${theme.text}`}>{school.name}</p>
                           <p className={`text-xs font-medium text-blue-500`}>
-                            {SCHOOL_TYPES[school.type]?.label || 'Trường học'}
+                            {SCHOOL_TYPES[school.type]?.label || 'School'}
                           </p>
                           {isHigherEd && school.major && (
                             <p className={`text-sm ${theme.text} mt-0.5`}>
-                              Chuyên ngành: <span className="font-medium">{school.major}</span>
+                              Major: <span className="font-medium">{school.major}</span>
                               {school.degree !== null && ` (${DEGREE_TYPES[school.degree]})`}
                             </p>
                           )}
                           <p className={`text-xs ${theme.textSub} mt-0.5`}>
-                            Thời gian: {school.startYear} - {school.endYear}
+                            Duration: {school.startYear} - {school.endYear}
                           </p>
                         </div>
                       </div>
@@ -464,7 +464,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
               ) : (
                 !isEditingSchool && (
                   <p className={`text-center py-6 text-sm ${theme.textSub}`}>
-                    Chưa có thông tin học vấn. Hãy thêm trường học của bạn.
+                    No education info yet. Add your school.
                   </p>
                 )
               )}
@@ -474,7 +474,7 @@ export default function AboutTab({ theme, schools = [], profileDetails, dateOfBi
 
         {activeSubTab !== 'Personal Information' && activeSubTab !== 'Education' && (
           <div className={`flex items-center justify-center h-full min-h-[200px] ${theme.textSub}`}>
-            Mục này đang được phát triển
+            This section is under development
           </div>
         )}
       </div>

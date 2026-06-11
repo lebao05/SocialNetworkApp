@@ -471,7 +471,7 @@ function PendingPostsView({ groupId, type }) {
             const authorAvatar =
               post.authorAvatarUrl ?? post.authorAvatar ?? post.AuthorAvatarUrl ?? null;
             const authorName =
-              post.authorName ?? post.authorName ?? post.AuthorName ?? "Người dùng";
+              post.authorName ?? post.authorName ?? post.AuthorName ?? "User";
             const content = post.content ?? post.Content ?? "";
             const createdAt = post.createdAt ?? post.CreatedAt
               ? new Date(post.createdAt ?? post.CreatedAt)

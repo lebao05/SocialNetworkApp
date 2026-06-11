@@ -699,7 +699,7 @@ export default function ProfilePage() {
                   </button>
                 )}
 
-                {/* Tin nổi bật section */}
+                {/* Featured section */}
                 <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
                   <h3 className={`text-sm font-semibold mb-3 ${theme.text}`}>Featured Stories</h3>
                   <button
@@ -856,7 +856,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Feed Section (Shows "Không có bài viết" empty state or dynamically created posts) */}
+                {/* Feed Section (Shows empty state or dynamically created posts) */}
                 {postsList.length === 0 ? (
                   <div className={`${theme.card} rounded-xl shadow p-12 flex flex-col items-center justify-center text-center transition-colors duration-200`}>
                     <div className={`w-20 h-20 rounded-full ${theme.input} flex items-center justify-center text-3xl mb-4 shadow-inner`}>

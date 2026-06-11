@@ -11,7 +11,6 @@ namespace Application.DTOs.Messages
         string? Content,
         string MessageType,
         DateTime CreatedAt,
-        MessageType MessageType,
         bool IsPinned,
         string? Reaction,
         Guid? ReactionUserId,
@@ -30,13 +29,10 @@ namespace Application.DTOs.Messages
                 Content: message.Content,
                 MessageType: message.MessageType.ToString(),
                 CreatedAt: message.CreatedAt,
-                MessageType: message.MessageType,
                 IsPinned: message.IsPinned,
                 Reaction: message.Reaction,
                 ReactionUserId: message.ReactionUserId,
-
                 Attachment: AttachmentDto.FromDomain(message.Attachment),
-
                 ForwardFromMessageId: message.ForwardFromMessageId
             );
         }

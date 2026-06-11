@@ -11,8 +11,8 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 // ══════════════════════════════════════════════════════════════════
 // Panel 1 — Conversation List
 // ══════════════════════════════════════════════════════════════════
-function ConvList({ selected, onSelect }) {
-  const { conversations, searchResults, isSearching, performSearch, fetchConversations } = useChat();
+function ConvList({ selected, onSelect, onSelectUser }) {
+  const { conversations, searchResults, isSearching, performSearch, fetchConversations, isOnline } = useChat();
   const [tab, setTab] = useState("all");
   const [searchVal, setSearchVal] = useState("");
 
@@ -95,7 +95,16 @@ function ConvList({ selected, onSelect }) {
               ${selected?.id === conv.id ? "bg-blue-50" : "hover:bg-[#F0F2F5]"}`}
           >
             <div className="relative flex-shrink-0">
-              <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-14 h-14 rounded-full object-cover" alt={conv.name} />
+              {conv.isOneToOne && conv.otherUserId ? (
+                <img
+                  src={conv.imageUrl || DEFAULT_AVATAR}
+                  className="w-14 h-14 rounded-full object-cover cursor-pointer"
+                  alt={conv.name}
+                  onClick={(e) => { e.stopPropagation(); onSelectUser(conv.otherUserId); }}
+                />
+              ) : (
+                <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-14 h-14 rounded-full object-cover" alt={conv.name} />
+              )}
               {!conv.isOneToOne && (
                 <span className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-fb-blue rounded-full border-2 border-white flex items-center justify-center">
                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -103,13 +112,25 @@ function ConvList({ selected, onSelect }) {
                   </svg>
                 </span>
               )}
+              {conv.isOneToOne && conv.otherUserId && isOnline(conv.otherUserId) && (
+                <span className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+              )}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"} text-fb-text`}>
-                  {conv.name}
-                </p>
+                {conv.isOneToOne && conv.otherUserId ? (
+                  <p
+                    className={`text-[15px] truncate cursor-pointer hover:underline ${conv.unreadCount > 0 ? "font-bold" : "font-medium"} text-fb-text`}
+                    onClick={(e) => { e.stopPropagation(); onSelectUser(conv.otherUserId); }}
+                  >
+                    {conv.name}
+                  </p>
+                ) : (
+                  <p className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"} text-fb-text`}>
+                    {conv.name}
+                  </p>
+                )}
                 <span className={`text-xs flex-shrink-0 ml-2 ${conv.unreadCount > 0 ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}>
                   {conv.lastMessageSentAt
                     ? new Date(conv.lastMessageSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -137,7 +158,7 @@ function ConvList({ selected, onSelect }) {
 // ══════════════════════════════════════════════════════════════════
 // Panel 2 — Chat Window
 // ══════════════════════════════════════════════════════════════════
-function ChatWindow({ conv }) {
+function ChatWindow({ conv, isOnline }) {
   const { user } = useAuth();
   const { messages, messagesLoading, loadMessages, sendMessage, markAsSeen } = useChat();
   const bottomRef = useRef(null);
@@ -178,9 +199,9 @@ function ChatWindow({ conv }) {
           <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-10 h-10 rounded-full object-cover" alt={conv.name} />
           <div>
             <p className="font-semibold text-[15px] text-fb-text leading-tight">{conv.name}</p>
-            <p className={`text-xs ${conv.isOnline ? "text-green-500" : "text-fb-subtext"}`}>
+            <p className={`text-xs ${conv.isOneToOne && isOnline(conv.otherUserId) ? "text-green-500" : "text-fb-subtext"}`}>
               {conv.isOneToOne
-                ? conv.isOnline ? "Active now" : "Offline"
+                ? isOnline(conv.otherUserId) ? "Active now" : "Offline"
                 : `${conv.memberCount ?? 0} members`}
             </p>
           </div>
@@ -314,9 +335,9 @@ function MessageInput() {
 // ══════════════════════════════════════════════════════════════════
 // ChatInfo
 // ══════════════════════════════════════════════════════════════════
-function ChatInfo({ conv }) {
+function ChatInfo({ conv, isOnline }) {
   if (!conv) return <div className="w-[340px] bg-white flex-shrink-0 rounded-xl" />;
-  return !conv.isOneToOne ? <ChatInfoGroup conv={conv} /> : <ChatInfoDirect conv={conv} />;
+  return !conv.isOneToOne ? <ChatInfoGroup conv={conv} /> : <ChatInfoDirect conv={conv} isOnline={isOnline} />;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -325,10 +346,10 @@ function ChatInfo({ conv }) {
 export default function MessengerFull() {
   const { convId } = useParams();
   const navigate = useNavigate();
-  const { selectedConversation, selectConversation } = useChat();
+  const { selectedConversation, selectConversation, isOnline } = useChat();
 
   useEffect(() => {
-    if (convId) selectConversation(convId, true);
+    if (convId) selectConversation(convId, false);
   }, [convId]);
 
   const handleSelect = (conv) => {
@@ -337,18 +358,22 @@ export default function MessengerFull() {
     navigate(target, { replace: true });
   };
 
+  const handleSelectUser = (userId) => {
+    navigate(`/profile/${userId}`);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#F0F2F5]">
       <Navbar />
       <div className="flex flex-1 overflow-hidden pt-14 p-2 gap-2">
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-          <ConvList selected={selectedConversation} onSelect={handleSelect} />
+          <ConvList selected={selectedConversation} onSelect={handleSelect} onSelectUser={handleSelectUser} />
         </div>
         <div className="flex-1 min-w-0 rounded-xl overflow-hidden bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-          <ChatWindow key={selectedConversation?.id || selectedConversation?.otherUserId} conv={selectedConversation} />
+          <ChatWindow key={selectedConversation?.id || selectedConversation?.otherUserId} conv={selectedConversation} isOnline={isOnline} />
         </div>
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-white" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-          <ChatInfo conv={selectedConversation} />
+          <ChatInfo conv={selectedConversation} isOnline={isOnline} />
         </div>
       </div>
     </div>

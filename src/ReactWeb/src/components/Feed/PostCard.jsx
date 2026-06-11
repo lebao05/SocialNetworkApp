@@ -633,12 +633,12 @@ export default function PostCard({ post }) {
                   <span className="font-bold hover:underline cursor-pointer">{authorName}</span>
                   {feeling && (
                     <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
-                      đang cảm thấy {feeling.emoji} <span className="font-semibold text-[#050505]">{feeling.label}</span>
+                      is feeling {feeling.emoji} <span className="font-semibold text-[#050505]">{feeling.label}</span>
                     </span>
                   )}
                   {post.locationTag && (
                     <span className="text-gray-500 font-normal text-[14px] flex items-center gap-0.5">
-                      ở <span className="font-semibold text-[#050505]">{post.locationTag}</span>
+                      at <span className="font-semibold text-[#050505]">{post.locationTag}</span>
                     </span>
                   )}
                 </p>

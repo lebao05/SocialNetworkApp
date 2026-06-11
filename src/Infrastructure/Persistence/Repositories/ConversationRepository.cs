@@ -91,8 +91,8 @@ namespace Infrastructure.Persistence.Repositories
                 if (latest != null)
                 {
                     var entry = _context.Entry(conv);
-                    if (!entry.Collection("_messages").IsLoaded)
-                        entry.Collection("_messages").CurrentValue = new List<Message> { latest };
+                    if (!entry.Collection("Messages").IsLoaded)
+                        entry.Collection("Messages").CurrentValue = new List<Message> { latest };
                 }
             }
 
@@ -168,17 +168,6 @@ namespace Infrastructure.Persistence.Repositories
                 .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<List<long>> GetAllConversationIdsAsync(
-            Guid userId,
-            CancellationToken cancellationToken)
-        {
-            return await _context.ConversationMembers
-                .AsNoTracking()
-                .Where(m => m.UserId == userId)
-                .Select(m => m.ConversationId)
                 .ToListAsync(cancellationToken);
         }
 

@@ -94,4 +94,9 @@ public class Message : AggregateRoot
             ReactionUserId = userId;
         }
     }
+
+    public void TogglePin()
+    {
+        IsPinned = !IsPinned;
+    }
 }

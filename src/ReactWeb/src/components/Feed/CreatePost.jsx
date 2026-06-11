@@ -19,7 +19,7 @@ export default function CreatePost({
 
   // Fallback to current authenticated user if propDisplayUser is not passed
   const displayUser = propDisplayUser || {
-    name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Bạn",
+    name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "You",
     avatar: currentUser?.avatarUrl || DEFAULT_AVATAR
   };
 

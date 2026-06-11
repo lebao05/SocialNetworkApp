@@ -20,11 +20,42 @@ export async function sendMessageApi({ conversationId, content, files = [] }) {
 }
 
 /**
- * Get messages with pagination
+ * Search messages within a conversation.
  */
-export async function getMessagesApi(conversationId, pageNumber = 1, pageSize = 20) {
-    const response = await axios.get("/messages", {
-        params: { conversationId, pageNumber, pageSize },
+export async function searchMessagesApi(conversationId, query, pageNumber = 1, pageSize = 20) {
+    const response = await axios.get("/messages/search", {
+        params: { conversationId, query, pageNumber, pageSize },
+    });
+    return response.data;
+}
+
+/**
+ * Get messages around an anchor message.
+ * @param {long} conversationId
+ * @param {long|null} anchorMessageId - anchor message id (null for initial load)
+ * @param {"up"|"down"|"around"} [direction="down"] - "up" = older, "down" = newer, "around" = both sides
+ * @param {number} [size=20] - number of messages per side (around = this many each side)
+ */
+export async function getMessagesAroundApi(conversationId, anchorMessageId = null, direction = "down", size = 20) {
+    const response = await axios.get("/messages/around", {
+        params: {
+            conversationId,
+            anchorMessageId: anchorMessageId ?? undefined,
+            direction,
+            size,
+        },
+    });
+    return response.data;
+}
+
+/**
+ * Get files (media or all) from a conversation.
+ * @param {long} conversationId
+ * @param {boolean} [isMedia=true] - true = media files only, false = all files
+ */
+export async function getFilesByConversationApi(conversationId, isMedia = true, pageNumber = 1, pageSize = 20) {
+    const response = await axios.get(`/messages/${conversationId}/files`, {
+        params: { isMedia, pageNumber, pageSize },
     });
     return response.data;
 }

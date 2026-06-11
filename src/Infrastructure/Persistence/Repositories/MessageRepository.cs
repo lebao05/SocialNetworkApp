@@ -148,5 +148,22 @@ namespace Infrastructure.Persistence.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<Message>> GetPinnedMessagesAsync(
+            long conversationId,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Messages
+                .Where(m => m.ConversationId == conversationId && m.IsPinned && m.DeletedAt == null)
+                .AsNoTracking()
+                .Include(m => m.Creator)
+                .Include(m => m.Attachment)
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

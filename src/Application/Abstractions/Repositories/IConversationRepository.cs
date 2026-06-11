@@ -35,7 +35,6 @@ namespace Application.Abstractions.Repositories
             int pageNumber,
             int pageSize,
             CancellationToken cancellationToken);
-        Task<List<long>> GetAllConversationIdsAsync(Guid userId, CancellationToken cancellationToken);
         Task<List<Guid>> GetMemberIdsAsync(long conversationId, CancellationToken cancellationToken);
     }
 }

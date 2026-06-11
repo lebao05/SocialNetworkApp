@@ -85,7 +85,7 @@ export default function StoryBar() {
               </div>
             </div>
           </div>
-          <span className="text-[11px] text-[#65676b] font-medium text-center leading-tight">Tạo tin</span>
+          <span className="text-[11px] text-[#65676b] font-medium text-center leading-tight">Create story</span>
         </button>
 
         <div className="w-px h-10 bg-[#dddfe2] shrink-0 mx-1" />

@@ -116,7 +116,7 @@ function formatRelativeDate(dateStr) {
   const d = new Date(dateStr);
   const diffMs = now - d;
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "Vừa xong";
+  if (diffMin < 1) return "Just now";
   if (diffMin < 60) return `${diffMin}m`;
   const diffHr = Math.floor(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h`;
@@ -131,15 +131,15 @@ function EmptyState() {
       <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f2f5]">
         <Bookmark size={36} className="text-[#bcc0c4]" />
       </div>
-      <h2 className="mb-2 text-2xl font-bold text-[#050505]">Chưa có bài viết đã lưu</h2>
+      <h2 className="mb-2 text-2xl font-bold text-[#050505]">No saved posts</h2>
       <p className="mb-8 max-w-sm text-[15px] text-[#65676b] leading-relaxed">
-        Lưu bài viết mà bạn muốn xem lại sau. Nhấn vào biểu tượng <span className="font-semibold text-[#050505]">dấu trang</span> trên bất kỳ bài viết nào để lưu nó vào đây.
+        Save posts you want to revisit later. Click the <span className="font-semibold text-[#050505]">bookmark</span> icon on any post to save it here.
       </p>
       <button
         type="button"
         className="rounded-lg bg-[#1877f2] px-6 py-2.5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#166fe5]"
       >
-        Tìm bài viết để lưu
+        Find posts to save
       </button>
     </div>
   );
@@ -173,8 +173,8 @@ export default function SavedPage() {
   }, []);
 
   const FILTERS = [
-    { key: "all", label: "Tất cả" },
-    { key: "posts", label: "Bài viết" },
+    { key: "all", label: "All" },
+    { key: "posts", label: "Posts" },
     { key: "reels", label: "Reels" },
   ];
 
@@ -191,8 +191,8 @@ export default function SavedPage() {
                 <Bookmark size={22} className="text-[#1877f2]" />
               </div>
               <div>
-                <h1 className="text-[22px] font-bold text-[#050505] leading-tight">Đã lưu</h1>
-                <p className="text-[13px] text-[#65676b]">{savedItems.length} mục đã lưu</p>
+                <h1 className="text-[22px] font-bold text-[#050505] leading-tight">Saved</h1>
+                <p className="text-[13px] text-[#65676b]">{savedItems.length} saved items</p>
               </div>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function SavedPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Tìm kiếm..."
+                  placeholder="Search..."
                   className="h-9 w-44 rounded-lg border border-[#ddd] bg-white pl-9 pr-3 text-[14px] text-[#050505] placeholder-[#bcc0c4] outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2]/20 sm:w-56"
                 />
                 {search && (
@@ -247,7 +247,7 @@ export default function SavedPage() {
                   type="button"
                   onClick={() => setLayout("grid")}
                   className={`rounded p-1.5 transition-colors ${layout === "grid" ? "bg-[#e7f3ff] text-[#1877f2]" : "text-[#65676b] hover:bg-[#f2f2f2]"}`}
-                  title="Lưới"
+                  title="Grid"
                 >
                   <Grid size={16} />
                 </button>
@@ -255,7 +255,7 @@ export default function SavedPage() {
                   type="button"
                   onClick={() => setLayout("list")}
                   className={`rounded p-1.5 transition-colors ${layout === "list" ? "bg-[#e7f3ff] text-[#1877f2]" : "text-[#65676b] hover:bg-[#f2f2f2]"}`}
-                  title="Danh sách"
+                  title="List"
                 >
                   <List size={16} />
                 </button>
@@ -269,7 +269,7 @@ export default function SavedPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader size={28} className="animate-spin text-[#1877f2]" />
-              <p className="text-[14px] text-[#65676b]">Đang tải bài viết đã lưu...</p>
+              <p className="text-[14px] text-[#65676b]">Loading saved posts...</p>
             </div>
           ) : filtered.length === 0 ? (
             search ? (
@@ -277,8 +277,8 @@ export default function SavedPage() {
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f2f5]">
                   <Search size={24} className="text-[#bcc0c4]" />
                 </div>
-                <p className="text-[15px] font-semibold text-[#050505]">Không tìm thấy kết quả</p>
-                <p className="mt-1 text-[13px] text-[#65676b]">Thử từ khóa khác</p>
+                <p className="text-[15px] font-semibold text-[#050505]">No results found</p>
+                <p className="mt-1 text-[13px] text-[#65676b]">Try different keywords</p>
               </div>
             ) : (
               <EmptyState />
@@ -317,12 +317,12 @@ export default function SavedPage() {
                       className="flex items-center gap-1 rounded-md bg-white/20 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/30 disabled:opacity-50"
                     >
                       <Bookmark size={12} className="fill-white" />
-                      {removingId === item.id ? "..." : "Bỏ lưu"}
+                      {removingId === item.id ? "..." : "Unsave"}
                     </button>
                   </div>
                   {/* Saved date */}
                   <div className="absolute top-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
-                    Đã lưu {formatRelativeDate(item.savedAt)}
+                    Saved {formatRelativeDate(item.savedAt)}
                   </div>
                 </div>
               ))}
@@ -334,7 +334,7 @@ export default function SavedPage() {
                   <PostCard key={item.id} post={item.post} />
                   <div className="absolute right-4 top-4 flex items-center gap-2">
                     <span className="rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
-                      Đã lưu {formatRelativeDate(item.savedAt)}
+                      Saved {formatRelativeDate(item.savedAt)}
                     </span>
                     <button
                       type="button"
@@ -343,7 +343,7 @@ export default function SavedPage() {
                       className="flex items-center gap-1 rounded-md bg-white/90 px-3 py-1.5 text-[13px] font-semibold text-[#050505] shadow-sm backdrop-blur-sm transition-colors hover:bg-white disabled:opacity-50"
                     >
                       <Bookmark size={14} className="text-[#65676b]" />
-                      {removingId === item.id ? "..." : "Bỏ lưu"}
+                      {removingId === item.id ? "..." : "Unsave"}
                     </button>
                   </div>
                 </div>

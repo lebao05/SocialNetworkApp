@@ -10,6 +10,7 @@ namespace Application.Abstractions.Repositories
         Task<List<Message>> SearchMessagesAsync(long conversationId, string searchTerm, int pageNumber, int pageSize, CancellationToken cancellationToken);
         Task<List<Message>> GetMessagesAroundAsync(long conversationId, long? anchorMessageId, string direction, int size, CancellationToken cancellationToken);
         Task<List<Message>> GetFilesByConversationIdAsync(long conversationId, bool isMedia, int pageNumber, int pageSize, CancellationToken cancellationToken);
+        Task<List<Message>> GetPinnedMessagesAsync(long conversationId, int pageNumber, int pageSize, CancellationToken cancellationToken);
         void Update(Message message);
     }
 }

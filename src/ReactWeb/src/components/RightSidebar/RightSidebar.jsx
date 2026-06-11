@@ -9,13 +9,13 @@ export default function RightSidebar({ onContactClick }) {
         <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-fb-hover cursor-pointer mb-3">
           <span className="text-2xl">🎂</span>
           <p className="text-sm text-fb-text">
-            <span className="font-semibold">{birthdays[0].name}</span> có sinh nhật hôm nay.
+            <span className="font-semibold">{birthdays[0].name}</span> has a birthday today.
           </p>
         </div>
       )}
 
       {/* Sponsored */}
-      <p className="text-fb-subtext font-semibold text-sm mb-2">Được tài trợ</p>
+      <p className="text-fb-subtext font-semibold text-sm mb-2">Sponsored</p>
       {ads.map((ad) => (
         <div key={ad.id} className="flex gap-3 cursor-pointer hover:bg-fb-hover p-2 rounded-lg mb-2">
           <img src={ad.image} className="w-20 h-20 rounded-lg object-cover flex-shrink-0" alt={ad.brand} />
@@ -30,7 +30,7 @@ export default function RightSidebar({ onContactClick }) {
 
       {/* Contacts */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-fb-subtext font-semibold text-sm">Người liên hệ</p>
+        <p className="text-fb-subtext font-semibold text-sm">Contacts</p>
         <div className="flex gap-1">
           <button className="w-8 h-8 rounded-full hover:bg-fb-hover flex items-center justify-center text-fb-subtext">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -60,7 +60,7 @@ export default function RightSidebar({ onContactClick }) {
         </div>
       </div>
 
-      {/* Contact list — click → mở mini chat */}
+      {/* Contact list — click to open mini chat */}
       {contacts.map((c) => (
         <div
           key={c.id}
