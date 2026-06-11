@@ -144,7 +144,7 @@ export function ChatProvider({ children }) {
 
         const receiveMessage = async (message) => {
             const convId = message.conversationId;
-
+            console.log("receiveMessage", message);
             setMessages((prev) => {
                 if (prev.some((m) => m.id === message.id)) return prev;
                 return [...prev, message];
@@ -502,7 +502,7 @@ export function ChatProvider({ children }) {
         }
         setMessagesLoading(true);
         try {
-            const data = await getMessagesAroundApi(selectedConversation.id, null, "down", PAGE_SIZE);
+            const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
             setMessages(data ?? []);
             setHasMoreMessages((data ?? []).length === PAGE_SIZE);
         } catch (err) {

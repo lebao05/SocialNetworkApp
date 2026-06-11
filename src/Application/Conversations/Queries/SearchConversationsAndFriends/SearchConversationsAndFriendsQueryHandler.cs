@@ -33,32 +33,33 @@ namespace Application.Conversations.Queries.SearchConversationsAndFriends
                 return Result.Success(new GlobalSearchResponse(new List<ConversationSearchResponse>()));
             }
 
-            // Execute the three specialized paginated searches in parallel
-            var groupTask = _conversationRepository.SearchGroupConversationsAsync(
+            // Execute the three specialized paginated searches sequentially (not in parallel —
+            // all three share the same DbContext instance, which is not thread-safe)
+            var groupResultsTask = _conversationRepository.SearchGroupConversationsAsync(
                 request.UserId,
                 request.SearchTerm,
                 request.PageNumber,
                 request.PageSize,
                 cancellationToken);
 
-            var oneToOneTask = _conversationRepository.SearchOneToOneConversationsAsync(
+            var groupResults = await groupResultsTask;
+
+            var oneToOneResults = await _conversationRepository.SearchOneToOneConversationsAsync(
                 request.UserId,
                 request.SearchTerm,
                 request.PageNumber,
                 request.PageSize,
                 cancellationToken);
 
-            var friendsTask = _friendshipRepository.SearchFriendsToChatAsync(
+            var friendResults = await _friendshipRepository.SearchFriendsToChatAsync(
                 request.UserId,
                 request.SearchTerm,
                 request.PageNumber,
                 request.PageSize,
                 cancellationToken);
-
-            await Task.WhenAll(groupTask, oneToOneTask, friendsTask);
 
             // 1. Map Group Conversations
-            var groupResults = groupTask.Result.Select(c => 
+            var groupMapped = groupResults.Select(c =>
                 new ConversationSearchResponse(
                     Id: c.Id.ToString(),
                     Name: c.Name ?? "Unnamed Group",
@@ -69,7 +70,7 @@ namespace Application.Conversations.Queries.SearchConversationsAndFriends
                 ));
 
             // 2. Map 1:1 Conversations
-            var oneToOneResults = oneToOneTask.Result.Select(c => 
+            var oneToOneMapped = oneToOneResults.Select(c =>
             {
                 var otherMember = c.Members.FirstOrDefault(m => m.UserId != request.UserId);
                 return new ConversationSearchResponse(
@@ -83,7 +84,7 @@ namespace Application.Conversations.Queries.SearchConversationsAndFriends
             });
 
             // 3. Map New Friends (Not yet in a conversation)
-            var friendResults = friendsTask.Result.Select(u => new ConversationSearchResponse(
+            var friendsMapped = friendResults.Select(u => new ConversationSearchResponse(
                 Id: u.Id.ToString(),
                 Name: $"{u.FirstName} {u.LastName}".Trim(),
                 ImageUrl: u.AvatarUrl,
@@ -93,9 +94,9 @@ namespace Application.Conversations.Queries.SearchConversationsAndFriends
             ));
 
             // Merge and return (sorted by Name)
-            var allResults = groupResults
-                .Concat(oneToOneResults)
-                .Concat(friendResults)
+            var allResults = groupMapped
+                .Concat(oneToOneMapped)
+                .Concat(friendsMapped)
                 .OrderBy(r => r.Name)
                 .ToList();
 

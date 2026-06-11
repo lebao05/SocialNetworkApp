@@ -156,6 +156,22 @@ function ConvList({ selected, onSelect, onSelectUser }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// Helper: format a time label (shown when gap > 10 minutes)
+// ══════════════════════════════════════════════════════════════════
+function formatTimeLabel(date) {
+    const d = new Date(date);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (isToday) return `Today at ${timeStr}`;
+    if (isYesterday) return `Yesterday at ${timeStr}`;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" }) + ` at ${timeStr}`;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // Panel 2 — Chat Window
 // ══════════════════════════════════════════════════════════════════
 function ChatWindow({ conv, isOnline }) {
@@ -191,6 +207,8 @@ function ChatWindow({ conv, isOnline }) {
       </div>
     );
   }
+
+  const isGroup = !conv.isOneToOne;
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -243,24 +261,44 @@ function ChatWindow({ conv, isOnline }) {
           const nextMsg = messages[idx + 1];
           const isFirst = !prevMsg || prevMsg.senderId !== m.senderId;
           const isLast = !nextMsg || nextMsg.senderId !== m.senderId;
-          const showAvatar = !isMe && isLast;
+
+          // Show time label when gap > 10 minutes
+          const showTimeLabel = prevMsg
+            && (new Date(m.createdAt) - new Date(prevMsg.createdAt)) > 10 * 60 * 1000;
+
+          // In group chats: show avatar on last message of a sender's sequence (seen indicator position)
+          const showAvatar = isGroup && !isMe && isLast && m.senderAvatarUrl;
 
           return (
-            <div key={m.id} className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"} ${isFirst ? "mt-3" : "mt-0.5"}`}>
-              {!isMe && (
-                <div className="w-7 flex-shrink-0 self-end mb-0.5">
-                  {showAvatar ? (
-                    <img src={conv.imageUrl || DEFAULT_AVATAR} className="w-7 h-7 rounded-full object-cover" alt="" />
-                  ) : (
-                    <div className="w-7" />
-                  )}
+            <React.Fragment key={m.id}>
+              {showTimeLabel && (
+                <div className="flex items-center justify-center my-3">
+                  <span className="px-3 py-1 text-xs text-fb-subtext bg-[#E4E6EB] rounded-full">
+                    {formatTimeLabel(m.createdAt)}
+                  </span>
                 </div>
               )}
-              <div className={`max-w-[65%] px-3 py-2 text-sm leading-relaxed ${isMe ? "bg-fb-blue text-white rounded-2xl" : "bg-[#F0F2F5] text-fb-text rounded-2xl"}`}>
-                {m.content}
-                {m.reaction && <span className="ml-1 text-xs">{m.reaction}</span>}
+              <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"} ${isFirst ? "mt-3" : "mt-0.5"}`}>
+                {!isMe && (
+                  <div className="w-7 flex-shrink-0 self-end mb-0.5">
+                    {showAvatar ? (
+                      <img
+                        src={m.senderAvatarUrl}
+                        className="w-7 h-7 rounded-full object-cover"
+                        alt={m.senderName ?? ""}
+                        onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+                      />
+                    ) : (
+                      <div className="w-7" />
+                    )}
+                  </div>
+                )}
+                <div className={`max-w-[65%] px-3 py-2 text-sm leading-relaxed ${isMe ? "bg-fb-blue text-white rounded-2xl" : "bg-[#F0F2F5] text-fb-text rounded-2xl"}`}>
+                  {m.content}
+                  {m.reaction && <span className="ml-1 text-xs">{m.reaction}</span>}
+                </div>
               </div>
-            </div>
+            </React.Fragment>
           );
         })}
         <div ref={bottomRef} />

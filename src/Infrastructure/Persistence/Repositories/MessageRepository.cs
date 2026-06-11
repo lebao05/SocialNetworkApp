@@ -70,7 +70,7 @@ namespace Infrastructure.Persistence.Repositories
                     query = query.Where(m => m.Id < anchorMessageId.Value);
                 
                 return await query
-                    .OrderByDescending(m => m.Id)
+                    .OrderBy(m => m.Id)
                     .Take(size)
                     .ToListAsync(cancellationToken);
             }
@@ -96,20 +96,18 @@ namespace Infrastructure.Persistence.Repositories
                 
                 var up = await query
                     .Where(m => m.Id < anchorMessageId.Value)
-                    .OrderByDescending(m => m.Id)
                     .Take(half)
                     .ToListAsync(cancellationToken);
 
                 var down = await query
                     .Where(m => m.Id > anchorMessageId.Value)
-                    .OrderBy(m => m.Id)
                     .Take(half)
                     .ToListAsync(cancellationToken);
 
                 var result = up.Concat(down).ToList();
                 if (anchorMessage != null) result.Add(anchorMessage);
                 
-                return result.OrderByDescending(m => m.Id).ToList();
+                return result.OrderBy(m => m.Id).ToList();
             }
         }
 
