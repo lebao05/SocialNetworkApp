@@ -10,18 +10,16 @@ namespace Infrastructure.SignalR;
 public class CallHub : Hub
 {
     private readonly IUserRepository _userRepository;
-    private readonly IPresenceTracker _presenceTracker;
     private readonly ICallHubNotifier _callHubNotifier;
 
     public CallHub(
         IUserRepository userRepository,
-        IPresenceTracker presenceTracker,
         ICallHubNotifier callHubNotifier)
     {
         _userRepository = userRepository;
-        _presenceTracker = presenceTracker;
         _callHubNotifier = callHubNotifier;
     }
+
     public override async Task OnConnectedAsync()
     {
         var userId = GetUserId();
@@ -47,6 +45,7 @@ public class CallHub : Hub
 
         await base.OnDisconnectedAsync(exception);
     }
+
     private Guid GetUserId()
     {
         var userIdStr = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -55,24 +54,19 @@ public class CallHub : Hub
             : throw new Exception("UserId not found");
     }
 
-    /// <summary>Initiate a 1:1 audio call. Notifies the callee via SignalR.</summary>
-    public async Task StartCall(string targetUserId)
+    /// <summary>Initiate a 1:1 audio/video call. Notifies the callee via SignalR.</summary>
+    public async Task StartCall(string targetUserId, bool isVideo = false)
     {
         var callerId = GetUserId();
-        var calleeConnections = _presenceTracker.GetConnections(targetUserId);
-
-        if (calleeConnections.Count == 0)
-        {
-            throw new HubException("User is not online.");
-        }
+        var targetId = Guid.Parse(targetUserId);
 
         var caller = await _userRepository.GetByIdAsync(callerId, CancellationToken.None);
-
         await _callHubNotifier.NotifyIncomingCallAsync(
             callerId,
             $"{caller?.FirstName} {caller?.LastName}",
             caller?.AvatarUrl,
-            calleeConnections,
+            isVideo,
+            targetId,
             CancellationToken.None);
     }
 
@@ -80,14 +74,9 @@ public class CallHub : Hub
     public async Task AcceptCall(string callerUserId)
     {
         var calleeId = GetUserId();
-        var callerConnections = _presenceTracker.GetConnections(callerUserId);
-
-        if (callerConnections.Count == 0) return;
-
         await _callHubNotifier.NotifyCallAcceptedAsync(
             Guid.Parse(callerUserId),
             calleeId,
-            callerConnections,
             CancellationToken.None);
     }
 
@@ -95,14 +84,9 @@ public class CallHub : Hub
     public async Task RejectCall(string callerUserId)
     {
         var calleeId = GetUserId();
-        var callerConnections = _presenceTracker.GetConnections(callerUserId);
-
-        if (callerConnections.Count == 0) return;
-
         await _callHubNotifier.NotifyCallRejectedAsync(
             Guid.Parse(callerUserId),
             calleeId,
-            callerConnections,
             CancellationToken.None);
     }
 
@@ -110,19 +94,11 @@ public class CallHub : Hub
     public async Task SendSignal(string targetUserId, string signalType, string signalData)
     {
         var senderId = GetUserId();
-        var targetConnections = _presenceTracker.GetConnections(targetUserId);
-
-        if (targetConnections.Count == 0)
-        {
-            throw new HubException("Target user is not online.");
-        }
-
         await _callHubNotifier.RelaySignalAsync(
             senderId,
             Guid.Parse(targetUserId),
             signalType,
             signalData,
-            targetConnections,
             CancellationToken.None);
     }
 

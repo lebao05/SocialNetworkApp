@@ -48,7 +48,9 @@ export default function ActiveCallUI() {
   if (callState !== "active" && callState !== "calling") return null;
 
   const targetOnline = callTarget?.id ? isOnline(callTarget.id) : false;
-  const showVideo = isVideoCall && callState === "active";
+  const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
+  const hasLocalVideo = localStream && localStream.getVideoTracks().length > 0;
+  const showVideo = (hasRemoteVideo || hasLocalVideo) && callState === "active";
 
   return (
     <>
@@ -155,7 +157,7 @@ export default function ActiveCallUI() {
           )}
 
           {/* Local video PIP */}
-          {showVideo && localStream && (
+          {showVideo && hasLocalVideo && (
             <div className="absolute bottom-32 right-6 w-36 h-24 bg-black rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
               <video
                 ref={localVideoRef}
@@ -206,8 +208,8 @@ export default function ActiveCallUI() {
             </svg>
           </button>
 
-          {/* Video toggle — only show for video calls */}
-          {isVideoCall && (
+          {/* Video toggle — only show when local video track exists */}
+          {hasLocalVideo && (
             <button
               onClick={toggleVideo}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors cursor-pointer

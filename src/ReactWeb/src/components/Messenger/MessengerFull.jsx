@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import EmojiPicker from "emoji-picker-react";
 import Navbar from "../Navbar/Navbar";
 import ChatInfoGroup from "./ChatInfoGroup";
 import ChatInfoDirect from "./ChatInfoDirect";
@@ -7,18 +8,27 @@ import CreateGroupModal from "./CreateGroupModal";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 import { useCall } from "../../contexts/CallContext";
+import { CHAT_THEMES, getChatTheme, getThemeAccentColor } from "../../data/chatThemes";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
 
-const REACTION_TYPES = [
-  { label: "Like", emoji: "\u2764\uFE0F", value: "Like" },
-  { label: "Love", emoji: "\uD83D\uDE0D", value: "Love" },
-  { label: "Haha", emoji: "\uD83D\uDE02", value: "Haha" },
-  { label: "Wow", emoji: "\uD83D\uDE2E", value: "Wow" },
-  { label: "Sad", emoji: "\uD83D\uDE22", value: "Sad" },
-  { label: "Angry", emoji: "\uD83D\uDE20", value: "Angry" },
+export const REACTION_TYPES = [
+  { label: "Like", emoji: "\u2764\uFE0F", value: "Like", color: "#E91E63" },
+  { label: "Love", emoji: "\uD83D\uDE0D", value: "Love", color: "#FF9800" },
+  { label: "Haha", emoji: "\uD83D\uDE02", value: "Haha", color: "#FFEB3B" },
+  { label: "Wow", emoji: "\uD83D\uDE2E", value: "Wow", color: "#FFC107" },
+  { label: "Sad", emoji: "\uD83D\uDE22", value: "Sad", color: "#2196F3" },
+  { label: "Angry", emoji: "\uD83D\uDE20", value: "Angry", color: "#F44336" },
 ];
+
+export function getReactionEmoji(reactionType) {
+  return REACTION_TYPES.find((r) => r.value === reactionType)?.emoji ?? "\u2764\uFE0F";
+}
+
+export function getReactionColor(reactionType) {
+  return REACTION_TYPES.find((r) => r.value === reactionType)?.color ?? "#E91E63";
+}
 
 function isImageType(fileType) {
   if (!fileType) return false;
@@ -124,28 +134,29 @@ function MessageMediaAttachment({ attachment, isMe }) {
       download
       target="_blank"
       rel="noreferrer"
-      className={`mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline transition-colors
-        ${isMe
-          ? "bg-blue-600/20 hover:bg-blue-600/30"
-          : "bg-[#E4E6EB] hover:bg-[#DADBDD]"}`}
+      className={`mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline transition-colors`}
+      style={{
+        backgroundColor: isMe ? `${theme.bubbleSelf}33` : `${theme.bubbleOther}`,
+        color: isMe ? theme.bubbleSelfText : theme.bubbleOtherText,
+      }}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
-        ${isMe ? "bg-blue-500" : "bg-[#DADBDD]"}`}>
-        <svg className={`w-5 h-5 ${isMe ? "text-white" : "text-fb-text"}`} fill="currentColor" viewBox="0 0 24 24">
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: isMe ? theme.bubbleSelf : `${theme.bubbleOther}` }}>
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
         </svg>
       </div>
       <div className="min-w-0">
-        <p className={`text-sm font-medium truncate ${isMe ? "text-white" : "text-fb-text"}`}>
+        <p className="text-sm font-medium truncate">
           {getFileExtension(attachment?.fileUrl)}
         </p>
         {attachment?.fileSize > 0 && (
-          <p className={`text-xs mt-0.5 ${isMe ? "text-blue-200" : "text-fb-subtext"}`}>
+          <p className="text-xs mt-0.5">
             {formatFileSize(attachment.fileSize)}
           </p>
         )}
       </div>
-      <svg className={`w-4 h-4 flex-shrink-0 ml-auto ${isMe ? "text-blue-200" : "text-fb-subtext"}`} fill="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 24 24">
         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
       </svg>
     </a>
@@ -268,12 +279,14 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
           )}
           {displayList.map((conv) => {
             const isSelected = selected?.id === conv.id;
+            const themeAccent = getThemeAccentColor(conv.theme);
             return (
               <div
                 key={conv.id}
                 onClick={() => onSelect(conv)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors
-                  ${isSelected ? "bg-[#E7F3FF]" : "hover:bg-[#F0F2F5]"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors relative
+                  ${isSelected ? `${themeAccent.bg} border-l-2` : "hover:bg-[#F0F2F5]"}`}
+                style={isSelected && conv.theme && conv.theme !== "default" ? { borderLeftColor: themeAccent.color } : {}}
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
@@ -324,7 +337,8 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
                       {conv.lastMessageContent || (conv.isNotInAConversation ? "Start a conversation" : "")}
                     </p>
                     {conv.unreadCount > 0 && (
-                      <span className="ml-2 flex-shrink-0 min-w-[20px] h-5 bg-fb-blue rounded-full flex items-center justify-center text-white text-xs font-bold px-1.5">
+                      <span className="ml-2 flex-shrink-0 min-w-[20px] h-5 rounded-full flex items-center justify-center text-white text-xs font-bold px-1.5"
+                        style={{ backgroundColor: (conv.theme && conv.theme !== "default") ? getThemeAccentColor(conv.theme).color : undefined }}>
                         {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                       </span>
                     )}
@@ -356,6 +370,9 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const { user } = useAuth();
   const { messages, messagesLoading, loadMessages, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers } = useChat();
   const { initiateCall } = useCall();
+
+  const theme = getChatTheme(conv?.theme);
+  const isMidnight = conv?.theme === "midnight";
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
 
@@ -391,14 +408,17 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const isGroup = !conv.isOneToOne;
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ backgroundColor: theme.bg, color: theme.text }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: "1px solid #E4E6EB" }}>
         <div className="flex items-center gap-3">
           {onBack && (
             <button
               onClick={onBack}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+              style={{ color: theme.text, backgroundColor: "transparent" }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.bubbleOther; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -417,8 +437,9 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             onError={(e) => { e.target.src = conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER; }}
           />
           <div className="cursor-pointer" onClick={onToggleInfo}>
-            <p className="font-semibold text-[15px] text-fb-text leading-tight">{conv.name}</p>
-            <p className={`text-xs ${conv.isOneToOne && isOnline(conv.otherUserId) ? "text-green-500" : "text-fb-subtext"}`}>
+            <p className="font-semibold text-[15px] leading-tight" style={{ color: theme.text }}>{conv.name}</p>
+            <p className={`text-xs ${conv.isOneToOne && isOnline(conv.otherUserId) ? "text-green-500" : ""}`}
+              style={{ color: conv.isOneToOne && isOnline(conv.otherUserId) ? undefined : isMidnight ? "#9FA8DA" : "#65676B" }}>
               {conv.isOneToOne
                 ? isOnline(conv.otherUserId) ? "Active now" : "Offline"
                 : `${conv.memberCount ?? 0} members`}
@@ -446,7 +467,13 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
               <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
             </svg>
           </button>
-          <button onClick={onToggleInfo} className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text">
+          <button
+            onClick={onToggleInfo}
+            className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center transition-colors"
+            style={{ color: theme.text, backgroundColor: "transparent" }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.bubbleOther; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
             </svg>
@@ -468,8 +495,8 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             alt={conv.name}
             onError={(e) => { e.target.src = conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER; }}
           />
-          <p className="font-bold text-base text-fb-text">{conv.name}</p>
-          <p className="text-sm text-fb-subtext mt-0.5">
+          <p className="font-bold text-base">{conv.name}</p>
+          <p className="text-sm mt-0.5" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>
             {isGroup ? `${conv.memberCount ?? 0} members` : "Facebook Community"}
           </p>
         </div>
@@ -495,7 +522,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             <React.Fragment key={m.id}>
               {showTimeLabel && (
                 <div className="flex justify-center my-3">
-                  <span className="px-3 py-1 text-xs text-fb-subtext bg-[#E4E6EB] rounded-full">
+                  <span className="px-3 py-1 text-xs rounded-full" style={{ backgroundColor: theme.timeBadge, color: theme.timeText }}>
                     {new Date(m.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
@@ -518,17 +545,18 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
                 <div className={`flex flex-col max-w-[75%] ${isMe ? "items-end" : "items-start"}`}>
                   {/* Sender name */}
                   {!isMe && isGroup && isFirst && (
-                    <span className="text-xs text-fb-subtext mb-0.5 ml-1 font-medium">{m.senderName}</span>
+                    <span className="text-xs mb-0.5 ml-1 font-medium" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>{m.senderName}</span>
                   )}
 
                   {/* Message bubble */}
                   <div
-                    className={`px-3 py-2 text-sm
-                      rounded-2xl ${isMe
-                        ? "bg-fb-blue text-white"
-                        : "bg-[#F0F2F5] text-fb-text"
-                      }`}
-                    style={{ overflowWrap: "break-word", wordBreak: "break-all" }}
+                    className={`px-3 py-2 text-sm rounded-2xl`}
+                    style={{
+                      backgroundColor: isMe ? theme.bubbleSelf : theme.bubbleOther,
+                      color: isMe ? theme.bubbleSelfText : theme.bubbleOtherText,
+                      overflowWrap: "break-word",
+                      wordBreak: "break-all",
+                    }}
                   >
                     <MessageContent message={m} isMe={isMe} />
 
@@ -544,7 +572,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
 
                   {/* Reactions */}
                   {m.reactions?.length > 0 && (
-                    <MessageReactionSummary reactions={m.reactions} currentUserId={user?.id} isMe={isMe} />
+                    <MessageReactionSummary reactions={m.reactions} currentUserId={user?.id} isMe={isMe} theme={theme} />
                   )}
                 </div>
               </div>
@@ -567,7 +595,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
                 />
               ))}
             </div>
-            <span className="text-xs text-fb-subtext">
+            <span className="text-xs" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>
               {Array.from(typingUsers).length === 1 ? "typing..." : "several people typing..."}
             </span>
           </div>
@@ -575,7 +603,14 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
       )}
 
       {/* Input bar */}
-      <MessageInput />
+      <MessageInput
+        theme={theme}
+        isMidnight={isMidnight}
+        conv={conv}
+        messages={messages}
+        reactToMessage={reactToMessage}
+        userId={user?.id}
+      />
     </div>
   );
 }
@@ -605,8 +640,12 @@ function MessageReactionButton({ messageId, reactions, currentUserId, onReact, i
     >
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all
-          ${displayEmoji ? "bg-[#E4E6EB] scale-110 shadow-sm" : "bg-[#E4E6EB] opacity-0 group-hover:opacity-100 shadow-sm"}`}
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all shadow-sm`}
+        style={{
+          backgroundColor: "#E4E6EB",
+          opacity: displayEmoji ? 1 : undefined,
+          transform: displayEmoji ? "scale(1.1)" : undefined,
+        }}
       >
         {displayEmoji ? (
           <span className="text-sm leading-none">{displayEmoji}</span>
@@ -637,7 +676,7 @@ function MessageReactionButton({ messageId, reactions, currentUserId, onReact, i
   );
 }
 
-function MessageReactionSummary({ reactions, currentUserId, isMe }) {
+function MessageReactionSummary({ reactions, currentUserId, isMe, theme }) {
   if (!reactions || reactions.length === 0) return null;
   const grouped = reactions.reduce((acc, r) => {
     if (!acc[r.reactionType]) acc[r.reactionType] = [];
@@ -653,11 +692,14 @@ function MessageReactionSummary({ reactions, currentUserId, isMe }) {
         return (
           <div
             key={type}
-            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors
-              ${isActive ? "border-fb-blue bg-blue-50" : "border-[#E4E6EB] bg-white"}`}
+            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors`}
+            style={{
+              backgroundColor: isActive ? `${theme.bubbleSelf}20` : "white",
+              borderColor: isActive ? theme.bubbleSelf : "#E4E6EB",
+            }}
           >
             <span className="text-sm leading-none">{emoji}</span>
-            <span className="font-medium text-fb-text">{users.length}</span>
+            <span className="font-medium" style={{ color: isActive ? theme.bubbleSelf : theme.text }}>{users.length}</span>
           </div>
         );
       })}
@@ -719,17 +761,39 @@ function FilePreview({ file, onRemove }) {
   );
 }
 
-function MessageInput() {
+function MessageInput({ theme, isMidnight, conv, messages, reactToMessage, userId }) {
   const { sendMessage, startTyping, endTyping } = useChat();
   const [msg, setMsg] = useState("");
   const [files, setFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimerRef = useRef(null);
   const dropZoneRef = useRef(null);
   const photoInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+
+  const defaultReaction = conv?.defaultReaction || "Like";
+  const defaultEmoji = getReactionEmoji(defaultReaction);
+  const defaultColor = getReactionColor(defaultReaction);
+
+  const lastMessage = messages?.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageReaction = lastMessage?.reactions?.find((r) => r.userId === userId);
+  const canSend = (msg.trim() || files.length > 0) && !isSending;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handler);
+    }
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showEmojiPicker]);
 
   const handleChange = (e) => {
     setMsg(e.target.value);
@@ -784,7 +848,10 @@ function MessageInput() {
     if (dropped?.length) addFiles(dropped);
   };
 
-  const canSend = (msg.trim() || files.length > 0) && !isSending;
+  const onEmojiClick = (emojiData) => {
+    setMsg((prev) => prev + emojiData.emoji);
+    inputRef.current?.focus();
+  };
 
   return (
     <div
@@ -843,8 +910,9 @@ function MessageInput() {
         {/* Photo / Image button */}
         <button
           onClick={() => photoInputRef.current?.click()}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text flex-shrink-0 cursor-pointer"
+          className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
           title="Send photo"
+          style={{ color: theme.text }}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
@@ -854,19 +922,48 @@ function MessageInput() {
         {/* Attach file button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text flex-shrink-0 cursor-pointer"
+          className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
           title="Attach file"
+          style={{ color: theme.text }}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
           </svg>
         </button>
 
+        {/* Emoji picker button */}
+        <div className="relative" ref={emojiPickerRef}>
+          <button
+            onClick={() => setShowEmojiPicker((v) => !v)}
+            className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+            title="Emoji"
+            style={{ color: theme.text }}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+            </svg>
+          </button>
+
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 right-0 z-50">
+              <EmojiPicker
+                onEmojiClick={onEmojiClick}
+                autoFocusSearch={false}
+                height={320}
+                width={320}
+                skinTonesDisabled
+                previewConfig={{ showPreview: false }}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Input field */}
-        <div className="flex-1 flex items-center bg-[#F0F2F5] rounded-[20px] px-3 py-1.5 gap-2 mx-1">
+        <div className="flex-1 flex items-center rounded-[20px] px-3 py-1.5 gap-2 mx-1" style={{ backgroundColor: theme.bubbleOther }}>
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent outline-none text-sm placeholder-fb-subtext"
+            className="flex-1 bg-transparent outline-none text-sm"
+            style={{ color: theme.bubbleOtherText }}
             placeholder="Aa"
             value={msg}
             onChange={handleChange}
@@ -874,31 +971,33 @@ function MessageInput() {
           />
         </div>
 
-        {/* Send / Like */}
-        {canSend ? (
-          <button
-            onClick={handleSend}
-            disabled={isSending}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#E4E6EB] transition-colors text-fb-blue flex-shrink-0 cursor-pointer"
-          >
-            {isSending ? (
-              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M1 21L23 12 1 3v7l15 2-15 2v7z" />
-              </svg>
-            )}
-          </button>
-        ) : (
-          <button className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text flex-shrink-0 cursor-pointer">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+        {/* Send / Like — default emoji */}
+        <button
+          onClick={() => {
+            if (lastMessage && !lastMessageReaction) {
+              reactToMessage(lastMessage.id, defaultReaction);
+            }
+          }}
+          disabled={isSending}
+          className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all flex-shrink-0 cursor-pointer"
+          style={{ color: lastMessageReaction ? defaultColor : theme.text }}
+          title={lastMessageReaction ? "Already reacted" : `React with ${defaultReaction}`}
+        >
+          {isSending ? (
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
             </svg>
-          </button>
-        )}
+          ) : canSend ? (
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" style={{ color: theme.bubbleSelf }}>
+              <path d="M1 21L23 12 1 3v7l15 2-15 2v7z" />
+            </svg>
+          ) : (
+            <span className="text-lg leading-none" style={{ transform: "scale(1.15)" }}>
+              {defaultEmoji}
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -991,7 +1090,7 @@ export default function MessengerFull() {
     return (
       <div className="flex flex-col h-screen bg-[#F0F2F5]">
         <Navbar />
-        <div className="flex flex-1 overflow-hidden pt-14">
+        <div className="flex flex-1 overflow-hidden pt-14.5">
           {/* Left panel — always visible */}
           <div className="w-[350px] flex-shrink-0 h-full" style={{ borderRight: "1px solid #E4E6EB" }}>
             <ConvList

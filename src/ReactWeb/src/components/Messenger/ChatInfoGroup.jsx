@@ -5,6 +5,8 @@ import { useAuth } from "../../contexts/authContext";
 import ViewPinnedMessagesModal from "./ViewPinnedMessagesModal";
 import SharedMediaModal from "./SharedMediaModal";
 import AddMemberModal from "./AddMemberModal";
+import ChangeThemeModal from "./ChangeThemeModal";
+import ChangeEmojiModal from "./ChangeEmojiModal";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
@@ -195,6 +197,8 @@ export default function ChatInfoGroup({ conv }) {
   const [showPinned, setShowPinned] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [showTheme, setShowTheme] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
 
   const toggle = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
 
@@ -347,13 +351,13 @@ export default function ChatInfoGroup({ conv }) {
             <div className="pb-2 flex flex-col">
               <InfoRow
                 icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>}
-                label="Edit nickname and colors"
-                onClick={() => { }}
+                label="Change emoji"
+                onClick={() => setShowEmoji(true)}
               />
               <InfoRow
                 icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>}
                 label="Change theme"
-                onClick={() => { }}
+                onClick={() => setShowTheme(true)}
               />
             </div>
           )}
@@ -465,6 +469,22 @@ export default function ChatInfoGroup({ conv }) {
 
       {showAddMember && (
         <AddMemberModal conv={conv} onClose={() => setShowAddMember(false)} />
+      )}
+
+      {showTheme && (
+        <ChangeThemeModal
+          conversationId={conv.id}
+          currentTheme={conv.theme}
+          onClose={() => setShowTheme(false)}
+        />
+      )}
+
+      {showEmoji && (
+        <ChangeEmojiModal
+          conversationId={conv.id}
+          currentEmoji={conv.defaultReaction}
+          onClose={() => setShowEmoji(false)}
+        />
       )}
     </div>
   );

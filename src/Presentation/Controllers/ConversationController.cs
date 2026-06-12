@@ -8,6 +8,8 @@ using Application.Conversations.Commands.LeaveConversation;
 using Application.Conversations.Commands.AssignAdminRole;
 using Application.Conversations.Commands.RevokeAdminRole;
 using Application.Conversations.Commands.KickMemberOut;
+using Application.Conversations.Commands.UpdateConversation;
+using Application.Conversations.Commands.UploadConversationImage;
 using Application.Conversations.Queries.GetConversationDetail;
 using Application.Conversations.Queries.GetConversationMembers;
 using Application.Conversations.Queries.SearchConversationsAndFriends;
@@ -23,6 +25,7 @@ using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Conversations;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace Presentation.Controllers;
 
@@ -273,5 +276,45 @@ public class ConversationController : ApiController
         return result.IsSuccess
             ? Ok(new { results = result.Value, totalCount = result.Value.Count })
             : HandleFailure(result);
+    }
+
+    [HttpPatch("{conversationId:long}")]
+    public async Task<IActionResult> UpdateConversation(
+        long conversationId,
+        [FromBody] UpdateConversationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new UpdateConversationCommand(
+            conversationId,
+            userId,
+            request.Name,
+            request.Theme,
+            request.DefaultReaction
+        );
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpPost("{conversationId:long}/image")]
+    public async Task<IActionResult> UploadConversationImage(
+        long conversationId,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var userId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        if (file == null || file.Length == 0)
+            return BadRequest("File is empty.");
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadConversationImageCommand(conversationId, userId, stream, file.FileName);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(new { Url = result.Value }) : HandleFailure(result);
     }
 }

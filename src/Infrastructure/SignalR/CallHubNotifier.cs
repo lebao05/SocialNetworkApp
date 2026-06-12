@@ -16,18 +16,20 @@ public class CallHubNotifier : ICallHubNotifier
         Guid callerId,
         string callerName,
         string? callerAvatar,
-        IReadOnlyList<string> calleeConnectionIds,
+        bool isVideo,
+        Guid otherId,
         CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Clients(calleeConnectionIds)
+            .User(otherId.ToString())
             .SendAsync(
                 "IncomingCall",
                 new
                 {
                     callerId = callerId.ToString(),
                     callerName,
-                    callerAvatar
+                    callerAvatar,
+                    isVideo
                 },
                 cancellationToken);
     }
@@ -35,11 +37,10 @@ public class CallHubNotifier : ICallHubNotifier
     public async Task NotifyCallAcceptedAsync(
         Guid callerId,
         Guid calleeId,
-        IReadOnlyList<string> callerConnectionIds,
         CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Clients(callerConnectionIds)
+            .User(callerId.ToString())
             .SendAsync(
                 "CallAccepted",
                 new { calleeId = calleeId.ToString() },
@@ -49,11 +50,10 @@ public class CallHubNotifier : ICallHubNotifier
     public async Task NotifyCallRejectedAsync(
         Guid callerId,
         Guid calleeId,
-        IReadOnlyList<string> callerConnectionIds,
         CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Clients(callerConnectionIds)
+            .User(callerId.ToString())
             .SendAsync(
                 "CallRejected",
                 new { calleeId = calleeId.ToString() },
@@ -65,11 +65,10 @@ public class CallHubNotifier : ICallHubNotifier
         Guid targetId,
         string signalType,
         string signalData,
-        IReadOnlyList<string> targetConnectionIds,
         CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Clients(targetConnectionIds)
+            .User(targetId.ToString())
             .SendAsync(
                 "ReceiveSignal",
                 new

@@ -19,6 +19,12 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(c => c.Theme)
                 .HasMaxLength(50);
 
+            builder.Property(c => c.DefaultReaction)
+                .HasMaxLength(100);
+
+            builder.Property(c => c.DefaultReaction)
+                .HasMaxLength(50);
+
             // ❗ Ignore fields so EF doesn't map them separately
             builder.Ignore("_members");
             builder.Ignore("_messages");

@@ -111,3 +111,28 @@ export async function addMemberApi(conversationId, userIdToAdd) {
     });
     return response.data;
 }
+
+/**
+ * Update conversation settings (name, theme, defaultReaction)
+ * Only admins/owners can update. Name is ignored for 1:1 conversations.
+ */
+export async function updateConversationApi(conversationId, { name, theme, defaultReaction }) {
+    const response = await axios.patch(`/conversation/${conversationId}`, {
+        name,
+        theme,
+        defaultReaction
+    });
+    return response.data;
+}
+
+/**
+ * Upload a conversation group image
+ */
+export async function uploadConversationImageApi(conversationId, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await axios.post(`/conversation/${conversationId}/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    });
+    return response.data;
+}

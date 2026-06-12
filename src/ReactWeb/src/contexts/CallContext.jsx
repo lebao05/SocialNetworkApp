@@ -147,11 +147,32 @@ export function CallProvider({ children }) {
 
     // ─── Start local media ─────────────────────────────────────────────────
     const startLocalMedia = async (isVideo) => {
+        const tryConstraints = (constraints) => navigator.mediaDevices.getUserMedia(constraints);
+
+        if (isVideo) {
+            try {
+                const stream = await tryConstraints({ audio: true, video: { facingMode: "user", width: 640, height: 480 } });
+                localStreamRef.current = stream;
+                setLocalStream(stream);
+                setIsVideoOff(false);
+                return stream;
+            } catch (err) {
+                if (err.name === "NotReadableError" || err.name === "NotAllowedError") {
+                    try {
+                        const stream = await tryConstraints({ audio: true, video: false });
+                        localStreamRef.current = stream;
+                        setLocalStream(stream);
+                        setIsVideoOff(true);
+                        return stream;
+                    } catch (_) {}
+                }
+                console.error("Failed to get user media:", err);
+                return null;
+            }
+        }
+
         try {
-            const constraints = isVideo
-                ? { audio: true, video: { facingMode: "user", width: 640, height: 480 } }
-                : { audio: true, video: false };
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await tryConstraints({ audio: true, video: false });
             localStreamRef.current = stream;
             setLocalStream(stream);
             setIsVideoOff(false);

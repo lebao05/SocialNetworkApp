@@ -17,6 +17,8 @@ import {
     revokeAdminApi,
     kickMemberApi,
     addMemberApi,
+    updateConversationApi,
+    uploadConversationImageApi,
 } from "../apis/conversationApi";
 import {
     getMessagesAroundApi,
@@ -492,6 +494,38 @@ function ChatContextInner({ children }) {
         }
     };
 
+    const updateConversation = async (conversationId, { name, theme, defaultReaction }) => {
+        try {
+            const updated = await updateConversationApi(conversationId, { name, theme, defaultReaction });
+            setConversations((prev) =>
+                prev.map((c) => c.id === conversationId ? { ...c, ...updated } : c)
+            );
+            if (selectedConversation?.id === conversationId) {
+                setSelectedConversation((prev) => ({ ...prev, ...updated }));
+            }
+            return updated;
+        } catch (err) {
+            console.error("Failed to update conversation:", err);
+            throw err;
+        }
+    };
+
+    const uploadConversationImage = async (conversationId, file) => {
+        try {
+            const { url } = await uploadConversationImageApi(conversationId, file);
+            setConversations((prev) =>
+                prev.map((c) => c.id === conversationId ? { ...c, imageUrl: url } : c)
+            );
+            if (selectedConversation?.id === conversationId) {
+                setSelectedConversation((prev) => ({ ...prev, imageUrl: url }));
+            }
+            return url;
+        } catch (err) {
+            console.error("Failed to upload conversation image:", err);
+            throw err;
+        }
+    };
+
     const removeMember = async (conversationId, userIdToRemove) => {
         try {
             await removeMemberApi(conversationId, userIdToRemove);
@@ -832,6 +866,8 @@ function ChatContextInner({ children }) {
         revokeAdmin,
         kickMember,
         addMember,
+        updateConversation,
+        uploadConversationImage,
 
         // Messages
         messages,

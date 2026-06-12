@@ -10,6 +10,7 @@ public class Conversation : AggregateRoot
     public string? ImageUrl { get; private set; }
     public string? Name { get; private set; }
     public string? Theme { get; private set; }
+    public string? DefaultReaction { get; private set; }
     public Guid OwnerId { get; private set; }
 
     private readonly List<ConversationMember> _members = new();
@@ -149,5 +150,28 @@ public class Conversation : AggregateRoot
 
         _members.Remove(target);
         return Result.Success();
+    }
+
+    public Result UpdateConversation(Guid requesterId, string? name, string? theme, string? defaultReaction)
+    {
+        var member = _members.FirstOrDefault(m => m.UserId == requesterId);
+        if (member == null)
+            return Result.Failure(new Error("Conversation.NotMember", "You are not a member of this conversation."));
+
+        if (member.Role != ConversationRole.Admin && member.Role != ConversationRole.Owner)
+            return Result.Failure(new Error("Conversation.Forbidden", "Only admins or the owner can update conversation settings."));
+
+        if (!IsOneToOne && !string.IsNullOrWhiteSpace(name))
+            Name = name.Trim();
+
+        Theme = string.IsNullOrWhiteSpace(theme) ? null : theme.Trim();
+        DefaultReaction = string.IsNullOrWhiteSpace(defaultReaction) ? null : defaultReaction.Trim();
+
+        return Result.Success();
+    }
+
+    public void SetImageUrl(string url)
+    {
+        ImageUrl = url;
     }
 }

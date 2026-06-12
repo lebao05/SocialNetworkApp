@@ -192,10 +192,10 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.MapHub<ChatHub>("hubs/chat");
-app.MapHub<CallHub>("hubs/call");
-
 app.UseAuthorization();
 app.MapStaticAssets(); // if you have static assets
+
+app.MapHub<ChatHub>("hubs/chat");
+app.MapHub<CallHub>("hubs/call");
 app.MapControllers();   // map API controllers
 app.Run();
