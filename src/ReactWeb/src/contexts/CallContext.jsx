@@ -9,6 +9,7 @@ export function CallProvider({ children }) {
 
     const [callState, setCallState] = useState("idle");
     const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [callStartTime, setCallStartTime] = useState(null);
 
@@ -17,14 +18,17 @@ export function CallProvider({ children }) {
     const [incomingCall, setIncomingCall] = useState(null);
     const [callTarget, setCallTarget] = useState(null);
 
-    // Keep refs in sync with state so SignalR handlers always see fresh values
+    const [isVideoCall, setIsVideoCall] = useState(false);
+
     const callStateRef = useRef(callState);
     const callTargetRef = useRef(callTarget);
     const incomingCallRef = useRef(incomingCall);
+    const isVideoCallRef = useRef(isVideoCall);
 
     useEffect(() => { callStateRef.current = callState; }, [callState]);
     useEffect(() => { callTargetRef.current = callTarget; }, [callTarget]);
     useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
+    useEffect(() => { isVideoCallRef.current = isVideoCall; }, [isVideoCall]);
 
     const connectionRef = useRef(null);
     const peerConnectionRef = useRef(null);
@@ -39,6 +43,7 @@ export function CallProvider({ children }) {
     ];
 
     const getAudioTrack = () => localStreamRef.current?.getAudioTracks()[0];
+    const getVideoTrack = () => localStreamRef.current?.getVideoTracks()[0];
 
     const stopDurationTimer = () => {
         if (durationTimerRef.current) {
@@ -68,6 +73,9 @@ export function CallProvider({ children }) {
             localStreamRef.current.getAudioTracks().forEach((track) => {
                 pc.addTrack(track, localStreamRef.current);
             });
+            localStreamRef.current.getVideoTracks().forEach((track) => {
+                pc.addTrack(track, localStreamRef.current);
+            });
         }
 
         pc.ontrack = (event) => {
@@ -92,8 +100,7 @@ export function CallProvider({ children }) {
         return pc;
     }, []);
 
-    // ─── Process offer: set remote desc, create + send answer ───────────────
-    // Reads from refs — never needs callTarget/incomingCall in deps, so stays stable
+    // ─── Process offer ──────────────────────────────────────────────────────
     const processOffer = useCallback(async (offerData) => {
         const pc = peerConnectionRef.current;
         if (!pc) {
@@ -105,7 +112,9 @@ export function CallProvider({ children }) {
             await pc.setRemoteDescription(new RTCSessionDescription(offerData));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            const calleeId = incomingCallRef.current?.callerId || callTargetRef.current?.id;
+            setCallState("active");
+            startDurationTimer();
+            const calleeId = callTargetRef.current?.id;
             if (calleeId && connectionRef.current) {
                 await connectionRef.current.invoke("SendSignal", calleeId, "answer", JSON.stringify(answer));
             }
@@ -114,7 +123,7 @@ export function CallProvider({ children }) {
         }
     }, []);
 
-    // ─── Process answer: set remote desc, start call ────────────────────────
+    // ─── Process answer ──────────────────────────────────────────────────────
     const processAnswer = useCallback(async (answerData) => {
         const pc = peerConnectionRef.current;
         if (!pc) return;
@@ -127,7 +136,7 @@ export function CallProvider({ children }) {
         }
     }, []);
 
-    // ─── Flush pending offer if any ─────────────────────────────────────────
+    // ─── Flush pending offer ─────────────────────────────────────────────────
     const flushPendingOffer = useCallback(async () => {
         if (pendingOfferRef.current) {
             const offer = pendingOfferRef.current;
@@ -137,11 +146,15 @@ export function CallProvider({ children }) {
     }, [processOffer]);
 
     // ─── Start local media ─────────────────────────────────────────────────
-    const startLocalMedia = async () => {
+    const startLocalMedia = async (isVideo) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const constraints = isVideo
+                ? { audio: true, video: { facingMode: "user", width: 640, height: 480 } }
+                : { audio: true, video: false };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             localStreamRef.current = stream;
             setLocalStream(stream);
+            setIsVideoOff(false);
             return stream;
         } catch (err) {
             console.error("Failed to get user media:", err);
@@ -152,6 +165,7 @@ export function CallProvider({ children }) {
     const stopLocalMedia = () => {
         if (localStreamRef.current) {
             localStreamRef.current.getAudioTracks().forEach((t) => t.stop());
+            localStreamRef.current.getVideoTracks().forEach((t) => t.stop());
             localStreamRef.current = null;
             setLocalStream(null);
         }
@@ -165,6 +179,7 @@ export function CallProvider({ children }) {
         }
         setRemoteStream(null);
         pendingOfferRef.current = null;
+        setIsVideoCall(false);
     };
 
     // ─── SignalR connection setup ────────────────────────────────────────────
@@ -186,11 +201,11 @@ export function CallProvider({ children }) {
         connection.onreconnected(() => setIsConnected(true));
         connection.onclose(() => setIsConnected(false));
 
-        // Read from refs so closures always see the latest values
-        connection.on("IncomingCall", ({ callerId, callerName, callerAvatar }) => {
+        connection.on("IncomingCall", ({ callerId, callerName, callerAvatar, isVideo }) => {
+            console.log("IncomingCall", { callerId, callerName, callerAvatar, isVideo });
             if (callStateRef.current !== "idle") return;
             pendingOfferRef.current = null;
-            setIncomingCall({ callerId, callerName, callerAvatar });
+            setIncomingCall({ callerId, callerName, callerAvatar, isVideo: isVideo ?? false });
             setCallState("ringing");
         });
 
@@ -215,23 +230,24 @@ export function CallProvider({ children }) {
         });
 
         connection.on("ReceiveSignal", async ({ senderId, signalType, signalData }) => {
-            const data = JSON.parse(signalData);
-            if (signalType === "offer") {
-                await processOffer(data);
-            } else if (signalType === "answer") {
-                await processAnswer(data);
-            } else if (signalType === "ice") {
-                const pc = peerConnectionRef.current;
-                if (pc) {
-                    try {
-                        await pc.addIceCandidate(new RTCIceCandidate(data));
-                    } catch (_) {}
+            try {
+                if (signalType === "offer") {
+                    await processOffer(JSON.parse(signalData));
+                } else if (signalType === "answer") {
+                    await processAnswer(JSON.parse(signalData));
+                } else if (signalType === "ice") {
+                    const pc = peerConnectionRef.current;
+                    if (pc) {
+                        await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(signalData)));
+                    }
+                } else if (signalType === "hangup") {
+                    cleanupCall();
+                    setCallState("idle");
+                    setIncomingCall(null);
+                    setCallTarget(null);
                 }
-            } else if (signalType === "hangup") {
-                cleanupCall();
-                setCallState("idle");
-                setIncomingCall(null);
-                setCallTarget(null);
+            } catch (err) {
+                console.error("ReceiveSignal error:", err);
             }
         });
 
@@ -260,25 +276,28 @@ export function CallProvider({ children }) {
     }, [processOffer, flushPendingOffer]);
 
     // ─── Initiate outgoing call ────────────────────────────────────────────
-    const initiateCall = async (targetUserId, targetName, targetAvatar) => {
+    const initiateCall = async (targetUserId, targetName, targetAvatar, isVideo = false) => {
         stopLocalMedia();
         cleanupCall();
         setCallTarget({ id: targetUserId, name: targetName, avatar: targetAvatar });
         setCallState("calling");
+        setIsVideoCall(isVideo);
         pendingOfferRef.current = null;
 
-        const stream = await startLocalMedia();
+        const stream = await startLocalMedia(isVideo);
         if (!stream) {
             setCallState("idle");
+            setIsVideoCall(false);
             return;
         }
 
         if (connectionRef.current) {
             try {
-                await connectionRef.current.invoke("StartCall", targetUserId);
+                await connectionRef.current.invoke("StartCall", targetUserId, isVideo);
             } catch (err) {
                 console.error("StartCall failed:", err);
                 setCallState("idle");
+                setIsVideoCall(false);
                 cleanupCall();
                 return;
             }
@@ -293,15 +312,19 @@ export function CallProvider({ children }) {
         const callerId = incomingCallRef.current.callerId;
         const callerName = incomingCallRef.current.callerName;
         const callerAvatar = incomingCallRef.current.callerAvatar;
+        const isVideo = incomingCallRef.current.isVideo ?? false;
 
         cleanupCall();
         setIncomingCall(null);
         setCallTarget({ id: callerId, name: callerName, avatar: callerAvatar });
+        setCallState("calling");
+        setIsVideoCall(isVideo);
 
-        const stream = await startLocalMedia();
+        const stream = await startLocalMedia(isVideo);
         if (!stream) {
             setCallState("idle");
             setCallTarget(null);
+            setIsVideoCall(false);
             return;
         }
 
@@ -337,7 +360,7 @@ export function CallProvider({ children }) {
         setCallTarget(null);
         stopDurationTimer();
         if (targetId && connectionRef.current) {
-            connectionRef.current.invoke("SendSignal", targetId, "hangup", "").catch(() => {});
+            connectionRef.current.invoke("SendSignal", targetId, "hangup", "{}").catch(() => {});
         }
     };
 
@@ -348,6 +371,14 @@ export function CallProvider({ children }) {
         track.enabled = !track.enabled;
         setIsMuted(!track.enabled);
     };
+
+    // ─── Toggle video on/off ──────────────────────────────────────────────
+    const toggleVideo = useCallback(() => {
+        const track = getVideoTrack();
+        if (!track) return;
+        track.enabled = !track.enabled;
+        setIsVideoOff(!track.enabled);
+    }, []);
 
     // ─── Format duration ──────────────────────────────────────────────────
     const formatDuration = (seconds) => {
@@ -362,6 +393,8 @@ export function CallProvider({ children }) {
         <CallContext.Provider value={{
             callState,
             isMuted,
+            isVideoOff,
+            isVideoCall,
             callDuration,
             callStartTime,
             localStream,
@@ -373,6 +406,7 @@ export function CallProvider({ children }) {
             rejectCall,
             endCall,
             toggleMute,
+            toggleVideo,
             formatDuration,
         }}>
             {children}

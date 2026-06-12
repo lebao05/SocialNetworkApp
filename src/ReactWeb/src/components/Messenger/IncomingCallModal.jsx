@@ -4,7 +4,7 @@ import { useCall } from "../../contexts/CallContext";
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
 export default function IncomingCallModal() {
-  const { incomingCall, callState, answerCall, rejectCall, formatDuration } = useCall();
+  const { incomingCall, callState, answerCall, rejectCall } = useCall();
   const oscillatorRef = useRef(null);
   const audioCtxRef = useRef(null);
 
@@ -45,11 +45,13 @@ export default function IncomingCallModal() {
 
   if (callState !== "ringing" || !incomingCall) return null;
 
+  const isVideo = incomingCall.isVideo ?? false;
+
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
         <div className="relative bg-white rounded-2xl w-[340px] p-6 flex flex-col items-center" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
-          {/* Avatar */}
+          {/* Avatar with call type badge */}
           <div className="relative mb-4">
             <img
               src={incomingCall.callerAvatar || DEFAULT_AVATAR}
@@ -58,15 +60,23 @@ export default function IncomingCallModal() {
               onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
             />
             <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-4 border-white">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57-.11.35-.02.74-.25 1.01l-2.2 2.21z" />
-              </svg>
+              {isVideo ? (
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57-.11.35-.02.74-.25 1.01l-2.2 2.21z" />
+                </svg>
+              )}
             </div>
           </div>
 
           {/* Name */}
           <h2 className="text-xl font-bold text-fb-text mb-1">{incomingCall.callerName}</h2>
-          <p className="text-sm text-green-500 font-medium mb-6">Incoming audio call...</p>
+          <p className="text-sm text-green-500 font-medium mb-6">
+            {isVideo ? "Incoming video call..." : "Incoming audio call..."}
+          </p>
 
           {/* Buttons */}
           <div className="flex items-center gap-8">

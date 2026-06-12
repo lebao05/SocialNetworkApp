@@ -429,15 +429,19 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
         {/* Action buttons */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => initiateCall(conv.otherUserId, conv.name, conv.otherUserAvatarUrl)}
+            onClick={() => initiateCall(conv.otherUserId, conv.name, conv.otherUserAvatarUrl, false)}
             className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-green-50 transition-colors text-green-600"
-            title="Voice call"
+            title="Audio call"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57-.11.35-.02.74-.25 1.01l-2.2 2.21z" />
             </svg>
           </button>
-          <button className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text">
+          <button
+            onClick={() => initiateCall(conv.otherUserId, conv.name, conv.otherUserAvatarUrl, true)}
+            className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-green-50 transition-colors text-green-600"
+            title="Video call"
+          >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
             </svg>
@@ -989,7 +993,7 @@ export default function MessengerFull() {
         <Navbar />
         <div className="flex flex-1 overflow-hidden pt-14">
           {/* Left panel — always visible */}
-          <div className="w-[400px] flex-shrink-0 h-full" style={{ borderRight: "1px solid #E4E6EB" }}>
+          <div className="w-[350px] flex-shrink-0 h-full" style={{ borderRight: "1px solid #E4E6EB" }}>
             <ConvList
               selected={selectedConversation}
               onSelect={handleSelect}

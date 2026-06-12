@@ -9,29 +9,46 @@ export default function ActiveCallUI() {
     callState,
     callTarget,
     isMuted,
+    isVideoOff,
+    isVideoCall,
     callDuration,
     formatDuration,
     toggleMute,
+    toggleVideo,
     endCall,
     remoteStream,
+    localStream,
     incomingCall,
   } = useCall();
 
   const { isOnline } = useChat();
   const audioRef = useRef(null);
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   const targetAvatar = callTarget?.avatar || DEFAULT_AVATAR;
 
-  // Attach remote stream to audio element
+  // Attach remote stream to audio/video elements
   useEffect(() => {
     if (audioRef.current && remoteStream) {
       audioRef.current.srcObject = remoteStream;
       audioRef.current.play().catch(() => {});
     }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
   }, [remoteStream]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
 
   if (callState !== "active" && callState !== "calling") return null;
 
   const targetOnline = callTarget?.id ? isOnline(callTarget.id) : false;
+  const showVideo = isVideoCall && callState === "active";
 
   return (
     <>
@@ -85,44 +102,75 @@ export default function ActiveCallUI() {
           )}
         </div>
 
-        {/* Center avatar */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          {/* Avatar */}
-          <div className="relative">
-            <img
-              src={targetAvatar}
-              className={`w-40 h-40 rounded-full object-cover ${callState === "active" && !isMuted ? "ring-4 ring-green-400" : "ring-4 ring-white/20"}`}
-              alt={callTarget?.name}
-              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+        {/* Remote video / Avatar area */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 relative">
+          {/* Remote video */}
+          {showVideo && remoteStream ? (
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
             />
-            {/* Animated rings when speaking */}
-            {callState === "active" && !isMuted && (
-              <div className="absolute inset-0 rounded-full">
-                <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" />
-                <div className="absolute inset-0 rounded-full border-2 border-green-400/20 animate-ping" style={{ animationDelay: "0.5s" }} />
-              </div>
-            )}
-          </div>
-
-          {/* Status text */}
-          <p className="text-white/70 text-base">
-            {callState === "calling" ? "Calling..." : "In call"}
-          </p>
-
-          {/* Waveform placeholder */}
-          {callState === "active" && !isMuted && (
-            <div className="flex items-center gap-1 h-12">
-              {[0.4, 0.7, 1.0, 0.6, 0.8, 0.5, 0.9, 0.3, 0.7, 1.0, 0.5, 0.8, 0.4, 0.9, 0.6].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-1 bg-green-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]"
-                  style={{
-                    height: `${h * 100}%`,
-                    animationDelay: `${i * 0.07}s`,
-                    opacity: 0.6 + h * 0.4,
-                  }}
+          ) : (
+            <>
+              {/* Avatar */}
+              <div className="relative">
+                <img
+                  src={targetAvatar}
+                  className={`w-40 h-40 rounded-full object-cover ${callState === "active" && !isMuted ? "ring-4 ring-green-400" : "ring-4 ring-white/20"}`}
+                  alt={callTarget?.name}
+                  onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
                 />
-              ))}
+                {callState === "active" && !isMuted && (
+                  <div className="absolute inset-0 rounded-full">
+                    <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" />
+                    <div className="absolute inset-0 rounded-full border-2 border-green-400/20 animate-ping" style={{ animationDelay: "0.5s" }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Status text */}
+              <p className="text-white/70 text-base">
+                {callState === "calling" ? "Calling..." : "In call"}
+              </p>
+
+              {/* Waveform */}
+              {callState === "active" && !isMuted && (
+                <div className="flex items-center gap-1 h-12">
+                  {[0.4, 0.7, 1.0, 0.6, 0.8, 0.5, 0.9, 0.3, 0.7, 1.0, 0.5, 0.8, 0.4, 0.9, 0.6].map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-green-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]"
+                      style={{
+                        height: `${h * 100}%`,
+                        animationDelay: `${i * 0.07}s`,
+                        opacity: 0.6 + h * 0.4,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Local video PIP */}
+          {showVideo && localStream && (
+            <div className="absolute bottom-32 right-6 w-36 h-24 bg-black rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              {isVideoOff && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white/60" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4a1 1 0 00-1 1v10a1 1 0 001 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z" />
+                  </svg>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -133,7 +181,7 @@ export default function ActiveCallUI() {
           <button
             onClick={toggleMute}
             className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors cursor-pointer
-              ${isMuted ? "bg-white/20" : "bg-white/10 hover:bg-white/20"}`}
+              ${isMuted ? "bg-red-500 hover:bg-red-600" : "bg-white/10 hover:bg-white/20"}`}
             title={isMuted ? "Unmute" : "Mute"}
           >
             {isMuted ? (
@@ -158,12 +206,25 @@ export default function ActiveCallUI() {
             </svg>
           </button>
 
-          {/* Speaker (placeholder for future) */}
-          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center opacity-40 cursor-not-allowed" title="Speaker (coming soon)">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-            </svg>
-          </div>
+          {/* Video toggle — only show for video calls */}
+          {isVideoCall && (
+            <button
+              onClick={toggleVideo}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors cursor-pointer
+                ${isVideoOff ? "bg-red-500 hover:bg-red-600" : "bg-white/10 hover:bg-white/20"}`}
+              title={isVideoOff ? "Turn camera on" : "Turn camera off"}
+            >
+              {isVideoOff ? (
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4a1 1 0 00-1 1v10a1 1 0 001 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </>
