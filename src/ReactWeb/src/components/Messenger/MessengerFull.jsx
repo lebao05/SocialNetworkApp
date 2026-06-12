@@ -153,24 +153,15 @@ function MessageMediaAttachment({ attachment, isMe }) {
 }
 
 function MessageContent({ message, isMe }) {
-  const hasAttachment = !!message.attachment;
-  const hasText = message.content && message.content.trim().length > 0;
+  // messageType from backend: "Text" (0) or "Attachment" (1)
+  // SignalR deserializes as number: 0 = Text, 1 = Attachment
+  const isAttachment = message.messageType === 1 || message.messageType === "Attachment";
 
-  if (!hasText && hasAttachment) {
+  if (isAttachment) {
     return <MessageMediaAttachment attachment={message.attachment} isMe={isMe} />;
   }
 
-  if (hasText && !hasAttachment) {
-    return <>{message.content}</>;
-  }
-
-  // Both text + attachment
-  return (
-    <>
-      <span>{message.content}</span>
-      <MessageMediaAttachment attachment={message.attachment} isMe={isMe} />
-    </>
-  );
+  return <>{message.content}</>;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -437,17 +428,15 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
 
         {/* Action buttons */}
         <div className="flex items-center gap-1">
-          {conv.isOneToOne && conv.otherUserId && isOnline(conv.otherUserId) && (
-            <button
-              onClick={() => initiateCall(conv.otherUserId, conv.name, conv.otherUserAvatarUrl)}
-              className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-green-50 transition-colors text-green-600"
-              title="Voice call"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57-.11.35-.02.74-.25 1.01l-2.2 2.21z" />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={() => initiateCall(conv.otherUserId, conv.name, conv.otherUserAvatarUrl)}
+            className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-green-50 transition-colors text-green-600"
+            title="Voice call"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57-.11.35-.02.74-.25 1.01l-2.2 2.21z" />
+            </svg>
+          </button>
           <button className="w-9 h-9 cursor-pointer rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
@@ -530,10 +519,10 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
 
                   {/* Message bubble */}
                   <div
-                    className={`relative group px-3 py-2 text-sm leading-[1.4] whitespace-pre-wrap break-word word-break max-w-full
+                    className={`px-3 py-2 text-sm
                       rounded-2xl ${isMe
-                        ? "bg-fb-blue text-white rounded-tr-[4px]"
-                        : "bg-[#F0F2F5] text-fb-text rounded-tl-[4px]"
+                        ? "bg-fb-blue text-white"
+                        : "bg-[#F0F2F5] text-fb-text"
                       }`}
                     style={{ overflowWrap: "break-word", wordBreak: "break-all" }}
                   >
@@ -695,7 +684,7 @@ function FilePreview({ file, onRemove }) {
       setPreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     }
-    return () => {};
+    return () => { };
   }, [file, isImage, isVideo]);
 
   return (
@@ -1000,7 +989,7 @@ export default function MessengerFull() {
         <Navbar />
         <div className="flex flex-1 overflow-hidden pt-14">
           {/* Left panel — always visible */}
-          <div className="w-[380px] flex-shrink-0 h-full" style={{ borderRight: "1px solid #E4E6EB" }}>
+          <div className="w-[400px] flex-shrink-0 h-full" style={{ borderRight: "1px solid #E4E6EB" }}>
             <ConvList
               selected={selectedConversation}
               onSelect={handleSelect}
@@ -1009,29 +998,31 @@ export default function MessengerFull() {
             />
           </div>
 
-          {/* Center — chat window (capped width for readability) */}
+          {/* Center — chat window */}
           <div className="flex-1 min-w-0 flex justify-center">
-            <div className="w-full max-w-[900px] bg-white">
             {selectedConversation ? (
-              <ChatWindow
-                key={selectedConversation.id || selectedConversation.otherUserId}
-                conv={selectedConversation}
-                isOnline={isOnline}
-                onToggleInfo={handleToggleInfo}
-                showInfoButton={true}
-              />
+              <div className="w-full max-w-[11000px] bg-white">
+                <ChatWindow
+                  key={selectedConversation.id || selectedConversation.otherUserId}
+                  conv={selectedConversation}
+                  isOnline={isOnline}
+                  onToggleInfo={handleToggleInfo}
+                  showInfoButton={true}
+                />
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
-                <div className="w-24 h-24 bg-[#F0F2F5] rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-12 h-12 text-fb-subtext" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
-                  </svg>
+              <div className="flex-1 bg-white">
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="w-24 h-24 bg-[#F0F2F5] rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-12 h-12 text-fb-subtext" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
+                    </svg>
+                  </div>
+                  <p className="text-xl font-bold text-fb-text">Select a conversation</p>
+                  <p className="text-sm text-fb-subtext mt-1">Choose from your existing conversations</p>
                 </div>
-                <p className="text-xl font-bold text-fb-text">Select a conversation</p>
-                <p className="text-sm text-fb-subtext mt-1">Choose from your existing conversations</p>
               </div>
             )}
-            </div>
           </div>
 
           {/* Right panel — info (togglable with the three-dots button) */}

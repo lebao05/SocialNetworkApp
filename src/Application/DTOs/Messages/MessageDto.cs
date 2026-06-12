@@ -7,7 +7,7 @@ public sealed record MessageDto(
     string SenderName,
     string? SenderAvatarUrl,
     string? Content,
-    string MessageType,
+    Domain.Enums.MessageType MessageType,
     DateTime CreatedAt,
     bool IsPinned,
     List<MessageReactionDto> Reactions,
@@ -25,7 +25,7 @@ public sealed record MessageDto(
             SenderName: creator is not null ? $"{creator.FirstName} {creator.LastName}" : "Unknown User",
             SenderAvatarUrl: creator?.AvatarUrl,
             Content: message.Content,
-            MessageType: message.MessageType.ToString(),
+            MessageType: message.MessageType,
             CreatedAt: message.CreatedAt,
             IsPinned: message.IsPinned,
             Reactions: message.Reactions

@@ -33,6 +33,7 @@ namespace Infrastructure
             services.AddScoped<IStoryRepository, StoryRepository>();
             services.AddScoped<IFeedRepository, FeedRepository>();
             services.AddScoped<IChatHubNotifier, ChatHubNotifier>();
+            services.AddScoped<ICallHubNotifier, CallHubNotifier>();
 
             services.AddScoped<IUploadService>(provider =>
             {

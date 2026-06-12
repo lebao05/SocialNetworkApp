@@ -1,29 +1,37 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import * as signalR from "@microsoft/signalr";
 import { useAuth } from "./authContext";
 
 const CallContext = createContext(null);
 
-export function CallProvider({ children, connection }) {
-    const { user } = useAuth();
+export function CallProvider({ children }) {
+    const { token } = useAuth();
 
-    // callState: "idle" | "calling" | "ringing" | "active" | "ended"
     const [callState, setCallState] = useState("idle");
     const [isMuted, setIsMuted] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [callStartTime, setCallStartTime] = useState(null);
 
-    // Call participants
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
-    const [incomingCall, setIncomingCall] = useState(null); // { callerId, callerName }
-    const [callTarget, setCallTarget] = useState(null);     // { id, name }
+    const [incomingCall, setIncomingCall] = useState(null);
+    const [callTarget, setCallTarget] = useState(null);
 
-    // WebRTC
+    // Keep refs in sync with state so SignalR handlers always see fresh values
+    const callStateRef = useRef(callState);
+    const callTargetRef = useRef(callTarget);
+    const incomingCallRef = useRef(incomingCall);
+
+    useEffect(() => { callStateRef.current = callState; }, [callState]);
+    useEffect(() => { callTargetRef.current = callTarget; }, [callTarget]);
+    useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
+
+    const connectionRef = useRef(null);
     const peerConnectionRef = useRef(null);
     const localStreamRef = useRef(null);
     const durationTimerRef = useRef(null);
-    // Pending offer received before peer conn was ready
     const pendingOfferRef = useRef(null);
+    const [isConnected, setIsConnected] = useState(false);
 
     const ICE_SERVERS = [
         { urls: "stun:stun.l.google.com:19302" },
@@ -68,8 +76,8 @@ export function CallProvider({ children, connection }) {
         };
 
         pc.onicecandidate = (event) => {
-            if (event.candidate && connection) {
-                connection.invoke("SendSignal", targetUserId, "ice", JSON.stringify(event.candidate));
+            if (event.candidate && connectionRef.current) {
+                connectionRef.current.invoke("SendSignal", targetUserId, "ice", JSON.stringify(event.candidate));
             }
         };
 
@@ -82,9 +90,10 @@ export function CallProvider({ children, connection }) {
 
         peerConnectionRef.current = pc;
         return pc;
-    }, [connection]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // ─── Process offer: set remote desc, create + send answer ───────────────
+    // Reads from refs — never needs callTarget/incomingCall in deps, so stays stable
     const processOffer = useCallback(async (offerData) => {
         const pc = peerConnectionRef.current;
         if (!pc) {
@@ -96,14 +105,14 @@ export function CallProvider({ children, connection }) {
             await pc.setRemoteDescription(new RTCSessionDescription(offerData));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            const calleeId = incomingCall?.callerId || callTarget?.id;
-            if (calleeId && connection) {
-                await connection.invoke("SendSignal", calleeId, "answer", JSON.stringify(answer));
+            const calleeId = incomingCallRef.current?.callerId || callTargetRef.current?.id;
+            if (calleeId && connectionRef.current) {
+                await connectionRef.current.invoke("SendSignal", calleeId, "answer", JSON.stringify(answer));
             }
         } catch (err) {
             console.error("Failed to process offer:", err);
         }
-    }, [connection, incomingCall, callTarget]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // ─── Process answer: set remote desc, start call ────────────────────────
     const processAnswer = useCallback(async (answerData) => {
@@ -158,62 +167,54 @@ export function CallProvider({ children, connection }) {
         pendingOfferRef.current = null;
     };
 
-    // ─── Initiate outgoing call ────────────────────────────────────────────
-    const initiateCall = async (targetUserId, targetName, targetAvatar) => {
-        stopLocalMedia();
-        cleanupCall();
-        setCallTarget({ id: targetUserId, name: targetName, avatar: targetAvatar });
-        setCallState("calling");
-        pendingOfferRef.current = null;
-
-        const stream = await startLocalMedia();
-        if (!stream) {
-            setCallState("idle");
-            return;
-        }
-
-        // Notify hub: "I'm calling this user" — hub sends IncomingCall to callee
-        if (connection) {
-            try {
-                await connection.invoke("StartCall", targetUserId);
-            } catch (err) {
-                console.error("StartCall failed:", err);
-                setCallState("idle");
-                cleanupCall();
-                return;
-            }
-        }
-
-        // Create peer connection and wait for answer
-        createPeerConnection(targetUserId);
-    };
-
-    // ─── SignalR event handlers ────────────────────────────────────────────
+    // ─── SignalR connection setup ────────────────────────────────────────────
     useEffect(() => {
-        if (!connection) return;
+        if (!token) return;
 
-        const handleIncomingCall = ({ callerId, callerName, callerAvatar }) => {
-            if (callState !== "idle") return; // ignore if already in a call
+        const HUB_URL = import.meta.env.VITE_API_HUB_BASE_URL;
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${HUB_URL}/hubs/call`, {
+                accessTokenFactory: () => token
+            })
+            .withAutomaticReconnect()
+            .configureLogging(signalR.LogLevel.Warning)
+            .build();
+
+        connectionRef.current = connection;
+
+        connection.onreconnecting(() => setIsConnected(false));
+        connection.onreconnected(() => setIsConnected(true));
+        connection.onclose(() => setIsConnected(false));
+
+        // Read from refs so closures always see the latest values
+        connection.on("IncomingCall", ({ callerId, callerName, callerAvatar }) => {
+            if (callStateRef.current !== "idle") return;
             pendingOfferRef.current = null;
             setIncomingCall({ callerId, callerName, callerAvatar });
             setCallState("ringing");
-        };
+        });
 
-        // Caller-side: callee accepted, now send the offer
-        const handleCallAccepted = async () => {
-            if (callState !== "calling") return;
+        connection.on("CallAccepted", async () => {
+            if (callStateRef.current !== "calling") return;
             const pc = peerConnectionRef.current;
-            if (!pc || !callTarget?.id) return;
+            const target = callTargetRef.current;
+            if (!pc || !target?.id) return;
             try {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                await connection.invoke("SendSignal", callTarget.id, "offer", JSON.stringify(offer));
+                await connection.invoke("SendSignal", target.id, "offer", JSON.stringify(offer));
             } catch (err) {
                 console.error("Failed to send offer:", err);
             }
-        };
+        });
 
-        const handleReceiveSignal = async ({ senderId, signalType, signalData }) => {
+        connection.on("CallRejected", () => {
+            cleanupCall();
+            setCallState("idle");
+            setCallTarget(null);
+        });
+
+        connection.on("ReceiveSignal", async ({ senderId, signalType, signalData }) => {
             const data = JSON.parse(signalData);
             if (signalType === "offer") {
                 await processOffer(data);
@@ -232,43 +233,66 @@ export function CallProvider({ children, connection }) {
                 setIncomingCall(null);
                 setCallTarget(null);
             }
-        };
+        });
 
-        const handleCallEnded = () => {
+        connection.on("CallEnded", () => {
             cleanupCall();
             setCallState("idle");
             setIncomingCall(null);
             setCallTarget(null);
-        };
+        });
 
-        const handleCallRejected = () => {
-            // Caller-side: callee rejected the call
-            cleanupCall();
-            setCallState("idle");
-            setCallTarget(null);
-        };
-
-        connection.on("IncomingCall", handleIncomingCall);
-        connection.on("CallAccepted", handleCallAccepted);
-        connection.on("CallRejected", handleCallRejected);
-        connection.on("ReceiveSignal", handleReceiveSignal);
-        connection.on("CallEnded", handleCallEnded);
+        connection.start()
+            .then(() => setIsConnected(true))
+            .catch((err) => console.error("CallHub connection failed:", err));
 
         return () => {
-            connection.off("IncomingCall", handleIncomingCall);
-            connection.off("CallAccepted", handleCallAccepted);
-            connection.off("CallRejected", handleCallRejected);
-            connection.off("ReceiveSignal", handleReceiveSignal);
-            connection.off("CallEnded", handleCallEnded);
+            cleanupCall();
+            stopDurationTimer();
+            connection.stop().catch(() => {});
+            connectionRef.current = null;
         };
-    }, [connection, callState, callTarget, processOffer, processAnswer]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [token, processOffer, processAnswer]);
+
+    // Re-flush pending offer when processOffer updates
+    useEffect(() => {
+        flushPendingOffer();
+    }, [processOffer, flushPendingOffer]);
+
+    // ─── Initiate outgoing call ────────────────────────────────────────────
+    const initiateCall = async (targetUserId, targetName, targetAvatar) => {
+        stopLocalMedia();
+        cleanupCall();
+        setCallTarget({ id: targetUserId, name: targetName, avatar: targetAvatar });
+        setCallState("calling");
+        pendingOfferRef.current = null;
+
+        const stream = await startLocalMedia();
+        if (!stream) {
+            setCallState("idle");
+            return;
+        }
+
+        if (connectionRef.current) {
+            try {
+                await connectionRef.current.invoke("StartCall", targetUserId);
+            } catch (err) {
+                console.error("StartCall failed:", err);
+                setCallState("idle");
+                cleanupCall();
+                return;
+            }
+        }
+
+        createPeerConnection(targetUserId);
+    };
 
     // ─── Accept incoming call ──────────────────────────────────────────────
     const answerCall = async () => {
-        if (!incomingCall || callState !== "ringing") return;
-        const callerId = incomingCall.callerId;
-        const callerName = incomingCall.callerName;
-        const callerAvatar = incomingCall.callerAvatar;
+        if (!incomingCallRef.current || callStateRef.current !== "ringing") return;
+        const callerId = incomingCallRef.current.callerId;
+        const callerName = incomingCallRef.current.callerName;
+        const callerAvatar = incomingCallRef.current.callerAvatar;
 
         cleanupCall();
         setIncomingCall(null);
@@ -283,39 +307,37 @@ export function CallProvider({ children, connection }) {
 
         createPeerConnection(callerId);
 
-        // Tell hub to notify the caller that we accepted — caller will then send the offer
-        if (connection) {
+        if (connectionRef.current) {
             try {
-                await connection.invoke("AcceptCall", callerId);
+                await connectionRef.current.invoke("AcceptCall", callerId);
             } catch (err) {
                 console.error("AcceptCall failed:", err);
             }
         }
 
-        // The offer will arrive via ReceiveSignal — flush pending if already there
         setTimeout(flushPendingOffer, 100);
     };
 
     // ─── Reject incoming call ────────────────────────────────────────────
     const rejectCall = () => {
-        const callerId = incomingCall?.callerId;
+        const callerId = incomingCallRef.current?.callerId;
         setIncomingCall(null);
         setCallState("idle");
         stopLocalMedia();
-        if (callerId && connection) {
-            connection.invoke("RejectCall", callerId).catch(() => {});
+        if (callerId && connectionRef.current) {
+            connectionRef.current.invoke("RejectCall", callerId).catch(() => {});
         }
     };
 
     // ─── End call (local) ────────────────────────────────────────────────
     const endCall = async () => {
-        const targetId = callTarget?.id;
+        const targetId = callTargetRef.current?.id;
         cleanupCall();
         setCallState("idle");
         setCallTarget(null);
         stopDurationTimer();
-        if (targetId && connection) {
-            connection.invoke("SendSignal", targetId, "hangup", "").catch(() => {});
+        if (targetId && connectionRef.current) {
+            connectionRef.current.invoke("SendSignal", targetId, "hangup", "").catch(() => {});
         }
     };
 
@@ -335,14 +357,6 @@ export function CallProvider({ children, connection }) {
         if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
-
-    // ─── Cleanup on unmount ────────────────────────────────────────────────
-    useEffect(() => {
-        return () => {
-            cleanupCall();
-            stopDurationTimer();
-        };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <CallContext.Provider value={{

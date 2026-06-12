@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import * as signalR from "@microsoft/signalr";
 import axios from "../apis/axios";
 import { useAuth } from "./authContext";
-import { CallProvider } from "./CallContext";
 import {
     getConversationsApi,
     getConversationDetailApi,
@@ -160,6 +159,7 @@ function ChatContextInner({ children }) {
             if (!isCurrentUser && notificationOn) {
                 playNotificationSound();
             }
+            console.log("message", message);
             setMessages((prev) => {
                 if (prev.some((m) => m.id === message.id)) return prev;
                 return [...prev, message];
@@ -633,8 +633,7 @@ function ChatContextInner({ children }) {
                 content,
                 files,
             });
-            setMessages((prev) => [...prev, newMessage]);
-            return newMessage;
+            return;
         } catch (err) {
             console.error("Failed to send message:", err);
             return null;
@@ -889,16 +888,11 @@ function ChatContextInner({ children }) {
         friendsSearchTerm,
         fetchFriends,
         createGroup,
-
-        // SignalR connection (for CallProvider)
-        connection,
     };
 
     return (
         <ChatContext.Provider value={value}>
-            <CallProvider connection={connection}>
-                {children}
-            </CallProvider>
+            {children}
         </ChatContext.Provider>
     );
 }

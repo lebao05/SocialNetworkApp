@@ -47,7 +47,7 @@ internal sealed class AddMemberToConversationCommandHandler
                 new Error("Conversation.InvalidOperation", "Cannot add members to a one-to-one conversation."));
         }
 
-        var result = conversation.AddMember(request.UserIdToAdd, Domain.Entities.ConversationRole.Member);
+        var result = conversation.AddMember(request.UserIdToAdd, Domain.Enums.ConversationRole.Member);
 
         if (result.IsFailure)
         {

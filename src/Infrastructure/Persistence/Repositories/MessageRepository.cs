@@ -139,13 +139,19 @@ namespace Infrastructure.Persistence.Repositories
 
             if (isMedia)
             {
-                query = query.Where(m => m.MessageType == Domain.Enums.MessageType.Image || m.MessageType == Domain.Enums.MessageType.Video);
+                // Media = messages with an image/video Attachment (filtered by MIME type)
+                query = query.Where(m =>
+                    m.Attachment != null &&
+                    (m.Attachment.FileType.ToLower().StartsWith("image/") ||
+                     m.Attachment.FileType.ToLower().StartsWith("video/")));
             }
             else
             {
-                query = query.Where(m => m.MessageType != Domain.Enums.MessageType.Image &&
-                                         m.MessageType != Domain.Enums.MessageType.Video &&
-                                         m.MessageType != Domain.Enums.MessageType.Audio);
+                // Files = messages with an Attachment that is NOT image/video
+                query = query.Where(m =>
+                    m.Attachment != null &&
+                    !m.Attachment.FileType.ToLower().StartsWith("image/") &&
+                    !m.Attachment.FileType.ToLower().StartsWith("video/"));
             }
 
             return await query
