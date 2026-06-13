@@ -169,7 +169,7 @@ function MemberRow({ member, isOwner, currentUserId, isOnline, onAssignAdmin, on
   );
 }
 
-export default function ChatInfoGroup({ conv }) {
+export default function ChatInfoGroup({ conv, onOpenSearch }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const {
@@ -303,22 +303,13 @@ export default function ChatInfoGroup({ conv }) {
             </span>
           </button>
 
-          <button className="flex flex-col items-center gap-1.5 cursor-pointer group">
+          <button onClick={onOpenSearch} className="flex flex-col items-center gap-1.5 cursor-pointer group">
             <div className="w-12 h-12 bg-[#F0F2F5] hover:bg-[#E4E6EB] hover:scale-105 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer">
               <svg className="w-5 h-5 text-fb-text" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
               </svg>
             </div>
             <span className="text-xs text-fb-subtext text-center cursor-pointer">Search</span>
-          </button>
-
-          <button className="flex flex-col items-center gap-1.5 cursor-pointer group">
-            <div className="w-12 h-12 bg-[#F0F2F5] hover:bg-[#E4E6EB] hover:scale-105 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer">
-              <svg className="w-5 h-5 text-fb-text" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
-              </svg>
-            </div>
-            <span className="text-xs text-fb-subtext text-center cursor-pointer">Notifications</span>
           </button>
         </div>
       </div>

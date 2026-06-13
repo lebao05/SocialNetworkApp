@@ -649,7 +649,7 @@ function ChatContextInner({ children }) {
         }
     };
 
-    const sendMessage = async (content, files = []) => {
+    const sendMessage = async (content, files = [], replyToMessageId = null) => {
         const hasContent = content?.trim();
         const hasFiles = files.length > 0;
         if (!selectedConversation || (!hasContent && !hasFiles)) return null;
@@ -666,6 +666,7 @@ function ChatContextInner({ children }) {
                 conversationId: targetConv.id,
                 content,
                 files,
+                replyToMessageId,
             });
             return;
         } catch (err) {

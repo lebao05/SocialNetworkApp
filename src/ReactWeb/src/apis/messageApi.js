@@ -3,10 +3,11 @@ import axios from "./axios";
 /**
  * Send a message (text + optional files)
  */
-export async function sendMessageApi({ conversationId, content, files = [] }) {
+export async function sendMessageApi({ conversationId, content, files = [], replyToMessageId = null }) {
     const form = new FormData();
     form.append("conversationId", String(conversationId));
     if (content != null) form.append("content", content);
+    if (replyToMessageId != null) form.append("replyToMessageId", String(replyToMessageId));
     files.forEach((file) => {
         if (file instanceof File) {
             form.append("files", file);
