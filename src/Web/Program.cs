@@ -13,8 +13,8 @@ using Microsoft.OpenApi;
 using Presentation;
 using Serilog;
 using System.Text;
+using System.Text.Json;
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalR(); 
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -99,7 +99,17 @@ builder.Services.AddIdentityCore<User>(options =>
 // Add controllers (including external assembly)
 builder.Services
     .AddControllers()
-    .AddApplicationPart(typeof(Presentation.Controllers.AuthController).Assembly);
+    .AddApplicationPart(typeof(Presentation.Controllers.AuthController).Assembly)
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
+
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 
 
 

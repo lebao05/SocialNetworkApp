@@ -17,7 +17,9 @@ namespace Application.Abstractions.Repositories
             Guid userId,
             int pageNumber,
             int pageSize,
-            CancellationToken cancellationToken);
+            bool groupsOnly = false,
+            bool unreadOnly = false,
+            CancellationToken cancellationToken = default);
         Task<List<long>> GetAllConversationIdsAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<Conversation?> GetOneToOneConversationAsync(
             Guid userId1,

@@ -15,9 +15,9 @@ export async function createConversationApi({ participantIds, name }) {
 /**
  * Get paginated conversations
  */
-export async function getConversationsApi(pageNumber = 1, pageSize = 20) {
+export async function getConversationsApi(pageNumber = 1, pageSize = 20, groupsOnly = false, unreadOnly = false) {
     const response = await axios.get("/conversation", {
-        params: { pageNumber, pageSize }
+        params: { pageNumber, pageSize, groupsOnly, unreadOnly }
     });
     return response.data;
 }

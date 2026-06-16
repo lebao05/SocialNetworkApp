@@ -26,7 +26,6 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<Message?> GetByIdWithIncludesAsync(long id, CancellationToken cancellationToken)
         {
             return await _context.Messages
-                .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
                 .Include(m => m.Reactions).ThenInclude(r => r.User)
@@ -53,11 +52,11 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<Message>> GetMessagesAroundAsync(
-            long conversationId, 
-            long? anchorMessageId, 
-            string direction, 
-            int size, 
+        public async Task<MessagesAroundResult> GetMessagesAroundAsync(
+            long conversationId,
+            long? anchorMessageId,
+            string direction,
+            int size,
             CancellationToken cancellationToken)
         {
             IQueryable<Message> query = _context.Messages
@@ -72,48 +71,81 @@ namespace Infrastructure.Persistence.Repositories
                 if (anchorMessageId.HasValue)
                     query = query.Where(m => m.Id < anchorMessageId.Value);
 
+                // Request size + 1 to detect if more exist above
                 var res = await query
                     .OrderByDescending(m => m.Id)
-                    .Take(size)
+                    .Take(size + 1)
                     .ToListAsync(cancellationToken);
-                return res.OrderBy(m => m.Id).ToList();
+
+                var hasMoreUp = res.Count > size;
+                if (hasMoreUp) res = res.Take(size).ToList();
+
+                return new MessagesAroundResult(
+                    Messages: res.OrderBy(m => m.Id).ToList(),
+                    HasMoreUp: hasMoreUp,
+                    HasMoreDown: false // unknown when only fetching older
+                );
             }
             else if (direction.ToLower() == "down")
             {
-                // If anchor is null for "down", it doesn't make much sense (where is the start?),
-                // so we'll just return empty or from start.
-                if (!anchorMessageId.HasValue) return new List<Message>();
+                if (!anchorMessageId.HasValue) return new MessagesAroundResult(new List<Message>(), false, false);
 
-                return await query
+                var res = await query
                     .Where(m => m.Id > anchorMessageId.Value)
                     .OrderBy(m => m.Id)
-                    .Take(size)
+                    .Take(size + 1)
                     .ToListAsync(cancellationToken);
+
+                var hasMoreDown = res.Count > size;
+                if (hasMoreDown) res = res.Take(size).ToList();
+
+                return new MessagesAroundResult(
+                    Messages: res,
+                    HasMoreUp: false, // unknown when only fetching newer
+                    HasMoreDown: hasMoreDown
+                );
             }
             else // "around"
             {
-                if (!anchorMessageId.HasValue) return await GetMessagesAroundAsync(conversationId, null, "up", size, cancellationToken);
+                if (!anchorMessageId.HasValue)
+                {
+                    // No anchor: return the latest `size` messages (newest down direction)
+                    var res = await GetMessagesAroundAsync(conversationId, null, "down", size, cancellationToken);
+                    // For "down" without anchor above, treat as bottom - hasMoreDown = false
+                    return new MessagesAroundResult(res.Messages, res.HasMoreUp, false);
+                }
 
                 var anchorMessage = await query.FirstOrDefaultAsync(m => m.Id == anchorMessageId.Value, cancellationToken);
 
                 var half = size / 2;
 
+                // Fetch size + 1 to detect more
                 var up = await query
                     .Where(m => m.Id < anchorMessageId.Value)
-                    .OrderByDescending( m => m.Id)
-                    .Take(half)
+                    .OrderByDescending(m => m.Id)
+                    .Take(half + 1)
                     .ToListAsync(cancellationToken);
+
+                var hasMoreUp = up.Count > half;
+                if (hasMoreUp) up = up.Take(half).ToList();
 
                 var down = await query
                     .Where(m => m.Id > anchorMessageId.Value)
-                    .OrderBy(m=>m.Id)
-                    .Take(half)
+                    .OrderBy(m => m.Id)
+                    .Take(half + 1)
                     .ToListAsync(cancellationToken);
+
+                var hasMoreDown = down.Count > half;
+                if (hasMoreDown) down = down.Take(half).ToList();
 
                 var result = up.Concat(down).ToList();
                 if (anchorMessage != null) result.Add(anchorMessage);
 
-                return result.OrderBy(m => m.Id).ToList();
+                return new MessagesAroundResult(
+                    Messages: result.OrderBy(m => m.Id).ToList(),
+                    HasMoreUp: hasMoreUp,
+                    HasMoreDown: hasMoreDown
+                );
             }
         }
 
@@ -147,11 +179,12 @@ namespace Infrastructure.Persistence.Repositories
             }
             else
             {
-                // Files = messages with an Attachment that is NOT image/video
+                // Files = messages with an Attachment that is NOT image/video/audio
                 query = query.Where(m =>
                     m.Attachment != null &&
                     !m.Attachment.FileType.ToLower().StartsWith("image/") &&
-                    !m.Attachment.FileType.ToLower().StartsWith("video/"));
+                    !m.Attachment.FileType.ToLower().StartsWith("video/") &&
+                    !m.Attachment.FileType.ToLower().StartsWith("audio/"));
             }
 
             return await query

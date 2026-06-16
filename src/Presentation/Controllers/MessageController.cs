@@ -2,9 +2,11 @@ using Application.Messages.Commands.InvokeMessage;
 using Application.Messages.Commands.MarkMessagesAsSeen;
 using Application.Messages.Commands.ReactToMessage;
 using Application.Messages.Commands.SendMessage;
+using Application.Messages.Commands.TogglePinMessage;
 using Application.Messages.Commands.UpdateMessage;
 using Application.Messages.Queries.GetMessagesAround;
 using Application.Messages.Queries.GetFilesByConversationId;
+using Application.Messages.Queries.GetPinnedMessages;
 using Application.Messages.Queries.SearchMessages;
 using Infrastructure.SignalR;
 using MediatR;
@@ -55,7 +57,8 @@ namespace Presentation.Controllers
             if (result.IsFailure)
                 return BadRequest(result.Error);
 
-            return Ok(result.Value);
+            var v = result.Value;
+            return Ok(new MessagesAroundResponse(v.Messages, v.HasMoreUp, v.HasMoreDown));
         }
 
         [HttpGet("search")]
@@ -107,7 +110,8 @@ namespace Presentation.Controllers
             if (result.IsFailure)
                 return BadRequest(result.Error);
 
-            return Ok(result.Value);
+            var v = result.Value;
+            return Ok(new MessagesAroundResponse(v.Messages, v.HasMoreUp, v.HasMoreDown));
         }
 
         [HttpGet("{conversationId:long}/files")]
@@ -128,6 +132,30 @@ namespace Presentation.Controllers
                 Guid.Parse(userIdString),
                 conversationId,
                 isMedia,
+                pageNumber,
+                pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{conversationId:long}/pinned")]
+        public async Task<IActionResult> GetPinnedMessages(
+            long conversationId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageNumber = Math.Max(pageNumber, 1);
+
+            var query = new GetPinnedMessagesQuery(
+                Guid.Parse(userIdString),
+                conversationId,
                 pageNumber,
                 pageSize);
 
@@ -202,6 +230,23 @@ namespace Presentation.Controllers
             var result = await _sender.Send(command, cancellationToken);
 
             if (result.IsFailure) return BadRequest(result.Error);
+
+            return Ok(result.Value);
+        }
+
+        [HttpPatch("{messageId}/pin")]
+        public async Task<IActionResult> TogglePinMessage(
+            long messageId,
+            CancellationToken cancellationToken)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            var command = new TogglePinMessageCommand(messageId, Guid.Parse(userIdString));
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            if (result.IsFailure) return HandleFailure(result);
 
             return Ok(result.Value);
         }

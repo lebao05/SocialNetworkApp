@@ -34,7 +34,6 @@ internal sealed class ReactToMessageCommandHandler
             Enum.TryParse<ReactionType>(request.ReactionType, ignoreCase: true, out var parsedReaction))
         {
             message.ToggleReaction(request.UserId, parsedReaction);
-            _messageRepository.Update(message);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

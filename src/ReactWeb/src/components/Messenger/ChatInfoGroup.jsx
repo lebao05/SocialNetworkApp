@@ -185,6 +185,7 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
     membersHasMore,
     loadConversationMembers,
     isOnline,
+    jumpToMessage,
   } = useChat();
 
   const [openSections, setOpenSections] = useState({
@@ -202,11 +203,6 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
 
   const toggle = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
 
-  useEffect(() => {
-    if (openSections.members && conv?.id && !conv.isVirtual) {
-      loadConversationMembers(true);
-    }
-  }, [openSections.members, conv?.id]);
 
   const handleMute = async () => {
     if (!conv?.id) return;
@@ -274,7 +270,6 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
           </div>
         </div>
         <p className="font-bold text-lg text-fb-text text-center">{conv.name}</p>
-        <p className="text-base text-fb-subtext mt-0.5">{conv.memberCount ?? 0} members</p>
 
         {/* Quick actions */}
         <div className="flex items-center gap-3 mt-5">
@@ -451,6 +446,7 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
           isOnline={isOnline}
           onlineUsers={null}
           onClose={() => setShowPinned(false)}
+          onJumpToMessage={jumpToMessage}
         />
       )}
 

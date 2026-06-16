@@ -5,6 +5,7 @@ import Navbar from "../Navbar/Navbar";
 import ChatInfoGroup from "./ChatInfoGroup";
 import ChatInfoDirect from "./ChatInfoDirect";
 import CreateGroupModal from "./CreateGroupModal";
+import VoiceRecorder from "./VoiceRecorder";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 import { useCall } from "../../contexts/CallContext";
@@ -115,8 +116,10 @@ function isVideoType(fileType) {
 function isAudioType(fileType) {
   if (!fileType) return false;
   const t = fileType.toLowerCase();
-  return t === "audio" || t === "audio/mpeg" || t === "audio/wav" || t === "audio/ogg" || t === "audio/mp3";
+  return t === "audio" || t.startsWith("audio/") || t === "audio/mpeg" || t === "audio/wav" || t === "audio/ogg" || t === "audio/mp3";
 }
+
+
 
 function formatFileSize(bytes) {
   if (!bytes) return "";
@@ -187,50 +190,59 @@ function MessageMediaAttachment({ attachment, isMe, theme }) {
 
   if (isAudioType(attachment?.fileType)) {
     return (
-      <div className={`mt-2 rounded-xl px-3 py-3`}
-        style={{ backgroundColor: isMe ? theme.bubbleSelf : theme.bubbleOther }}
-      >
+      <div className="mt-2 rounded-xl overflow-hidden">
         <audio
           src={attachment.fileUrl}
           controls
-          className="h-8 w-52"
+          className="h-8 w-52 block"
         />
       </div>
     );
   }
 
   // File attachment
+  const fileName = (() => {
+    if (!attachment?.fileUrl) return "File";
+    const parts = attachment.fileUrl.split("/");
+    const filenameWithQuery = parts[parts.length - 1];
+    const filename = filenameWithQuery.split("?")[0];
+    return decodeURIComponent(filename);
+  })();
+
   return (
     <a
       href={attachment?.fileUrl}
       download
       target="_blank"
       rel="noreferrer"
-      className={`mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline transition-colors`}
-      style={{
-        backgroundColor: isMe ? `${theme.bubbleSelf}33` : `${theme.bubbleOther}`,
-        color: isMe ? theme.bubbleSelfText : theme.bubbleOtherText,
-      }}
+      className="mt-2 flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-all duration-200 no-underline shadow-sm w-64 max-w-full text-gray-800 dark:text-zinc-100"
     >
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: isMe ? theme.bubbleSelf : `${theme.bubbleOther}` }}>
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
+      {/* Circular Document Icon Container */}
+      <div 
+        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white"
+        style={{ backgroundColor: theme.bubbleSelf }}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
         </svg>
       </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate">
-          {getFileExtension(attachment?.fileUrl)}
+
+      {/* File Metadata */}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold truncate text-gray-900 dark:text-zinc-100">
+          {fileName}
         </p>
-        {attachment?.fileSize > 0 && (
-          <p className="text-xs mt-0.5">
-            {formatFileSize(attachment.fileSize)}
-          </p>
-        )}
+        <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5 font-medium">
+          {attachment?.fileSize > 0 ? formatFileSize(attachment.fileSize) : getFileExtension(attachment?.fileUrl)}
+        </p>
       </div>
-      <svg className="w-4 h-4 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-      </svg>
+
+      {/* Download Action Circle */}
+      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-700 flex items-center justify-center text-gray-500 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-650 transition-colors flex-shrink-0">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+      </div>
     </a>
   );
 }
@@ -251,8 +263,7 @@ function MessageContent({ message, isMe, theme }) {
 // Panel 1 — Conversation List (Facebook Messenger style)
 // ══════════════════════════════════════════════════════════════════
 function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
-  const { conversations, searchResults, isSearching, performSearch, fetchConversations, isOnline } = useChat();
-  const [tab, setTab] = useState("all");
+  const { conversations, searchResults, isSearching, performSearch, fetchConversations, isOnline, conversationFilter, setConversationFilter } = useChat();
   const [searchVal, setSearchVal] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -265,8 +276,8 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
   };
 
   const filtered = conversations.filter((c) => {
-    if (tab === "unread") return c.unreadCount > 0;
-    if (tab === "group") return !c.isOneToOne;
+    if (conversationFilter === "unread") return c.unreadCount > 0;
+    if (conversationFilter === "groups") return !c.isOneToOne;
     return true;
   });
 
@@ -318,13 +329,13 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
             {[
               { key: "all", label: "All" },
               { key: "unread", label: "Unread" },
-              { key: "group", label: "Groups" },
+              { key: "groups", label: "Groups" },
             ].map((t) => (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => setConversationFilter(t.key)}
                 className={`px-3 py-1.5 rounded-[20px] text-sm font-semibold transition-colors
-                  ${tab === t.key
+                  ${conversationFilter === t.key
                     ? "bg-fb-blue text-white"
                     : "bg-[#F0F2F5] text-fb-text hover:bg-[#E4E6EB]"
                   }`}
@@ -398,20 +409,23 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
                       {conv.name}
                     </p>
                     <span className={`text-xs flex-shrink-0 ml-2 ${conv.unreadCount > 0 ? "text-fb-blue font-bold" : "text-fb-subtext"}`}>
-                      {conv.lastMessageSentAt
-                        ? new Date(conv.lastMessageSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      {conv.lastMessage?.createdAt
+                        ? new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         : ""}
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
                     <p className={`text-sm truncate ${conv.unreadCount > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}>
-                      {!conv.isOneToOne && conv.memberCount ? `${conv.memberCount} members \u00B7 ` : ""}
-                      {conv.lastMessageContent || (conv.isNotInAConversation ? "Start a conversation" : "")}
+                      {conv.isOneToOne
+                        ? (conv.lastMessage?.content || (conv.isNotInAConversation ? "Start a conversation" : ""))
+                        : (conv.lastMessage
+                            ? `${conv.lastMessage.senderName}: ${conv.lastMessage.content}`
+                            : (conv.isNotInAConversation ? "Start a conversation" : ""))}
                     </p>
                     {conv.unreadCount > 0 && (
                       <span className="ml-2 flex-shrink-0 min-w-[20px] h-5 rounded-full flex items-center justify-center text-white text-xs font-bold px-1.5"
                         style={{ backgroundColor: (conv.theme && conv.theme !== "default") ? getThemeAccentColor(conv.theme).color : undefined }}>
-                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                       </span>
                     )}
                   </div>
@@ -441,16 +455,29 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
 function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { messages, messagesLoading, loadMessages, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
+  const { messages, messagesLoading, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
   const { initiateCall } = useCall();
 
   const theme = getChatTheme(conv?.theme);
   const isMidnight = conv?.theme === "midnight";
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
+  const isAtBottomRef = useRef(true); // mirrors whether the user is at the bottom
   const [replyTo, setReplyTo] = useState(null); // message being replied to
   const [editingMsg, setEditingMsg] = useState(null); // message being edited
   const [hoveredMsgId, setHoveredMsgId] = useState(null);
+
+  const getTypingText = () => {
+    if (typingUsers.size === 0) return "";
+    const names = Array.from(typingUsers)
+      .map((tId) => conversationMembers.find((m) => m.userId === tId)?.fullName)
+      .filter(Boolean);
+
+    if (names.length === 0) return "Someone is typing...";
+    if (names.length === 1) return `${names[0]} is typing...`;
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
+    return "Several people are typing...";
+  };
 
   useEffect(() => {
     if (conv) loadMessages(true);
@@ -459,8 +486,54 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   }, [conv?.id]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only auto-scroll to the bottom if the user is already near the bottom
+    // (or it's the very first message load). If they're scrolled up reading
+    // history, don't yank them to the bottom.
+    if (isAtBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages.length]);
+
+  // Track whether the user is at the bottom of the message list (within 150px)
+  // and auto-load older/newer messages when scrolling near the edges.
+  const handleMessagesScroll = (e) => {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isBottom = distanceFromBottom <= 150;
+    isAtBottomRef.current = isBottom;
+    setAtBottomState(isBottom);
+
+    // When the user scrolls near the top, automatically fetch older messages
+    if (el.scrollTop <= 100 && hasMoreUp && !messagesLoading) {
+      // Remember the current scrollHeight so we can preserve the visual position
+      // after the older messages are prepended.
+      const prevScrollHeight = el.scrollHeight;
+      const prevScrollTop = el.scrollTop;
+      // Mark that the user is NOT at the bottom (so the messages.length effect
+      // above doesn't snap us to the bottom after the prepend).
+      isAtBottomRef.current = false;
+      loadOlderMessages().then(() => {
+        // After prepending, restore the visual position so the user doesn't jump.
+        // Use requestAnimationFrame to wait for React to flush the new DOM.
+        requestAnimationFrame(() => {
+          const newScrollHeight = el.scrollHeight;
+          el.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
+        });
+      });
+      return;
+    }
+
+    // When the user scrolls near the bottom and there are unloaded newer
+    // messages (e.g., they jumped to an older message), fetch the next page
+    // of newer messages. Skip if they're already at the very bottom (no need).
+    if (
+      distanceFromBottom <= 150 &&
+      hasMoreDown &&
+      !messagesLoading
+    ) {
+      loadNewerMessages();
+    }
+  };
 
   useEffect(() => {
     if (conv && !conv.isVirtual) {
@@ -516,12 +589,6 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
           />
           <div className="cursor-pointer" onClick={onToggleInfo}>
             <p className="font-semibold text-[15px] leading-tight" style={{ color: theme.text }}>{conv.name}</p>
-            <p className={`text-xs ${conv.isOneToOne && isOnline(conv.otherUserId) ? "text-green-500" : ""}`}
-              style={{ color: conv.isOneToOne && isOnline(conv.otherUserId) ? undefined : isMidnight ? "#9FA8DA" : "#65676B" }}>
-              {conv.isOneToOne
-                ? isOnline(conv.otherUserId) ? "Active now" : "Offline"
-                : `${conv.memberCount ?? 0} members`}
-            </p>
           </div>
         </div>
 
@@ -560,7 +627,11 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
       </div>
 
       {/* Messages */}
-      <div ref={messagesRef} className="flex-1 overflow-y-auto px-4 py-3 flex flex-col">
+      <div
+        ref={messagesRef}
+        onScroll={handleMessagesScroll}
+        className="flex-1 overflow-y-auto px-4 py-3 flex flex-col relative"
+      >
         {/* Chat header banner */}
         <div className="flex flex-col items-center py-6 mb-2">
           <img
@@ -574,9 +645,6 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             onError={(e) => { e.target.src = conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER; }}
           />
           <p className="font-bold text-base">{conv.name}</p>
-          <p className="text-sm mt-0.5" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>
-            {isGroup ? `${conv.memberCount ?? 0} members` : "Facebook Community"}
-          </p>
         </div>
 
         {messagesLoading && (
@@ -584,71 +652,117 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             <div className="w-6 h-6 border-2 border-fb-blue border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-
         {messages.map((m, idx) => {
           const isMe = m.senderId === user?.id;
+
           const prevMsg = messages[idx - 1];
-          const isFirst = !prevMsg || prevMsg.senderId !== m.senderId;
+
+          const isFirst =
+            !prevMsg || prevMsg.senderId !== m.senderId;
 
           const showTimeLabel =
             prevMsg &&
-            new Date(m.createdAt) - new Date(prevMsg.createdAt) > 10 * 60 * 1000;
-
-          const showAvatar = isGroup && !isMe;
+            new Date(m.createdAt) - new Date(prevMsg.createdAt) >
+            10 * 60 * 1000;
 
           return (
             <React.Fragment key={m.id}>
               {showTimeLabel && (
                 <div className="flex justify-center my-3">
-                  <span className="px-3 py-1 text-xs rounded-full" style={{ backgroundColor: theme.timeBadge, color: theme.timeText }}>
-                    {new Date(m.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  <span
+                    className="px-3 py-1 text-xs rounded-full"
+                    style={{
+                      backgroundColor: theme.timeBadge,
+                      color: theme.timeText,
+                    }}
+                  >
+                    {new Date(m.createdAt).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                 </div>
               )}
 
               <div
                 data-msg-id={m.id}
-                className={`group flex items-end gap-1.5 mb-0.5 ${isMe ? "justify-end" : "justify-start"} ${isFirst ? "mt-2" : "mt-0.5"}`}
+                className={`group relative flex mb-0.5 ${isMe ? "justify-end" : "justify-start"
+                  } ${isFirst ? "mt-2" : "mt-0.5"}`}
                 onMouseEnter={() => setHoveredMsgId(m.id)}
                 onMouseLeave={() => setHoveredMsgId(null)}
               >
-                {/* Avatar for group */}
-                {isGroup && !isMe && (
-                  <div className="w-7 flex-shrink-0">
-                    {showAvatar ? (
-                      <div className={`w-7 h-7 mb-1 rounded-full ${m.reactions?.length > 0 ? "mb-7" : ""} object-cover hover:scale-105 transition-all duration-150 cursor-pointer`} onClick={() => { navigate(`/profile/${m.senderId}`); }}>
-                        <img src={m.senderAvatarUrl || DEFAULT_AVATAR} alt={m.senderName ?? ""}
-                          title={m.senderName ?? ""}
-                          className="w-7 h-7 rounded-full object-cover" onError={(e) => { e.target.src = DEFAULT_AVATAR; }} />
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7" />
-                    )}
+                {/* Pinned indicator */}
+                {m.isPinned && (
+                  <div className={`absolute flex items-center gap-0.5 text-[10px] font-medium text-fb-blue mb-0.5 ${isMe ? "-top-4 right-0" : "-top-4 left-0"}`}>
+                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                      <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/>
+                    </svg>
+                    <span>Pinned</span>
                   </div>
                 )}
-
-                <div className={`flex flex-col max-w-[75%] ${isMe ? "items-end" : "items-start"}`}>
-                  {/* Sender name */}
+                <div
+                  className={`flex flex-col max-w-[75%] ${isMe ? "items-end" : "items-start"
+                    }`}
+                >
+                  {/* Avatar + Sender Name */}
                   {!isMe && isGroup && isFirst && (
-                    <span className="text-xs mb-0.5 ml-1 font-medium" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>{m.senderName}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <img
+                        src={m.senderAvatarUrl || DEFAULT_AVATAR}
+                        alt={m.senderName ?? ""}
+                        title={m.senderName ?? ""}
+                        className="w-7 h-7 rounded-full object-cover cursor-pointer hover:scale-105 transition-all duration-150"
+                        onClick={() =>
+                          navigate(`/profile/${m.senderId}`)
+                        }
+                        onError={(e) => {
+                          e.target.src = DEFAULT_AVATAR;
+                        }}
+                      />
+
+                      <span
+                        className="text-xs font-medium"
+                        style={{
+                          color: isMidnight
+                            ? "#9FA8DA"
+                            : "#65676B",
+                        }}
+                      >
+                        {m.senderName}
+                      </span>
+                    </div>
                   )}
 
-                  {/* Bubble + actions wrapper (so toolbar positions relative to this) */}
+                  {/* Message Bubble + Actions */}
                   <div className="relative flex items-end gap-1">
-                    {/* Message bubble */}
-                    <div
-                      className={`px-3 py-2 text-sm rounded-2xl`}
-                      style={{
-                        backgroundColor: isMe ? theme.bubbleSelf : theme.bubbleOther,
-                        color: isMe ? theme.bubbleSelfText : theme.bubbleOtherText,
-                        overflowWrap: "break-word",
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      <MessageContent message={m} isMe={isMe} theme={theme} />
-                    </div>
+                    {(() => {
+                      const isAttachment = m.messageType === 1 || m.messageType === "Attachment";
 
-                    {/* Message actions toolbar */}
+                      return (
+                        <div
+                          className={isAttachment ? "rounded-2xl" : "px-3 py-2 text-sm rounded-2xl"}
+                          style={{
+                            backgroundColor: isAttachment
+                              ? undefined
+                              : (isMe ? theme.bubbleSelf : theme.bubbleOther),
+                            color: isAttachment
+                              ? undefined
+                              : (isMe ? theme.bubbleSelfText : theme.bubbleOtherText),
+                            overflowWrap: "break-word",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          <MessageContent
+                            message={m}
+                            isMe={isMe}
+                            theme={theme}
+                          />
+                        </div>
+                      );
+                    })()}
+
                     <MessageActions
                       message={m}
                       isMe={isMe}
@@ -656,12 +770,20 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
                       isHovered={hoveredMsgId === m.id}
                       onReact={reactToMessage}
                       onReply={(msg, edit) => {
-                        if (edit) { setEditingMsg(msg); setReplyTo(null); }
-                        else { setReplyTo(msg); setEditingMsg(null); }
+                        if (edit) {
+                          setEditingMsg(msg);
+                          setReplyTo(null);
+                        } else {
+                          setReplyTo(msg);
+                          setEditingMsg(null);
+                        }
                       }}
                       onTogglePin={() => togglePin(m.id)}
                       onRevoke={() => revokeMessage(m.id)}
-                      onEdit={() => { setEditingMsg(m); setReplyTo(null); }}
+                      onEdit={() => {
+                        setEditingMsg(m);
+                        setReplyTo(null);
+                      }}
                       theme={theme}
                       isMidnight={isMidnight}
                     />
@@ -669,23 +791,48 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
 
                   {/* Reactions */}
                   {m.reactions?.length > 0 && (
-                    <MessageReactionSummary reactions={m.reactions} currentUserId={user?.id} isMe={isMe} theme={theme} />
+                    <MessageReactionSummary
+                      reactions={m.reactions}
+                      currentUserId={user?.id}
+                      isMe={isMe}
+                      theme={theme}
+                    />
                   )}
 
-                  {/* Read receipts: show avatars of members whose LastReadMessageId === this message */}
-                  {true && conversationMembers?.filter(c => c.lastReadMessageId === m.id && c.userId !== user?.id).map(c => (
-                    <div className="flex items-center gap-0.5">
-                      <img
+                  {/* Read Receipts */}
+                  {conversationMembers
+                    ?.filter(
+                      (c) =>
+                        c.lastReadMessageId === m.id &&
+                        c.userId !== user?.id
+                    )
+                    .map((c) => (
+                      <div
                         key={c.userId}
-                        src={c.avatarUrl || DEFAULT_AVATAR}
-                        alt={c.fullName}
-                        title={`${c.fullName} has read this message`}
-                        className="w-4 h-4 rounded-full object-cover mt-0.5"
-                        onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
-                      />
-                      <span className="text-xs" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>{c.fullName}</span>
-                    </div>
-                  )) || null}
+                        className="flex items-center gap-1 mt-0.5"
+                      >
+                        <img
+                          src={c.avatarUrl || DEFAULT_AVATAR}
+                          alt={c.fullName}
+                          title={`${c.fullName} has read this message`}
+                          className="w-4 h-4 rounded-full object-cover"
+                          onError={(e) => {
+                            e.target.src = DEFAULT_AVATAR;
+                          }}
+                        />
+
+                        <span
+                          className="text-xs"
+                          style={{
+                            color: isMidnight
+                              ? "#9FA8DA"
+                              : "#65676B",
+                          }}
+                        >
+                          {c.fullName}
+                        </span>
+                      </div>
+                    ))}
                 </div>
               </div>
             </React.Fragment>
@@ -693,6 +840,28 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
         })}
         <div ref={bottomRef} className="h-2" />
       </div>
+
+      {/* Jump to latest / new messages floating button */}
+      {(!atBottom || pendingNewMessageCount > 0) && (
+        <button
+          onClick={() => {
+            if (hasMoreDown) {
+              // We're in a "jump to a message" view (older context) - load latest
+              jumpToLatest();
+            } else {
+              // Just scroll to bottom
+              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+              setAtBottomState(true);
+            }
+          }}
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-white text-fb-blue text-xs font-semibold rounded-full shadow-lg border border-[#E4E6EB] hover:bg-[#F0F2F5] transition-colors cursor-pointer z-10 flex items-center gap-1.5"
+        >
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/>
+          </svg>
+          {hasMoreDown ? "Jump to latest" : `${pendingNewMessageCount > 0 ? `${pendingNewMessageCount} new ` : ""}Jump to latest`}
+        </button>
+      )}
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
@@ -708,7 +877,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
               ))}
             </div>
             <span className="text-xs" style={{ color: isMidnight ? "#9FA8DA" : "#65676B" }}>
-              {Array.from(typingUsers).length === 1 ? "typing..." : "several people typing..."}
+              {getTypingText()}
             </span>
           </div>
         </div>
@@ -770,7 +939,7 @@ function MessageActions({ message, isMe, isGroup, isHovered, onReact, onReply, o
 
   const isImageType = (t) => !t || ["image", "image/jpeg", "image/png", "image/gif", "image/webp"].includes(t?.toLowerCase());
   const isVideoType = (t) => !t || ["video", "video/mp4", "video/webm", "video/quicktime"].includes(t?.toLowerCase());
-  const isAudioType = (t) => !t || ["audio", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp3"].includes(t?.toLowerCase());
+  const isAudioType = (t) => !t || t.toLowerCase().startsWith("audio/") || ["audio", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp3"].includes(t?.toLowerCase());
 
   const menuBg = isMidnight ? "#1E2235" : "#FFFFFF";
   const menuText = isMidnight ? "#E4E6EB" : "#050505";
@@ -985,13 +1154,14 @@ function FilePreview({ file, onRemove }) {
 }
 
 function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySent, onEditSent, onCancelReply, onCancelEdit }) {
+  const [voicePhase, setVoicePhase] = useState("idle");
   const { sendMessage, startTyping, endTyping, updateMessage } = useChat();
   const [msg, setMsg] = useState("");
   const [files, setFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const typingTimerRef = useRef(null);
+  const isTypingRef = useRef(false);
   const dropZoneRef = useRef(null);
   const photoInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1001,6 +1171,21 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
   const defaultReaction = conv?.defaultReaction || "Like";
   const defaultEmoji = getReactionEmoji(defaultReaction);
   const canSend = (msg.trim() || files.length > 0) && !isSending;
+
+  // Handle conversation switching clean up and initialization
+  useEffect(() => {
+    // Initialize input state and reset typing flag for the new conversation
+    setMsg("");
+    setFiles([]);
+    isTypingRef.current = false;
+
+    return () => {
+      // Before leaving current conversation, send EndTyping to SignalR
+      if (isTypingRef.current && conv?.id) {
+        endTyping(conv.id);
+      }
+    };
+  }, [conv?.id]);
 
   // Sync editing message content to input
   useEffect(() => {
@@ -1012,6 +1197,10 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
     if (!replyTo && !editingMsg && !msg) return;
     if (!replyTo && !editingMsg) {
       setMsg("");
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        endTyping();
+      }
     }
   }, [replyTo, editingMsg]);
 
@@ -1028,10 +1217,16 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
   }, [showEmojiPicker]);
 
   const handleChange = (e) => {
-    setMsg(e.target.value);
-    startTyping();
-    clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => endTyping(), 2000);
+    const val = e.target.value;
+    setMsg(val);
+    const hasText = val.length > 0;
+    if (hasText && !isTypingRef.current) {
+      isTypingRef.current = true;
+      startTyping();
+    } else if (!hasText && isTypingRef.current) {
+      isTypingRef.current = false;
+      endTyping();
+    }
   };
 
   const addFiles = (newFiles) => {
@@ -1043,15 +1238,18 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSend = async (prepend = "") => {
+  const handleSend = async (prepend = "", extraFiles = []) => {
     const content = prepend || msg;
     const hasContent = content.trim();
-    const hasFiles = files.length > 0;
+    const allFiles = [...files, ...extraFiles];
+    const hasFiles = allFiles.length > 0;
     if (!hasContent && !hasFiles) return;
     if (isSending) return;
 
-    clearTimeout(typingTimerRef.current);
-    endTyping();
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      endTyping();
+    }
     setIsSending(true);
     try {
       if (editingMsg) {
@@ -1060,7 +1258,7 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
         setFiles([]);
         onEditSent?.();
       } else {
-        await sendMessage(prepend || msg, files, replyTo?.id ?? null);
+        await sendMessage(prepend || msg, allFiles, replyTo?.id ?? null);
         setMsg("");
         setFiles([]);
         onReplySent?.();
@@ -1090,7 +1288,15 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
   };
 
   const onEmojiClick = (emojiData) => {
-    setMsg((prev) => prev + emojiData.emoji);
+    setMsg((prev) => {
+      const newVal = prev + emojiData.emoji;
+      const hasText = newVal.length > 0;
+      if (hasText && !isTypingRef.current) {
+        isTypingRef.current = true;
+        startTyping();
+      }
+      return newVal;
+    });
     inputRef.current?.focus();
   };
 
@@ -1172,101 +1378,124 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
         <input
           ref={fileInputRef}
           type="file"
-          accept={`${ACCEPT_IMAGE},${ACCEPT_VIDEO},${ACCEPT_FILE}`}
           multiple
           className="hidden"
           onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
         />
 
-        {/* Photo / Image button */}
-        <button
-          onClick={() => photoInputRef.current?.click()}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
-          title="Send photo"
-          style={{ color: theme.text }}
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-          </svg>
-        </button>
+        {voicePhase === "idle" && (
+          <>
+            {/* Photo / Image button */}
+            <button
+              onClick={() => photoInputRef.current?.click()}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+              title="Send photo"
+              style={{ color: theme.text }}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+              </svg>
+            </button>
 
-        {/* Attach file button */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
-          title="Attach file"
-          style={{ color: theme.text }}
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
-          </svg>
-        </button>
+            {/* Attach file button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+              title="Attach file"
+              style={{ color: theme.text }}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
+              </svg>
+            </button>
 
-        {/* Emoji picker button */}
-        <div className="relative" ref={emojiPickerRef}>
-          <button
-            onClick={() => setShowEmojiPicker((v) => !v)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
-            title="Emoji"
-            style={{ color: theme.text }}
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-            </svg>
-          </button>
+            {/* Emoji picker button */}
+            <div className="relative" ref={emojiPickerRef}>
+              <button
+                onClick={() => setShowEmojiPicker((v) => !v)}
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+                title="Emoji"
+                style={{ color: theme.text }}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                </svg>
+              </button>
 
-          {showEmojiPicker && (
-            <div className="absolute bottom-12 right-0 z-50">
-              <EmojiPicker
-                onEmojiClick={onEmojiClick}
-                autoFocusSearch={false}
-                height={320}
-                width={320}
-                skinTonesDisabled
-                previewConfig={{ showPreview: false }}
-              />
+              {showEmojiPicker && (
+                <div className="absolute bottom-12 right-0 z-50">
+                  <EmojiPicker
+                    onEmojiClick={onEmojiClick}
+                    autoFocusSearch={false}
+                    height={320}
+                    width={320}
+                    skinTonesDisabled
+                    previewConfig={{ showPreview: false }}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
-        {/* Input field */}
-        <div className="flex-1 flex items-center rounded-[20px] px-3 py-1.5 gap-2 mx-1" style={{ backgroundColor: theme.bubbleOther }}>
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: theme.bubbleOtherText }}
-            placeholder={editingMsg ? "Edit message..." : "Aa"}
-            value={msg}
-            onChange={handleChange}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+        {/* Voice Recorder container (always present to preserve state, expands during recording/playback) */}
+        <div className={`flex items-center justify-center flex-shrink-0 ${voicePhase !== "idle" ? "flex-1 w-full" : "w-9 h-9"}`}>
+          <VoiceRecorder
+            theme={theme}
+            onPhaseChange={setVoicePhase}
+            onSend={(blob) => {
+              if (blob) {
+                handleSend("", [blob]);
+              }
+              setVoicePhase("idle");
+            }}
           />
         </div>
 
-        {/* Send / Like — default emoji */}
-        <button
-          onClick={() => {
-            if (!canSend) {
-              handleSend(defaultEmoji);
-            }
-          }}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all flex-shrink-0 cursor-pointer"
-          title={canSend ? "Send message" : `Send ${defaultReaction}`}
-        >
-          {isSending ? (
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
-            </svg>
-          ) : canSend ? (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" style={{ color: theme.bubbleSelf }}>
-              <path d="M1 21L23 12 1 3v7l15 2-15 2v7z" />
-            </svg>
-          ) : (
-            <span className="text-lg leading-none" style={{ transform: "scale(1.15)" }}>
-              {defaultEmoji}
-            </span>
-          )}
-        </button>
+        {voicePhase === "idle" && (
+          <>
+            {/* Input field */}
+            <div className="flex-1 flex items-center rounded-[20px] px-3 py-1.5 gap-2 mx-1" style={{ backgroundColor: theme.bubbleOther }}>
+              <input
+                ref={inputRef}
+                className="flex-1 bg-transparent outline-none text-sm"
+                style={{ color: theme.bubbleOtherText }}
+                placeholder={editingMsg ? "Edit message..." : "Aa"}
+                value={msg}
+                onChange={handleChange}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              />
+            </div>
+
+            {/* Send / Like — default emoji */}
+            <button
+              onClick={() => {
+                if (canSend) {
+                  handleSend();
+                } else {
+                  handleSend(defaultEmoji);
+                }
+              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all flex-shrink-0 cursor-pointer"
+              title={canSend ? "Send message" : `Send ${defaultReaction}`}
+            >
+              {isSending ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
+                </svg>
+              ) : canSend ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" style={{ color: theme.bubbleSelf }}>
+                  <path d="M1 21L23 12 1 3v7l15 2-15 2v7z" />
+                </svg>
+              ) : (
+                <span className="text-lg leading-none" style={{ transform: "scale(1.15)" }}>
+                  {defaultEmoji}
+                </span>
+              )}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1275,23 +1504,35 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
 // ══════════════════════════════════════════════════════════════════
 // SearchMessages — right-panel message search
 // ══════════════════════════════════════════════════════════════════
-function SearchMessages({ conv, onClose }) {
-  const { messages } = useChat();
+function SearchMessages({ conv, onClose, onJumpToMessage }) {
+  const { searchMessagesInConversation, messageSearchLoading, jumpToMessage } = useChat();
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
   const messagesEndRef = useRef(null);
 
-  const results = messages.filter((m) =>
-    (m.content || "").toLowerCase().includes(query.toLowerCase())
-  );
+  // Debounced search on query change
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    const timer = setTimeout(async () => {
+      const data = await searchMessagesInConversation(query);
+      setResults(Array.isArray(data) ? data : []);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  // Scroll to a message in the chat window
-  const scrollToMessage = (msg) => {
-    const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-fb-blue");
-      setTimeout(() => el.classList.remove("ring-2", "ring-fb-blue"), 1500);
-    }
+  // Click a result: load messages around it then scroll & highlight
+  const handleResultClick = async (msg) => {
+    await jumpToMessage(msg.id);
+    // Wait a tick for the DOM to render the newly loaded messages
+    setTimeout(() => {
+      const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-fb-blue");
+        setTimeout(() => el.classList.remove("ring-2", "ring-fb-blue"), 1500);
+      }
+      if (onJumpToMessage) onJumpToMessage(msg.id);
+    }, 150);
   };
 
   return (
@@ -1349,6 +1590,10 @@ function SearchMessages({ conv, onClose }) {
               <p className="text-xs text-fb-subtext mt-1">Find messages in this conversation</p>
             </div>
           </div>
+        ) : messageSearchLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-fb-blue border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : results.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
             <div className="w-14 h-14 bg-[#F0F2F5] rounded-full flex items-center justify-center">
@@ -1367,17 +1612,17 @@ function SearchMessages({ conv, onClose }) {
               {results.length} result{results.length !== 1 ? "s" : ""}
             </div>
             {results.map((m) => {
-              const isMe = m.senderId === m.senderId; // just for color
+              const isMe = m.senderId === m.senderId;
               return (
                 <button
                   key={m.id}
-                  onClick={() => scrollToMessage(m)}
+                  onClick={() => handleResultClick(m)}
                   className="w-full text-left px-4 py-2.5 hover:bg-[#F0F2F5] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                       {m.senderAvatarUrl ? (
-                        <img src={m.senderAvatarUrl} alt={m.senderName} className="w-full h-full object-cover" />
+                        <img src={m.senderAvatarUrl} alt={m.senderName} className="w-full h-full object-cover" onError={(e) => { e.target.src = DEFAULT_AVATAR; }} />
                       ) : (
                         <div className="w-full h-full bg-[#D8DADF] flex items-center justify-center">
                           <span className="text-xs font-bold text-fb-subtext">
@@ -1422,7 +1667,7 @@ function ChatInfo({ conv, isOnline, onBack, onOpenSearch }) {
       </div>
     );
   }
-  return !conv.isOneToOne ? <ChatInfoGroup conv={conv} onOpenSearch={onOpenSearch} /> : <ChatInfoDirect conv={conv} isOnline={isOnline} />;
+  return !conv.isOneToOne ? <ChatInfoGroup conv={conv} onOpenSearch={onOpenSearch} /> : <ChatInfoDirect conv={conv} isOnline={isOnline} onOpenSearch={onOpenSearch} />;
 }
 
 // ══════════════════════════════════════════════════════════════════

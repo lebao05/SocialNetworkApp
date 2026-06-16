@@ -29,6 +29,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
+                    .ThenInclude(m => m.Creator)
                 .FirstOrDefaultAsync(c => c.Id == id && c.DeletedAt == null, cancellationToken);
         }
         public async Task<ConversationMember?> GetMemberAsync(
@@ -46,31 +47,57 @@ namespace Infrastructure.Persistence.Repositories
                 Guid userId,
                 int pageNumber,
                 int pageSize,
+                bool groupsOnly = false,
+                bool unreadOnly = false,
                 CancellationToken cancellationToken = default)
         {
-            // 1. Paginated conversations — no messages loaded yet
-            var conversationIds = await _context.ConversationMembers
+            // 1. Get conversation IDs the user belongs to, with optional filters
+            IQueryable<long> baseQuery = _context.ConversationMembers
                 .AsNoTracking()
                 .Where(m => m.UserId == userId)
-                .Select(m => m.ConversationId)
-                .ToListAsync(cancellationToken);
+                .Select(m => m.ConversationId);
 
-            var paginatedIds = conversationIds
+            if (groupsOnly)
+            {
+                baseQuery = _context.Conversations
+                    .AsNoTracking()
+                    .Where(c => !c.IsOneToOne && c.DeletedAt == null && _context.ConversationMembers.Any(m => m.ConversationId == c.Id && m.UserId == userId))
+                    .Select(c => c.Id);
+            }
+
+            var allConversationIds = await baseQuery.ToListAsync(cancellationToken);
+
+            // 2. Apply unread filter in memory (requires loading members for lastReadMessageId)
+            if (unreadOnly)
+            {
+                var unreadConvIds = await _context.ConversationMembers
+                    .AsNoTracking()
+                    .Where(m => m.UserId == userId && allConversationIds.Contains(m.ConversationId))
+                    .Where(m => m.LastReadMessageId == null ||
+                        _context.Messages.Any(msg => msg.ConversationId == m.ConversationId && msg.Id > m.LastReadMessageId))
+                    .Select(m => m.ConversationId)
+                    .ToListAsync(cancellationToken);
+
+                allConversationIds = unreadConvIds;
+            }
+
+            if (!allConversationIds.Any())
+                return new List<Conversation>();
+
+            // 3. Paginate
+            var paginatedIds = allConversationIds
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
 
-            if (!paginatedIds.Any())
-                return new List<Conversation>();
-
-            // 2. Load conversations with members (no bloated messages include)
+            // 4. Load conversations with members
             var conversations = await _context.Conversations
                 .AsNoTracking()
                 .Include(c => c.Members).ThenInclude(m => m.User)
                 .Where(c => c.DeletedAt == null && paginatedIds.Contains(c.Id))
                 .ToListAsync(cancellationToken);
 
-            // 3. Attach only the latest message per conversation via EF change tracker
+            // 5. Attach only the latest message per conversation
             var latestMessages = await _context.Messages
                 .Where(m => paginatedIds.Contains(m.ConversationId))
                 .GroupBy(m => m.ConversationId)
@@ -80,6 +107,7 @@ namespace Infrastructure.Persistence.Repositories
             var latestMsgIds = latestMessages.Select(x => x.LatestMessageId).ToList();
 
             var latestMessagesByConv = await _context.Messages
+                .Include(m => m.Creator)
                 .Where(m => latestMsgIds.Contains(m.Id))
                 .ToListAsync(cancellationToken);
 
@@ -119,6 +147,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
+                    .ThenInclude(m => m.Creator)
                 .Where(c => c.IsOneToOne && c.DeletedAt == null)
                 .Where(c => c.Members.Any(m => m.UserId == userId1) && c.Members.Any(m => m.UserId == userId2))
                 .FirstOrDefaultAsync(cancellationToken);
@@ -138,6 +167,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
+                    .ThenInclude(m => m.Creator)
                 .Where(c => !c.IsOneToOne && c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
                 .Where(c => c.Name != null && c.Name.ToLower().Contains(lowerTerm))
                 .OrderByDescending(c => c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt)
@@ -160,6 +190,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                 .Include(c => c.Messages)
+                    .ThenInclude(m => m.Creator)
                 .Where(c => c.IsOneToOne && c.DeletedAt == null && c.Members.Any(m => m.UserId == userId))
                 .Where(c => c.Members.Any(m =>
                     m.UserId != userId &&

@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -46,6 +46,21 @@ public class ChatHub : Hub
                 await Clients.Group(conversationId.ToString())
                     .SendAsync("UserOnline", userId.ToString());
         }
+
+        var onlineUsers = new HashSet<string>();
+        foreach (var conversationId in conversationIds)
+        {
+            var groupUsers = _presenceTracker.GetGroupUsers(conversationId.ToString());
+            foreach (var groupUser in groupUsers)
+            {
+                if (groupUser != userId.ToString())
+                {
+                    onlineUsers.Add(groupUser);
+                }
+            }
+        }
+
+        await Clients.Caller.SendAsync("GetOnlineUsers", onlineUsers.ToList());
 
         await base.OnConnectedAsync();
     }

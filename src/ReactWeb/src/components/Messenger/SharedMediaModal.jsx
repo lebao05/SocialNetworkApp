@@ -13,6 +13,19 @@ function isVideoType(fileType) {
   return t === "video" || t === "video/mp4" || t === "video/webm" || t === "video/quicktime";
 }
 
+function formatFileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileExtension(url) {
+  if (!url) return "FILE";
+  const parts = url.split(".");
+  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "FILE";
+}
+
 function MediaThumbnail({ item, onClick }) {
   const att = item.attachment;
   const isImage = isImageType(att?.fileType);
@@ -188,7 +201,10 @@ export default function SharedMediaModal({ conv, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-white flex flex-col max-w-2xl mx-auto h-full max-h-[90vh] mx-auto my-[5vh] rounded-2xl shadow-2xl overflow-hidden">
+      {/* Dark backdrop overlay */}
+      <div className="fixed inset-0 bg-black/50 z-[999]" onClick={onClose} />
+
+      <div className="fixed inset-0 z-[1000] bg-white text-gray-900 flex flex-col max-w-2xl mx-auto h-full max-h-[90vh] mx-auto my-[5vh] rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E4E6EB] flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -240,7 +256,7 @@ export default function SharedMediaModal({ conv, onClose }) {
               </svg>
               <p className="text-sm font-medium">No shared {activeTab === "media" ? "photos or videos" : "files"} yet</p>
             </div>
-          ) : (
+          ) : activeTab === "media" ? (
             <div className="grid grid-cols-3 gap-1.5">
               {conversationFiles.map((item, idx) => (
                 <MediaThumbnail
@@ -249,6 +265,56 @@ export default function SharedMediaModal({ conv, onClose }) {
                   onClick={() => handleThumbnailClick(item, idx)}
                 />
               ))}
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-gray-100">
+              {conversationFiles.map((item, idx) => {
+                const att = item.attachment;
+                const fileName = (() => {
+                  if (!att?.fileUrl) return "File";
+                  const parts = att.fileUrl.split("/");
+                  const filenameWithQuery = parts[parts.length - 1];
+                  const filename = filenameWithQuery.split("?")[0];
+                  return decodeURIComponent(filename);
+                })();
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleThumbnailClick(item, idx)}
+                    className="flex items-center gap-3 py-3 px-2 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    {/* Document Icon Container */}
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
+                      </svg>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate text-gray-900">
+                        {fileName}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                        {att?.fileSize > 0 ? formatFileSize(att.fileSize) : getFileExtension(att?.fileUrl)}
+                      </p>
+                    </div>
+
+                    {/* Download Icon */}
+                    <a
+                      href={att?.fileUrl}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                    </a>
+                  </div>
+                );
+              })}
             </div>
           )}
 

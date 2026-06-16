@@ -119,6 +119,8 @@ public class ConversationController : ApiController
     public async Task<IActionResult> Get(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] bool groupsOnly = false,
+        [FromQuery] bool unreadOnly = false,
         CancellationToken cancellationToken = default)
     {
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -126,7 +128,7 @@ public class ConversationController : ApiController
 
         var userId = ClaimsPrincipalExtensions.GetUserId(User);
 
-        var query = new GetConversationsQuery(userId, pageSize, pageNumber);
+        var query = new GetConversationsQuery(userId, pageSize, pageNumber, groupsOnly, unreadOnly);
 
         Result<List<ConversationDetailDto>> result = await _sender.Send(query, cancellationToken);
 

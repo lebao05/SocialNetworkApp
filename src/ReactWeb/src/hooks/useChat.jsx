@@ -13,9 +13,6 @@ export const useChat = (conversationId) => {
     const pageSize = 20;
     const [hasMore, setHasMore] = useState(true);
 
-    /* ===========================
-       LOAD INITIAL MESSAGES
-       =========================== */
     const loadMessages = useCallback(async () => {
         if (!conversationId) return;
 

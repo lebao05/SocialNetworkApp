@@ -9,8 +9,9 @@ export async function sendMessageApi({ conversationId, content, files = [], repl
     if (content != null) form.append("content", content);
     if (replyToMessageId != null) form.append("replyToMessageId", String(replyToMessageId));
     files.forEach((file) => {
-        if (file instanceof File) {
-            form.append("files", file);
+        if (file instanceof File || file instanceof Blob) {
+            const fileName = file.name || "voice_message.webm";
+            form.append("files", file, fileName);
         }
     });
 
@@ -36,6 +37,7 @@ export async function searchMessagesApi(conversationId, query, pageNumber = 1, p
  * @param {long|null} anchorMessageId - anchor message id (null for initial load)
  * @param {"up"|"down"|"around"} [direction="down"] - "up" = older, "down" = newer, "around" = both sides
  * @param {number} [size=20] - number of messages per side (around = this many each side)
+ * @returns {Promise<{messages: Array, hasMoreUp: boolean, hasMoreDown: boolean}>}
  */
 export async function getMessagesAroundApi(conversationId, anchorMessageId = null, direction = "down", size = 20) {
     const response = await axios.get("/messages/around", {
@@ -57,6 +59,20 @@ export async function getMessagesAroundApi(conversationId, anchorMessageId = nul
 export async function getFilesByConversationApi(conversationId, isMedia = true, pageNumber = 1, pageSize = 20) {
     const response = await axios.get(`/messages/${conversationId}/files`, {
         params: { isMedia, pageNumber, pageSize },
+    });
+    return response.data;
+}
+
+/**
+ * Get pinned messages in a conversation.
+ * @param {long} conversationId
+ * @param {number} [pageNumber=1]
+ * @param {number} [pageSize=20]
+ * @returns {Promise<Array>} array of pinned message DTOs
+ */
+export async function getPinnedMessagesApi(conversationId, pageNumber = 1, pageSize = 100) {
+    const response = await axios.get(`/messages/${conversationId}/pinned`, {
+        params: { pageNumber, pageSize },
     });
     return response.data;
 }

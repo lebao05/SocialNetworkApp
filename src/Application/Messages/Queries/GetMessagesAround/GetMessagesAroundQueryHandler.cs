@@ -6,7 +6,7 @@ using Domain.Shared;
 namespace Application.Messages.Queries.GetMessagesAround;
 
 internal sealed class GetMessagesAroundQueryHandler
-    : IQueryHandler<GetMessagesAroundQuery, List<MessageDto>>
+    : IQueryHandler<GetMessagesAroundQuery, MessagesAroundDto>
 {
     private readonly IMessageRepository _messageRepository;
     private readonly IConversationRepository _conversationRepository;
@@ -19,7 +19,7 @@ internal sealed class GetMessagesAroundQueryHandler
         _conversationRepository = conversationRepository;
     }
 
-    public async Task<Result<List<MessageDto>>> Handle(
+    public async Task<Result<MessagesAroundDto>> Handle(
         GetMessagesAroundQuery request,
         CancellationToken cancellationToken)
     {
@@ -27,16 +27,16 @@ internal sealed class GetMessagesAroundQueryHandler
         var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId, cancellationToken);
         if (conversation is null)
         {
-            return Result.Failure<List<MessageDto>>(new Error("Conversation.NotFound", "Conversation not found"));
+            return Result.Failure<MessagesAroundDto>(new Error("Conversation.NotFound", "Conversation not found"));
         }
 
         if (conversation.Members.All(m => m.UserId != request.UserId))
         {
-            return Result.Failure<List<MessageDto>>(new Error("Conversation.Forbidden", "You are not a member of this conversation"));
+            return Result.Failure<MessagesAroundDto>(new Error("Conversation.Forbidden", "You are not a member of this conversation"));
         }
 
         // 2. Fetch messages
-        var messages = await _messageRepository.GetMessagesAroundAsync(
+        var aroundResult = await _messageRepository.GetMessagesAroundAsync(
             request.ConversationId,
             request.AnchorMessageId,
             request.Direction,
@@ -44,6 +44,10 @@ internal sealed class GetMessagesAroundQueryHandler
             cancellationToken);
 
         // 3. Map to DTO
-        return Result.Success(messages.Select(MessageDto.FromDomain).ToList());
+        var dto = new MessagesAroundDto(
+            aroundResult.Messages.Select(MessageDto.FromDomain).ToList(),
+            aroundResult.HasMoreUp,
+            aroundResult.HasMoreDown);
+        return Result.Success(dto);
     }
 }

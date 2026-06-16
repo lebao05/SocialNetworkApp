@@ -58,7 +58,8 @@ namespace Application.Messages.Commands.SendMessage
                 {
                     fileUrl = await _uploadService.UploadImageAsync(file.Stream, file.FileName);
                 }
-                else if (file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                else if (file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
+                         file.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
                 {
                     var result = await _uploadService.UploadVideoWithMetadataAsync(file.Stream, file.FileName);
                     fileUrl = result.VideoUrl;

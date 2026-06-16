@@ -22,6 +22,7 @@ import {
 } from "../apis/conversationApi";
 import {
     getMessagesAroundApi,
+    getPinnedMessagesApi,
     searchMessagesApi,
     getFilesByConversationApi,
     sendMessageApi,
@@ -50,6 +51,7 @@ function ChatContextInner({ children }) {
     const [conversations, setConversations] = useState([]);
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [conversationsLoading, setConversationsLoading] = useState(false);
+    const [conversationFilter, setConversationFilter] = useState("all"); // "all" | "groups" | "unread"
 
     // ── Members state (for ChatInfo sidebar) ──
     const [conversationMembers, setConversationMembers] = useState([]);
@@ -75,12 +77,22 @@ function ChatContextInner({ children }) {
     const convsRef = useRef(conversations);
     useEffect(() => { convsRef.current = conversations; }, [conversations]);
 
+    const selectedConversationRef = useRef(selectedConversation);
+    useEffect(() => { selectedConversationRef.current = selectedConversation; }, [selectedConversation]);
+
     // ── Messages state ──
     const [messages, setMessages] = useState([]);
     const [messagesLoading, setMessagesLoading] = useState(false);
-    const [hasMoreMessages, setHasMoreMessages] = useState(true);
-    const [pageNumber, setPageNumber] = useState(1);
+    const [hasMoreUp, setHasMoreUp] = useState(true);
+    const [hasMoreDown, setHasMoreDown] = useState(false); // false = at the bottom (newest loaded)
+    const [pendingNewMessageCount, setPendingNewMessageCount] = useState(0);
+    const [atBottom, setAtBottom] = useState(true); // tracked by MessengerFull scroll listener
+    const isAtBottomRef = useRef(true); // sync ref for SignalR handler
     const PAGE_SIZE = 20;
+
+    // Refs that mirror state for synchronous reads inside the SignalR handler
+    const hasMoreDownRef = useRef(hasMoreDown);
+    useEffect(() => { hasMoreDownRef.current = hasMoreDown; }, [hasMoreDown]);
 
     // ── Search state ──
     const [searchResults, setSearchResults] = useState([]);
@@ -98,6 +110,11 @@ function ChatContextInner({ children }) {
     const [friends, setFriends] = useState([]);
     const [friendsLoading, setFriendsLoading] = useState(false);
     const [friendsSearchTerm, setFriendsSearchTerm] = useState("");
+
+    // ── Refetch conversations when filter changes ──
+    useEffect(() => {
+        fetchConversations(1, 20);
+    }, [conversationFilter]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // SIGNALR SETUP
@@ -145,7 +162,11 @@ function ChatContextInner({ children }) {
             newConnection.stop();
         };
     }, [token]);
-
+    useEffect(() => {
+        if (selectedConversation?.id && !selectedConversation.isVirtual) {
+            loadConversationMembers(true);
+        }
+    }, [selectedConversation?.id]);
     // ─────────────────────────────────────────────────────────────────────────
     // SIGNALR EVENT LISTENERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -162,10 +183,21 @@ function ChatContextInner({ children }) {
                 playNotificationSound();
             }
             console.log("message", message);
-            setMessages((prev) => {
-                if (prev.some((m) => m.id === message.id)) return prev;
-                return [...prev, message];
-            });
+
+            // Only auto-append when viewing this conversation and the user is at the bottom
+            // (i.e., hasMoreDown === false means the newest messages are already loaded).
+            // Otherwise, increment a counter so the user can jump-to-latest.
+            const isViewingThisConv = selectedConversationRef.current?.id === convId;
+            if (isViewingThisConv) {
+                if (hasMoreDownRef.current === false && isAtBottomRef.current) {
+                    setMessages((prev) => {
+                        if (prev.some((m) => m.id === message.id)) return prev;
+                        return [...prev, message];
+                    });
+                } else {
+                    setPendingNewMessageCount((c) => c + 1);
+                }
+            }
 
             setConversations((prev) => {
                 const idx = prev.findIndex((c) => c.id === convId);
@@ -175,8 +207,7 @@ function ChatContextInner({ children }) {
                         .then((detail) => {
                             const newConv = {
                                 ...detail,
-                                lastMessageContent: message.content,
-                                lastMessageAt: message.createdAt,
+                                lastMessage: message,
                                 unreadCount: 0,
                             };
                             setConversations((curr) => {
@@ -196,8 +227,7 @@ function ChatContextInner({ children }) {
 
                 const updatedConv = {
                     ...conv,
-                    lastMessageContent: message.content,
-                    lastMessageAt: message.createdAt,
+                    lastMessage: message,
                     unreadCount: updatedUnread,
                 };
 
@@ -226,17 +256,6 @@ function ChatContextInner({ children }) {
                 next.add(userId);
                 return { ...prev, [convId]: next };
             });
-
-            clearTimeout(typingTimerRef.current[convId]);
-            typingTimerRef.current[convId] = setTimeout(() => {
-                setTypingUsers((prev) => {
-                    const conv = prev[convId];
-                    if (!conv) return prev;
-                    const next = new Set(conv);
-                    next.delete(userId);
-                    return { ...prev, [convId]: next };
-                });
-            }, 4000);
         };
 
         const onUserOnline = (userId) => {
@@ -255,15 +274,22 @@ function ChatContextInner({ children }) {
             });
         };
 
+        const onGetOnlineUsers = (userIds) => {
+            setOnlineUsers((prev) => {
+                const next = new Set(prev);
+                userIds.forEach((id) => next.add(id));
+                return next;
+            });
+        };
+
         const onMessagesSeen = ({ conversationId, userId: seenByUserId, lastReadMessageId }) => {
             if (seenByUserId === user?.id?.toString()) return;
-            setConversations((prev) =>
-                prev.map((c) =>
-                    c.id === conversationId
-                        ? { ...c, unreadCount: 0, lastReadMessageId }
-                        : c
-                )
-            );
+            setConversationMembers(pre =>
+                pre.map((m) => m.userId === seenByUserId ? {
+                    ...m,
+                    lastReadMessageId,
+                } : m)
+            )
         };
 
         const onMessageReactionUpdated = (updatedMessage) => {
@@ -280,7 +306,6 @@ function ChatContextInner({ children }) {
             if (userId === user?.id?.toString()) return;
             const convId = selectedConversation?.id?.toString();
             if (!convId || convId !== conversationId?.toString()) return;
-            clearTimeout(typingTimerRef.current[convId]);
             setTypingUsers((prev) => {
                 const conv = prev[convId];
                 if (!conv) return prev;
@@ -291,6 +316,7 @@ function ChatContextInner({ children }) {
         });
         connection.on("UserOnline", onUserOnline);
         connection.on("UserOffline", onUserOffline);
+        connection.on("GetOnlineUsers", onGetOnlineUsers);
         connection.on("MessagesSeen", onMessagesSeen);
         connection.on("MemberAdded", ({ conversationId, member }) => {
             if (selectedConversation?.id?.toString() === conversationId?.toString()) {
@@ -302,7 +328,7 @@ function ChatContextInner({ children }) {
             // Refresh conversation list so member count is up to date
             getConversationsApi()
                 .then((data) => setConversations(data ?? []))
-                .catch(() => {});
+                .catch(() => { });
         });
         connection.on("MemberRemoved", ({ conversationId, removedUserId }) => {
             if (selectedConversation?.id?.toString() === conversationId?.toString()) {
@@ -312,7 +338,7 @@ function ChatContextInner({ children }) {
             }
             getConversationsApi()
                 .then((data) => setConversations(data ?? []))
-                .catch(() => {});
+                .catch(() => { });
         });
 
         return () => {
@@ -323,11 +349,26 @@ function ChatContextInner({ children }) {
             connection.off("UserUntyping");
             connection.off("UserOnline", onUserOnline);
             connection.off("UserOffline", onUserOffline);
+            connection.off("GetOnlineUsers", onGetOnlineUsers);
             connection.off("MessagesSeen", onMessagesSeen);
             connection.off("MemberAdded");
             connection.off("MemberRemoved");
         };
     }, [connection, user, selectedConversation]);
+
+    // Clear typing indicators for the previous conversation when leaving it
+    useEffect(() => {
+        const prevId = selectedConversation?.id;
+        return () => {
+            if (prevId) {
+                setTypingUsers((prev) => {
+                    const next = { ...prev };
+                    delete next[prevId];
+                    return next;
+                });
+            }
+        };
+    }, [selectedConversation?.id]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // CONVERSATION METHODS
@@ -336,7 +377,9 @@ function ChatContextInner({ children }) {
     const fetchConversations = async (page = 1, pageSize = 20) => {
         setConversationsLoading(true);
         try {
-            const data = await getConversationsApi(page, pageSize);
+            const groupsOnly = conversationFilter === "groups";
+            const unreadOnly = conversationFilter === "unread";
+            const data = await getConversationsApi(page, pageSize, groupsOnly, unreadOnly);
             setConversations(data);
         } catch (err) {
             console.error("Failed to fetch conversations:", err);
@@ -348,8 +391,9 @@ function ChatContextInner({ children }) {
     const selectConversation = async (idOrUserId, byUserId = false) => {
         setConversationsLoading(true);
         setMessages([]);
-        setPageNumber(1);
-        setHasMoreMessages(true);
+        setHasMoreUp(true);
+        setHasMoreDown(false);
+        setPendingNewMessageCount(0);
         setConversationMembers([]);
         setMembersTotalCount(0);
         setPinnedMessages([]);
@@ -595,19 +639,22 @@ function ChatContextInner({ children }) {
     // MESSAGE METHODS
     // ─────────────────────────────────────────────────────────────────────────
 
+    // Initial load: fetch the latest N messages (direction "up" with no anchor returns the newest `size` messages)
     const loadMessages = async (reset = true) => {
         if (!selectedConversation || selectedConversation.isVirtual) return;
         if (reset) {
             setMessages([]);
-            setPageNumber(1);
-            setHasMoreMessages(true);
+            setHasMoreUp(true);
+            setHasMoreDown(false);
+            setPendingNewMessageCount(0);
         }
         setMessagesLoading(true);
         try {
             const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
-            setMessages(data ?? []);
-            console.log(data);
-            setHasMoreMessages((data ?? []).length === PAGE_SIZE);
+            const list = data?.messages ?? data ?? [];
+            setMessages(list);
+            setHasMoreUp(data?.hasMoreUp ?? list.length === PAGE_SIZE);
+            setHasMoreDown(data?.hasMoreDown ?? false);
         } catch (err) {
             console.error("Failed to load messages:", err);
         } finally {
@@ -615,24 +662,88 @@ function ChatContextInner({ children }) {
         }
     };
 
-    const loadMoreMessages = async () => {
-        if (!selectedConversation || messagesLoading || !hasMoreMessages) return;
-        const nextPage = pageNumber + 1;
+    // Load older messages (scroll up) — prepend to current list
+    const loadOlderMessages = async () => {
+        if (!selectedConversation || messagesLoading || !hasMoreUp || messages.length === 0) return;
         setMessagesLoading(true);
         try {
-            const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
-            if (!data?.length) {
-                setHasMoreMessages(false);
+            const oldestId = messages[0]?.id;
+            const data = await getMessagesAroundApi(selectedConversation.id, oldestId, "up", PAGE_SIZE);
+            const list = data?.messages ?? data ?? [];
+            if (!list.length) {
+                setHasMoreUp(false);
             } else {
-                setMessages((prev) => [...data, ...prev]);
-                setPageNumber(nextPage);
-                if (data.length < PAGE_SIZE) setHasMoreMessages(false);
+                setMessages((prev) => [...list, ...prev]);
+                setHasMoreUp(data?.hasMoreUp ?? list.length === PAGE_SIZE);
             }
         } catch (err) {
-            console.error("Failed to load more messages:", err);
+            console.error("Failed to load older messages:", err);
         } finally {
             setMessagesLoading(false);
         }
+    };
+
+    // Load newer messages (scroll down) — append to current list
+    const loadNewerMessages = async () => {
+        if (!selectedConversation || messagesLoading || !hasMoreDown || messages.length === 0) return;
+        setMessagesLoading(true);
+        try {
+            const newestId = messages[messages.length - 1]?.id;
+            const data = await getMessagesAroundApi(selectedConversation.id, newestId, "down", PAGE_SIZE);
+            const list = data?.messages ?? data ?? [];
+            if (!list.length) {
+                setHasMoreDown(false);
+            } else {
+                setMessages((prev) => [...prev, ...list]);
+                setHasMoreDown(data?.hasMoreDown ?? list.length === PAGE_SIZE);
+            }
+        } catch (err) {
+            console.error("Failed to load newer messages:", err);
+        } finally {
+            setMessagesLoading(false);
+        }
+    };
+
+    // Jump to a specific message: load messages around it (used by search & pinned)
+    const jumpToMessage = async (messageId) => {
+        if (!selectedConversation || selectedConversation.isVirtual) return;
+        setMessagesLoading(true);
+        try {
+            const data = await getMessagesAroundApi(selectedConversation.id, messageId, "around", PAGE_SIZE);
+            const list = data?.messages ?? data ?? [];
+            setMessages(list);
+            setHasMoreUp(data?.hasMoreUp ?? false);
+            setHasMoreDown(data?.hasMoreDown ?? true);
+            setPendingNewMessageCount(0);
+        } catch (err) {
+            console.error("Failed to jump to message:", err);
+        } finally {
+            setMessagesLoading(false);
+        }
+    };
+
+    // Jump to the latest messages
+    const jumpToLatest = async () => {
+        if (!selectedConversation || selectedConversation.isVirtual) return;
+        setMessagesLoading(true);
+        try {
+            const data = await getMessagesAroundApi(selectedConversation.id, null, "up", PAGE_SIZE);
+            const list = data?.messages ?? data ?? [];
+            setMessages(list);
+            setHasMoreUp(data?.hasMoreUp ?? list.length === PAGE_SIZE);
+            setHasMoreDown(false);
+            setPendingNewMessageCount(0);
+        } catch (err) {
+            console.error("Failed to jump to latest:", err);
+        } finally {
+            setMessagesLoading(false);
+        }
+    };
+
+    const setAtBottomState = (val) => {
+        isAtBottomRef.current = val;
+        setAtBottom(val);
+        if (val) setPendingNewMessageCount(0);
     };
 
     const searchMessagesInConversation = async (query, pageNumber = 1, pageSize = 20) => {
@@ -758,9 +869,8 @@ function ChatContextInner({ children }) {
         if (!selectedConversation || !selectedConversation.id || selectedConversation.isVirtual) return;
         setPinnedLoading(true);
         try {
-            const data = await getMessagesAroundApi(selectedConversation.id, null, "around", 100);
-            const pinned = (data ?? []).filter((m) => m.isPinned);
-            setPinnedMessages(pinned);
+            const data = await getPinnedMessagesApi(selectedConversation.id, 1, 100);
+            setPinnedMessages(data ?? []);
         } catch (err) {
             console.error("Failed to load pinned messages:", err);
         } finally {
@@ -799,27 +909,21 @@ function ChatContextInner({ children }) {
     // TYPING INDICATORS (via hub)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const startTyping = async () => {
-        if (!connection || !selectedConversation || selectedConversation.isVirtual) return;
-        const convId = selectedConversation.id.toString();
-
-        // Debounce: only invoke hub once per "typing session" (within 3s)
-        if (typingDebounceRef.current[convId]) return;
-        typingDebounceRef.current[convId] = true;
-
+    const startTyping = async (conversationId) => {
+        if (!connection) return;
+        const targetId = conversationId || selectedConversation?.id;
+        if (!targetId || (selectedConversation?.isVirtual && !conversationId)) return;
         try {
-            await connection.invoke("Typing", convId);
+            await connection.invoke("Typing", targetId.toString());
         } catch (_) { /* non-critical */ }
-
-        setTimeout(() => {
-            delete typingDebounceRef.current[convId];
-        }, 3000);
     };
 
-    const endTyping = async () => {
-        if (!connection || !selectedConversation || selectedConversation.isVirtual) return;
+    const endTyping = async (conversationId) => {
+        if (!connection) return;
+        const targetId = conversationId || selectedConversation?.id;
+        if (!targetId || (selectedConversation?.isVirtual && !conversationId)) return;
         try {
-            await connection.invoke("Untyping", selectedConversation.id.toString());
+            await connection.invoke("Untyping", targetId.toString());
         } catch (_) { /* non-critical */ }
     };
 
@@ -854,6 +958,8 @@ function ChatContextInner({ children }) {
         conversations,
         selectedConversation,
         conversationsLoading,
+        conversationFilter,
+        setConversationFilter,
         fetchConversations,
         selectConversation,
         startConversation,
@@ -873,9 +979,16 @@ function ChatContextInner({ children }) {
         // Messages
         messages,
         messagesLoading,
-        hasMoreMessages,
+        hasMoreUp,
+        hasMoreDown,
+        atBottom,
+        pendingNewMessageCount,
+        setAtBottomState,
         loadMessages,
-        loadMoreMessages,
+        loadOlderMessages,
+        loadNewerMessages,
+        jumpToMessage,
+        jumpToLatest,
         sendMessage,
         updateMessage,
         revokeMessage,

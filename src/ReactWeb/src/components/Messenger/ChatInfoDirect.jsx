@@ -52,14 +52,14 @@ function InfoRow({ icon, label, onClick, danger = false, sublabel }) {
   return content;
 }
 
-export default function ChatInfoDirect({ conv, isOnline }) {
+export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
   const navigate = useNavigate();
-  const { toggleNotifications } = useChat();
+  const { toggleNotifications, jumpToMessage } = useChat();
 
   const [openSections, setOpenSections] = useState({
-    info: false,
-    custom: false,
+    about: false,
     media: false,
+    custom: false,
     privacy: false,
   });
   const [showPinned, setShowPinned] = useState(false);
@@ -143,7 +143,7 @@ export default function ChatInfoDirect({ conv, isOnline }) {
             </span>
           </button>
 
-          <button className="flex flex-col items-center gap-1.5 cursor-pointer group">
+          <button onClick={onOpenSearch} className="flex flex-col items-center gap-1.5 cursor-pointer group">
             <div className="w-12 h-12 bg-[#F0F2F5] hover:bg-[#E4E6EB] hover:scale-105 rounded-full flex items-center justify-center transition-all duration-150">
               <svg className="w-5 h-5 text-fb-text" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
@@ -202,6 +202,20 @@ export default function ChatInfoDirect({ conv, isOnline }) {
           )}
         </div>
 
+        {/* About */}
+        <div>
+          <SectionHeader title="About" open={openSections.about} onToggle={() => toggle("about")} />
+          {openSections.about && (
+            <div className="pb-2 flex flex-col">
+              <InfoRow
+                icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>}
+                label="Pinned messages"
+                onClick={() => setShowPinned(true)}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Privacy */}
         <div>
           <SectionHeader
@@ -237,6 +251,7 @@ export default function ChatInfoDirect({ conv, isOnline }) {
           isOnline={isOnline}
           onlineUsers={null}
           onClose={() => setShowPinned(false)}
+          onJumpToMessage={jumpToMessage}
         />
       )}
 

@@ -25,6 +25,8 @@ namespace Application.Conversations.Queries.GetConversations
                 request.UserId,
                 request.PageNumber,
                 request.PageSize,
+                request.GroupsOnly,
+                request.UnreadOnly,
                 cancellationToken);
 
             var dtos = pagedConversations

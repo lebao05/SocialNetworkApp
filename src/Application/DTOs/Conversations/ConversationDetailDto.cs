@@ -1,3 +1,4 @@
+using Application.DTOs.Messages;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -18,7 +19,8 @@ namespace Application.DTOs.Conversations
         Guid? OwnerId,
         Guid? OtherUserId,
         int MemberCount,
-        string? OtherUserAvatarUrl
+        string? OtherUserAvatarUrl,
+        MessageDto? LastMessage
     )
     {
         public static ConversationDetailDto FromDomain(
@@ -47,6 +49,10 @@ namespace Application.DTOs.Conversations
                 otherUserAvatarUrl = other?.User.AvatarUrl;
             }
 
+            var lastMessage = conversation.Messages
+                .OrderByDescending(m => m.Id)
+                .FirstOrDefault();
+
             return new ConversationDetailDto(
                 Id: conversation.Id,
                 Name: displayName,
@@ -62,7 +68,10 @@ namespace Application.DTOs.Conversations
                 OwnerId: conversation.OwnerId,
                 OtherUserId: otherUserId,
                 MemberCount: conversation.Members.Count,
-                OtherUserAvatarUrl: otherUserAvatarUrl
+                OtherUserAvatarUrl: otherUserAvatarUrl,
+                LastMessage: lastMessage != null
+                    ? MessageDto.FromDomain(lastMessage)
+                    : null
             );
         }
 
@@ -83,7 +92,8 @@ namespace Application.DTOs.Conversations
                 OwnerId: currentUser.Id,
                 OtherUserId: targetUser.Id,
                 MemberCount: 1,
-                OtherUserAvatarUrl: targetUser.AvatarUrl
+                OtherUserAvatarUrl: targetUser.AvatarUrl,
+                LastMessage: null
             );
         }
     }

@@ -24,7 +24,7 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 // ── Messenger Dropdown Panel ───────────────────────────────────────────────────
 function MessengerDropdown({ onClose }) {
   const navigate = useNavigate();
-  const { conversations, isOnline } = useChat();
+  const { conversations, isOnline, conversationFilter, setConversationFilter } = useChat();
 
   const handleOpenAll = () => {
     navigate("/messenger");
@@ -91,13 +91,18 @@ function MessengerDropdown({ onClose }) {
 
       {/* Tabs */}
       <div className="flex gap-2 px-4 pb-2">
-        {["All", "Unread", "Groups"].map((tab, i) => (
+        {[
+          { key: "all", label: "All" },
+          { key: "unread", label: "Unread" },
+          { key: "groups", label: "Groups" },
+        ].map((t) => (
           <button
-            key={tab}
+            key={t.key}
+            onClick={() => setConversationFilter(t.key)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-              ${i === 0 ? "bg-blue-100 text-fb-blue" : "bg-fb-bg text-fb-text hover:bg-fb-hover"}`}
+              ${conversationFilter === t.key ? "bg-blue-100 text-fb-blue" : "bg-fb-bg text-fb-text hover:bg-fb-hover"}`}
           >
-            {tab}
+            {t.label}
           </button>
         ))}
       </div>
@@ -142,15 +147,10 @@ function MessengerDropdown({ onClose }) {
                   className={`text-xs flex-shrink-0 ml-2
                   ${(conv.unreadCount ?? 0) > 0 ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
                 >
-                  {formatTime(conv.lastMessageSentAt)}
-                </span>
-              </div>
-              <p
-                className={`text-sm truncate
-                ${(conv.unreadCount ?? 0) > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}
-              >
-                {conv.lastMessageContent || (conv.isNotInAConversation ? "Start a conversation" : "")}
-              </p>
+                {formatTime(conv.lastMessage?.createdAt)}
+              </span>
+            </div>
+             z
             </div>
             {(conv.unreadCount ?? 0) > 0 && (
               <span className="w-5 h-5 bg-fb-blue rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
