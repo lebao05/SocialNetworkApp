@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.SignalR;
 using Application.DTOs.Conversations;
 using Domain.Shared;
 
@@ -11,13 +12,16 @@ internal sealed class UpdateConversationCommandHandler
 {
     private readonly IConversationRepository _conversationRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IChatHubNotifier _hubNotifier;
 
     public UpdateConversationCommandHandler(
         IConversationRepository conversationRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IChatHubNotifier hubNotifier)
     {
         _conversationRepository = conversationRepository;
         _unitOfWork = unitOfWork;
+        _hubNotifier = hubNotifier;
     }
 
     public async Task<Result<ConversationDetailDto>> Handle(
@@ -47,6 +51,13 @@ internal sealed class UpdateConversationCommandHandler
         var updated = await _conversationRepository.GetByIdAsync(
             request.ConversationId, cancellationToken);
 
-        return ConversationDetailDto.FromDomain(updated!, request.RequesterId);
+        var dto = ConversationDetailDto.FromDomain(updated!, request.RequesterId);
+
+        await _hubNotifier.NotifyConversationUpdatedAsync(
+            request.ConversationId,
+            dto,
+            cancellationToken);
+
+        return dto;
     }
 }

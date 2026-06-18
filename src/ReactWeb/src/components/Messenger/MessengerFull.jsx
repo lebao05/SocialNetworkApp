@@ -6,10 +6,16 @@ import ChatInfoGroup from "./ChatInfoGroup";
 import ChatInfoDirect from "./ChatInfoDirect";
 import CreateGroupModal from "./CreateGroupModal";
 import VoiceRecorder from "./VoiceRecorder";
+import BlockedBanner from "./BlockedBanner";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 import { useCall } from "../../contexts/CallContext";
 import { CHAT_THEMES, getChatTheme, getThemeAccentColor } from "../../data/chatThemes";
+import {
+  isBlockingUserApi,
+  isBlockedByUserIdApi,
+  unblockUserApi,
+} from "../../apis/conversationApi";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
@@ -251,9 +257,18 @@ function MessageContent({ message, isMe, theme }) {
   // messageType from backend: "Text" (0) or "Attachment" (1)
   // SignalR deserializes as number: 0 = Text, 1 = Attachment
   const isAttachment = message.messageType === 1 || message.messageType === "Attachment";
+  const isRevoked = message.content === "This message was revoked.";
 
   if (isAttachment) {
     return <MessageMediaAttachment attachment={message.attachment} isMe={isMe} theme={theme} />;
+  }
+
+  if (isRevoked) {
+    return (
+      <span className="italic text-neutral-400 dark:text-neutral-500">
+        {message.content}
+      </span>
+    );
   }
 
   return <>{message.content}</>;
@@ -290,11 +305,6 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-[1.5rem] font-bold text-fb-text leading-tight">Chats</h1>
           <div className="flex items-center gap-1">
-            <button className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-text">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-              </svg>
-            </button>
             <button
               onClick={() => setShowCreateGroup(true)}
               className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#F0F2F5] transition-colors text-fb-blue"
@@ -455,7 +465,7 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
 function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { messages, messagesLoading, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
+  const { messages, messagesLoading, messagesLoadingDirection, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, highlightedMessageId, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
   const { initiateCall } = useCall();
 
   const theme = getChatTheme(conv?.theme);
@@ -466,6 +476,53 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const [replyTo, setReplyTo] = useState(null); // message being replied to
   const [editingMsg, setEditingMsg] = useState(null); // message being edited
   const [hoveredMsgId, setHoveredMsgId] = useState(null);
+
+  // Block-related state (1:1 chats only)
+  const isOneToOne = conv?.isOneToOne;
+  const otherUserId = isOneToOne ? conv?.otherUserId : null;
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isBlockedBy, setIsBlockedBy] = useState(false);
+  const [unblockLoading, setUnblockLoading] = useState(false);
+
+  useEffect(() => {
+    if (!otherUserId || !user?.id || otherUserId === user.id) {
+      setIsBlocking(false);
+      setIsBlockedBy(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [blocking, blockedBy] = await Promise.all([
+          isBlockingUserApi(otherUserId),
+          isBlockedByUserIdApi(otherUserId),
+        ]);
+        if (!cancelled) {
+          setIsBlocking(!!blocking);
+          setIsBlockedBy(!!blockedBy);
+        }
+      } catch (err) {
+        console.error("Failed to load block state:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [otherUserId, user?.id]);
+
+  const handleUnblock = async () => {
+    if (!otherUserId) return;
+    setUnblockLoading(true);
+    try {
+      await unblockUserApi(otherUserId);
+      setIsBlocking(false);
+    } catch (err) {
+      console.error("Failed to unblock user:", err);
+      alert("Could not unblock this user. Please try again.");
+    } finally {
+      setUnblockLoading(false);
+    }
+  };
 
   const getTypingText = () => {
     if (typingUsers.size === 0) return "";
@@ -647,7 +704,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
           <p className="font-bold text-base">{conv.name}</p>
         </div>
 
-        {messagesLoading && (
+        {messagesLoading && messagesLoadingDirection !== "down" && (
           <div className="flex justify-center py-4">
             <div className="w-6 h-6 border-2 border-fb-blue border-t-transparent rounded-full animate-spin" />
           </div>
@@ -689,13 +746,17 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
               <div
                 data-msg-id={m.id}
                 className={`group relative flex mb-0.5 ${isMe ? "justify-end" : "justify-start"
-                  } ${isFirst ? "mt-2" : "mt-0.5"}`}
+                  } ${isFirst ? "mt-2" : "mt-0.5"} ${highlightedMessageId === m.id
+                    ? "z-10 rounded-2xl ring-2 ring-yellow-400 transition-shadow"
+                    : ""} ${m.isPinned ? "z-10" : ""}`}
                 onMouseEnter={() => setHoveredMsgId(m.id)}
                 onMouseLeave={() => setHoveredMsgId(null)}
               >
                 {/* Pinned indicator */}
                 {m.isPinned && (
-                  <div className={`absolute flex items-center gap-0.5 text-[10px] font-medium text-fb-blue mb-0.5 ${isMe ? "-top-4 right-0" : "-top-4 left-0"}`}>
+                  <div
+                    className={`absolute z-10 flex items-center gap-0.5 text-[10px] font-medium text-fb-blue bg-white px-1.5 py-0.5 rounded-full shadow-sm ring-1 ring-yellow-400 ${isMe ? "-top-3 right-0" : "-top-3 left-0"}`}
+                  >
                     <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
                       <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/>
                     </svg>
@@ -838,6 +899,12 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
             </React.Fragment>
           );
         })}
+        {/* Bottom spinner — shown when loading newer messages via scroll-down pagination */}
+        {messagesLoadingDirection === "down" && (
+          <div className="flex justify-center py-4">
+            <div className="w-6 h-6 border-2 border-fb-blue border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
         <div ref={bottomRef} className="h-2" />
       </div>
 
@@ -883,18 +950,32 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
         </div>
       )}
 
-      {/* Input bar */}
-      <MessageInput
-        theme={theme}
-        isMidnight={isMidnight}
-        conv={conv}
-        replyTo={replyTo}
-        editingMsg={editingMsg}
-        onReplySent={() => setReplyTo(null)}
-        onEditSent={() => setEditingMsg(null)}
-        onCancelReply={() => setReplyTo(null)}
-        onCancelEdit={() => setEditingMsg(null)}
-      />
+      {/* Block-related banner (shown above the input) */}
+      {isOneToOne && otherUserId && (isBlocking || isBlockedBy) && (
+        <div className="px-4 pb-2">
+          <BlockedBanner
+            variant={isBlocking ? "blocking" : "blockedBy"}
+            name={conv.name}
+            loading={unblockLoading}
+            onUnblock={handleUnblock}
+          />
+        </div>
+      )}
+
+      {/* Input bar — hidden when blocked (banner above is shown instead) */}
+      {!(isOneToOne && (isBlocking || isBlockedBy)) && (
+        <MessageInput
+          theme={theme}
+          isMidnight={isMidnight}
+          conv={conv}
+          replyTo={replyTo}
+          editingMsg={editingMsg}
+          onReplySent={() => setReplyTo(null)}
+          onEditSent={() => setEditingMsg(null)}
+          onCancelReply={() => setReplyTo(null)}
+          onCancelEdit={() => setEditingMsg(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1022,7 +1103,7 @@ function MessageActions({ message, isMe, isGroup, isHovered, onReact, onReply, o
         </button>
         {menuOpen && (
           <div
-            className="absolute bottom-9 z-50 rounded-xl overflow-hidden shadow-[0_1px_8px_rgba(0,0,0,0.12)] border py-1 w-48"
+            className="absolute bottom-9 z-[1000] rounded-xl overflow-hidden shadow-[0_1px_8px_rgba(0,0,0,0.12)] border py-1 w-48"
             style={{ backgroundColor: menuBg, borderColor: menuBorder, [isMe ? "right" : "left"]: 0 }}
           >
             {menuItem(
@@ -1041,13 +1122,6 @@ function MessageActions({ message, isMe, isGroup, isHovered, onReact, onReply, o
             )}
             {menuItem(
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>,
-              "Chuyển tiếp",
-              () => { },
-            )}
-            {menuItem(
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>,
               message.isPinned ? "Unpin" : "Pin",
@@ -1057,7 +1131,7 @@ function MessageActions({ message, isMe, isGroup, isHovered, onReact, onReply, o
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>,
-              "Thu hồi",
+              "Revoke",
               onRevoke,
               true,
             )}
@@ -1153,7 +1227,7 @@ function FilePreview({ file, onRemove }) {
   );
 }
 
-function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySent, onEditSent, onCancelReply, onCancelEdit }) {
+function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySent, onEditSent, onCancelReply, onCancelEdit, disabled = false, disabledReason = "" }) {
   const [voicePhase, setVoicePhase] = useState("idle");
   const { sendMessage, startTyping, endTyping, updateMessage } = useChat();
   const [msg, setMsg] = useState("");
@@ -1270,6 +1344,7 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
 
   // Drag-and-drop on the entire input area
   const handleDragOver = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
@@ -1280,6 +1355,7 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
     }
   };
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -1387,8 +1463,9 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
           <>
             {/* Photo / Image button */}
             <button
-              onClick={() => photoInputRef.current?.click()}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+              onClick={() => { if (!disabled) photoInputRef.current?.click(); }}
+              disabled={disabled}
+              className={`w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
               title="Send photo"
               style={{ color: theme.text }}
             >
@@ -1399,8 +1476,9 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
 
             {/* Attach file button */}
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+              onClick={() => { if (!disabled) fileInputRef.current?.click(); }}
+              disabled={disabled}
+              className={`w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
               title="Attach file"
               style={{ color: theme.text }}
             >
@@ -1412,8 +1490,9 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
             {/* Emoji picker button */}
             <div className="relative" ref={emojiPickerRef}>
               <button
-                onClick={() => setShowEmojiPicker((v) => !v)}
-                className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 cursor-pointer"
+                onClick={() => { if (!disabled) setShowEmojiPicker((v) => !v); }}
+                disabled={disabled}
+                className={`w-9 h-9 rounded-full flex items-center justify-center hover:opacity-70 transition-colors flex-shrink-0 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                 title="Emoji"
                 style={{ color: theme.text }}
               >
@@ -1458,26 +1537,30 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
             <div className="flex-1 flex items-center rounded-[20px] px-3 py-1.5 gap-2 mx-1" style={{ backgroundColor: theme.bubbleOther }}>
               <input
                 ref={inputRef}
-                className="flex-1 bg-transparent outline-none text-sm"
+                className="flex-1 bg-transparent outline-none text-sm disabled:cursor-not-allowed"
                 style={{ color: theme.bubbleOtherText }}
-                placeholder={editingMsg ? "Edit message..." : "Aa"}
+                placeholder={disabled ? (disabledReason || "Messaging disabled") : editingMsg ? "Edit message..." : "Aa"}
                 value={msg}
                 onChange={handleChange}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                disabled={disabled}
+                readOnly={disabled}
               />
             </div>
 
             {/* Send / Like — default emoji */}
             <button
               onClick={() => {
+                if (disabled) return;
                 if (canSend) {
                   handleSend();
                 } else {
                   handleSend(defaultEmoji);
                 }
               }}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all flex-shrink-0 cursor-pointer"
-              title={canSend ? "Send message" : `Send ${defaultReaction}`}
+              disabled={disabled}
+              className={`w-9 h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all flex-shrink-0 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+              title={disabled ? "Messaging disabled" : canSend ? "Send message" : `Send ${defaultReaction}`}
             >
               {isSending ? (
                 <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1520,19 +1603,11 @@ function SearchMessages({ conv, onClose, onJumpToMessage }) {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Click a result: load messages around it then scroll & highlight
+  // Click a result: load messages around it then close the search panel.
+  // The yellow highlight + scroll into view is handled centrally in ChatContext.jumpToMessage.
   const handleResultClick = async (msg) => {
     await jumpToMessage(msg.id);
-    // Wait a tick for the DOM to render the newly loaded messages
-    setTimeout(() => {
-      const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-2", "ring-fb-blue");
-        setTimeout(() => el.classList.remove("ring-2", "ring-fb-blue"), 1500);
-      }
-      if (onJumpToMessage) onJumpToMessage(msg.id);
-    }, 150);
+    if (onJumpToMessage) onJumpToMessage(msg.id);
   };
 
   return (

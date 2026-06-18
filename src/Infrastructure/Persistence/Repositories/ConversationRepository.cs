@@ -212,5 +212,62 @@ namespace Infrastructure.Persistence.Repositories
                 .Select(m => m.UserId)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<bool> IsBlockingUserAsync(
+            Guid currentUserId,
+            Guid targetUserId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.BlockChats
+                .AnyAsync(
+                    b => b.UserId == currentUserId && b.BlockedUserId == targetUserId,
+                    cancellationToken);
+        }
+
+        public async Task<bool> IsBlockedByUserIdAsync(
+            Guid currentUserId,
+            Guid targetUserId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.BlockChats
+                .AnyAsync(
+                    b => b.UserId == targetUserId && b.BlockedUserId == currentUserId,
+                    cancellationToken);
+        }
+
+        public async Task<bool> AddBlockAsync(
+            Guid currentUserId,
+            Guid targetUserId,
+            CancellationToken cancellationToken = default)
+        {
+            if (currentUserId == targetUserId) return false;
+
+            var alreadyBlocked = await _context.BlockChats
+                .AnyAsync(
+                    b => b.UserId == currentUserId && b.BlockedUserId == targetUserId,
+                    cancellationToken);
+
+            if (alreadyBlocked) return false;
+
+            var block = new BlockChat(currentUserId, targetUserId, 0);
+            await _context.BlockChats.AddAsync(block, cancellationToken);
+            return true;
+        }
+
+        public async Task<bool> RemoveBlockAsync(
+            Guid currentUserId,
+            Guid targetUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var block = await _context.BlockChats
+                .FirstOrDefaultAsync(
+                    b => b.UserId == currentUserId && b.BlockedUserId == targetUserId,
+                    cancellationToken);
+
+            if (block is null) return false;
+
+            _context.BlockChats.Remove(block);
+            return true;
+        }
     }
 }

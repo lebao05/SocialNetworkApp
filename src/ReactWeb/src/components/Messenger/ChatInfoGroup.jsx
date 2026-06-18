@@ -58,7 +58,7 @@ function InfoRow({ icon, label, onClick, danger = false, sublabel }) {
 function MemberRow({ member, isOwner, currentUserId, isOnline, onAssignAdmin, onRevokeAdmin, onKick, onRemoveMember, onNavigate, onBlock, onReport }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-
+  const navigate = useNavigate();
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -93,10 +93,10 @@ function MemberRow({ member, isOwner, currentUserId, isOnline, onAssignAdmin, on
         <div className="flex items-center gap-2">
           <p className="text-base font-semibold text-fb-text truncate">{member.fullName}</p>
           {isMemberOwner && (
-            <span className="text-[10px] font-bold text-fb-blue bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">Admin</span>
+            <span className="text-[10px] font-bold text-fb-blue bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">Creator</span>
           )}
           {isMemberAdmin && !isMemberOwner && (
-            <span className="text-[10px] font-bold text-fb-blue bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">Moderator</span>
+            <span className="text-[10px] font-bold text-fb-blue bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">Admin</span>
           )}
         </div>
         <p className="text-sm text-fb-subtext">
@@ -148,15 +148,19 @@ function MemberRow({ member, isOwner, currentUserId, isOnline, onAssignAdmin, on
 
               <>
                 <button className="w-full text-left px-4 py-3 text-base font-medium text-fb-text hover:bg-[#F0F2F5] transition-colors duration-150 cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}>
-                  Block messages
-                </button>
-                <button className="w-full text-left px-4 py-3 text-base font-medium text-fb-text hover:bg-[#F0F2F5] transition-colors duration-150 cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/messenger/t/${member.userId}`);
+                    setMenuOpen(false);
+                  }}>
                   Message
                 </button>
                 <button className="w-full text-left px-4 py-3 text-base font-medium text-fb-text hover:bg-[#F0F2F5] transition-colors duration-150 cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/profile/${member.userId}`);
+                    setMenuOpen(false);
+                  }}>
                   View Profile
                 </button>
               </>
@@ -186,6 +190,7 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
     loadConversationMembers,
     isOnline,
     jumpToMessage,
+    uploadConversationImage,
   } = useChat();
 
   const [openSections, setOpenSections] = useState({
@@ -200,6 +205,8 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef(null);
 
   const toggle = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
 
@@ -216,6 +223,23 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
       await leaveConversation(conv.id);
       navigate("/messenger");
     } catch { /* handled in context */ }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !conv?.id) return;
+    setUploadingAvatar(true);
+    try {
+      await uploadConversationImage(conv.id, file);
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleAvatarClick = () => {
+    if (!isOwner || uploadingAvatar) return;
+    avatarInputRef.current?.click();
   };
 
   const handleRemoveMember = async (userIdToRemove) => {
@@ -252,24 +276,96 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
 
   const isOwner = conv.ownerId === user?.id;
   const members = conversationMembers;
+  const isVirtual = conv.isVirtual === true;
+
+  // Profile target: for a virtual group, the only meaningful profile is the
+  // group's creator/owner (no real conv has been created yet).
+  const virtualProfileId = conv.ownerId || conv.otherUserId;
+
+  if (isVirtual) {
+    return (
+      <div className="flex flex-col h-full overflow-y-auto">
+        {/* Avatar + name (read-only, no edit pencil) */}
+        <div className="flex flex-col items-center pt-6 pb-4 px-4">
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => virtualProfileId && navigate(`/profile/${virtualProfileId}`)}
+          >
+            <img
+              src={conv.imageUrl || DEFAULT_CHAT_GROUP_COVER}
+              className="w-20 h-20 rounded-full object-cover mb-3 transition-transform duration-200 group-hover:scale-105"
+              alt={conv.name}
+            />
+            <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </div>
+          </div>
+          <p
+            className="font-bold text-lg text-fb-text cursor-pointer hover:underline transition-opacity duration-150"
+            onClick={() => virtualProfileId && navigate(`/profile/${virtualProfileId}`)}
+          >
+            {conv.name}
+          </p>
+        </div>
+
+        <div className="px-4 pb-6 flex flex-col">
+          <InfoRow
+            icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>}
+            label="View Profile"
+            onClick={() => virtualProfileId && navigate(`/profile/${virtualProfileId}`)}
+          />
+          <InfoRow
+            icon={<svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15H9V8h2v9zm4 0h-2V8h2v9z" /></svg>}
+            label="Block messages"
+            danger={true}
+            onClick={() => window.alert("Block messages — to be implemented")}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Avatar + name */}
       <div className="flex flex-col items-center pt-6 pb-4 px-4">
-        <div className="relative group cursor-pointer">
+        <div
+          className={`relative group rounded-full mb-3 overflow-hidden ${isOwner ? "cursor-pointer" : ""}`}
+          onClick={handleAvatarClick}
+        >
           <img
             src={conv.imageUrl || DEFAULT_CHAT_GROUP_COVER}
-            className="w-20 h-20 rounded-full object-cover mb-3 transition-transform duration-200 group-hover:scale-105"
+            className={`w-20 h-20 object-cover transition-transform duration-200 ${isOwner ? "group-hover:scale-105" : ""}`}
             alt={conv.name}
           />
-          <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-            </svg>
-          </div>
+          {/* Upload spinner overlay */}
+          {uploadingAvatar && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+          )}
+          {/* Edit icon — owner only, hidden while uploading */}
+          {!uploadingAvatar && isOwner && (
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+            </div>
+          )}
         </div>
         <p className="font-bold text-lg text-fb-text text-center">{conv.name}</p>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarUpload}
+        />
 
         {/* Quick actions */}
         <div className="flex items-center gap-3 mt-5">
@@ -320,11 +416,6 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
                 icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" /></svg>}
                 label="Pinned messages"
                 onClick={() => setShowPinned(true)}
-              />
-              <InfoRow
-                icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>}
-                label="Description"
-                sublabel={conv.description || "No description"}
               />
             </div>
           )}

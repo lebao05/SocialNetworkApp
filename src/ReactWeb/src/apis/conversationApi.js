@@ -136,3 +136,37 @@ export async function uploadConversationImageApi(conversationId, file) {
     });
     return response.data;
 }
+
+/**
+ * Checks if the current user has blocked the target user.
+ * "Am I blocking them?"
+ */
+export async function isBlockingUserApi(targetUserId) {
+    const response = await axios.get(`/conversation/is-blocking/${targetUserId}`);
+    return response.data;
+}
+
+/**
+ * Checks if the current user has been blocked by the target user.
+ * "Are they blocking me?"
+ */
+export async function isBlockedByUserIdApi(targetUserId) {
+    const response = await axios.get(`/conversation/is-blocked-by/${targetUserId}`);
+    return response.data;
+}
+
+/**
+ * Block the target user.
+ */
+export async function blockUserApi(targetUserId) {
+    const response = await axios.post(`/conversation/block/${targetUserId}`);
+    return response.data;
+}
+
+/**
+ * Unblock the target user.
+ */
+export async function unblockUserApi(targetUserId) {
+    const response = await axios.delete(`/conversation/block/${targetUserId}`);
+    return response.data;
+}

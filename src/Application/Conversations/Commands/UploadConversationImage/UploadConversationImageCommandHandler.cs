@@ -1,6 +1,8 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.SignalR;
+using Application.DTOs.Conversations;
 using Domain.Shared;
 
 namespace Application.Conversations.Commands.UploadConversationImage;
@@ -11,15 +13,18 @@ internal sealed class UploadConversationImageCommandHandler
     private readonly IConversationRepository _conversationRepository;
     private readonly IUploadService _uploadService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IChatHubNotifier _hubNotifier;
 
     public UploadConversationImageCommandHandler(
         IConversationRepository conversationRepository,
         IUploadService uploadService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IChatHubNotifier hubNotifier)
     {
         _conversationRepository = conversationRepository;
         _uploadService = uploadService;
         _unitOfWork = unitOfWork;
+        _hubNotifier = hubNotifier;
     }
 
     public async Task<Result<string>> Handle(
@@ -51,6 +56,16 @@ internal sealed class UploadConversationImageCommandHandler
 
             conversation.SetImageUrl(imageUrl);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var updated = await _conversationRepository.GetByIdAsync(
+                request.ConversationId, cancellationToken);
+
+            var dto = ConversationDetailDto.FromDomain(updated!, request.RequesterId);
+
+            await _hubNotifier.NotifyConversationUpdatedAsync(
+                request.ConversationId,
+                dto,
+                cancellationToken);
 
             return Result.Success(imageUrl);
         }

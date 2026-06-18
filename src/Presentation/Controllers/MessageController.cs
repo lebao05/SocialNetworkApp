@@ -218,7 +218,7 @@ namespace Presentation.Controllers
         }
 
         [HttpDelete("{messageId}/revoke")]
-        public async Task<IActionResult> InvokeMessage(
+        public async Task<IActionResult> RevokeMessage(
             long messageId,
             CancellationToken cancellationToken)
         {

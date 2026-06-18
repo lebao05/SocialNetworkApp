@@ -10,13 +10,16 @@ using Application.Conversations.Commands.RevokeAdminRole;
 using Application.Conversations.Commands.KickMemberOut;
 using Application.Conversations.Commands.UpdateConversation;
 using Application.Conversations.Commands.UploadConversationImage;
+using Application.Conversations.Commands.BlockUser;
+using Application.Conversations.Commands.UnblockUser;
 using Application.Conversations.Queries.GetConversationDetail;
 using Application.Conversations.Queries.GetConversationMembers;
 using Application.Conversations.Queries.SearchConversationsAndFriends;
 using Application.Conversations.Queries.GetConversationDetailByUserId;
 using Application.Conversations.Queries.GetConversations;
 using Application.DTOs.Conversations;
-using Application.Shared;
+using Application.Users.Queries.IsBlockedByUserId;
+using Application.Users.Queries.IsBlockingUser;
 using Domain.Shared;
 using Infrastructure.Extensions;
 using MediatR;
@@ -318,5 +321,73 @@ public class ConversationController : ApiController
         var result = await _sender.Send(command, cancellationToken);
 
         return result.IsSuccess ? Ok(new { Url = result.Value }) : HandleFailure(result);
+    }
+
+    /// <summary>
+    /// Checks whether the current user has blocked the target user.
+    /// </summary>
+    [HttpGet("is-blocking/{targetUserId:guid}")]
+    public async Task<IActionResult> IsBlockingUser(
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new IsBlockingUserQuery(currentUserId, targetUserId);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    /// <summary>
+    /// Checks whether the current user has been blocked by the target user.
+    /// </summary>
+    [HttpGet("is-blocked-by/{targetUserId:guid}")]
+    public async Task<IActionResult> IsBlockedByUserId(
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var query = new IsBlockedByUserIdQuery(currentUserId, targetUserId);
+
+        var result = await _sender.Send(query, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    /// <summary>
+    /// Block the target user so they can no longer message or call the current user.
+    /// </summary>
+    [HttpPost("block/{targetUserId:guid}")]
+    public async Task<IActionResult> BlockUser(
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new BlockUserCommand(currentUserId, targetUserId);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    /// <summary>
+    /// Unblock a previously blocked user.
+    /// </summary>
+    [HttpDelete("block/{targetUserId:guid}")]
+    public async Task<IActionResult> UnblockUser(
+        Guid targetUserId,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+        var command = new UnblockUserCommand(currentUserId, targetUserId);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
     }
 }

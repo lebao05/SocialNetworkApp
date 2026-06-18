@@ -1,10 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChat } from "../../contexts/ChatContext";
+import { useAuth } from "../../contexts/authContext";
 import ViewPinnedMessagesModal from "./ViewPinnedMessagesModal";
 import SharedMediaModal from "./SharedMediaModal";
 import ChangeThemeModal from "./ChangeThemeModal";
 import ChangeEmojiModal from "./ChangeEmojiModal";
+import ConfirmModal from "./ConfirmModal";
+import {
+  isBlockingUserApi,
+  isBlockedByUserIdApi,
+  blockUserApi,
+  unblockUserApi,
+} from "../../apis/conversationApi";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -54,6 +62,7 @@ function InfoRow({ icon, label, onClick, danger = false, sublabel }) {
 
 export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toggleNotifications, jumpToMessage } = useChat();
 
   const [openSections, setOpenSections] = useState({
@@ -66,6 +75,13 @@ export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
   const [showMedia, setShowMedia] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+
+  // Block-related state
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isBlockedBy, setIsBlockedBy] = useState(false);
+  const [blockActionLoading, setBlockActionLoading] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showUnblockConfirm, setShowUnblockConfirm] = useState(false);
 
   const toggle = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
 
@@ -82,6 +98,63 @@ export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
 
   const handleAvatarClick = () => {
     if (otherUserId) navigate(`/profile/${otherUserId}`);
+  };
+
+  // Fetch block-related state when the other user changes
+  useEffect(() => {
+    if (!otherUserId || !user?.id || otherUserId === user.id) {
+      setIsBlocking(false);
+      setIsBlockedBy(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [blocking, blockedBy] = await Promise.all([
+          isBlockingUserApi(otherUserId),
+          isBlockedByUserIdApi(otherUserId),
+        ]);
+        if (!cancelled) {
+          setIsBlocking(!!blocking);
+          setIsBlockedBy(!!blockedBy);
+        }
+      } catch (err) {
+        console.error("Failed to load block state:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [otherUserId, user?.id]);
+
+  const handleConfirmBlock = async () => {
+    if (!otherUserId) return;
+    setBlockActionLoading(true);
+    try {
+      await blockUserApi(otherUserId);
+      setIsBlocking(true);
+    } catch (err) {
+      console.error("Failed to block user:", err);
+      alert("Could not block this user. Please try again.");
+    } finally {
+      setBlockActionLoading(false);
+      setShowBlockConfirm(false);
+    }
+  };
+
+  const handleConfirmUnblock = async () => {
+    if (!otherUserId) return;
+    setBlockActionLoading(true);
+    try {
+      await unblockUserApi(otherUserId);
+      setIsBlocking(false);
+    } catch (err) {
+      console.error("Failed to unblock user:", err);
+      alert("Could not unblock this user. Please try again.");
+    } finally {
+      setBlockActionLoading(false);
+      setShowUnblockConfirm(false);
+    }
   };
 
   return (
@@ -236,9 +309,16 @@ export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
               />
               <InfoRow
                 icon={<svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15H9V8h2v9zm4 0h-2V8h2v9z" /></svg>}
-                label="Block messages"
+                label={isBlocking ? "Unblock messages" : "Block messages"}
                 danger={true}
-                onClick={() => {}}
+                onClick={() => {
+                  if (!otherUserId) return;
+                  if (isBlocking) {
+                    setShowUnblockConfirm(true);
+                  } else {
+                    setShowBlockConfirm(true);
+                  }
+                }}
               />
             </div>
           )}
@@ -274,6 +354,27 @@ export default function ChatInfoDirect({ conv, isOnline, onOpenSearch }) {
           onClose={() => setShowEmoji(false)}
         />
       )}
+
+      <ConfirmModal
+        open={showBlockConfirm}
+        title={`Block ${conv.name || "this person"}?`}
+        message={`Once you block ${conv.name || "this person"}, they will no longer be able to message or call you. They will not be notified.`}
+        confirmLabel="Block"
+        confirmDanger
+        loading={blockActionLoading}
+        onConfirm={handleConfirmBlock}
+        onCancel={() => setShowBlockConfirm(false)}
+      />
+
+      <ConfirmModal
+        open={showUnblockConfirm}
+        title={`Unblock ${conv.name || "this person"}?`}
+        message={`${conv.name || "This person"} will be able to message and call you again.`}
+        confirmLabel="Unblock"
+        loading={blockActionLoading}
+        onConfirm={handleConfirmUnblock}
+        onCancel={() => setShowUnblockConfirm(false)}
+      />
     </div>
   );
 }

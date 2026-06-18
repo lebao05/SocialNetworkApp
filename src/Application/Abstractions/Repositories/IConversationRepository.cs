@@ -38,5 +38,28 @@ namespace Application.Abstractions.Repositories
             int pageSize,
             CancellationToken cancellationToken);
         Task<List<Guid>> GetMemberIdsAsync(long conversationId, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Checks if the current user has blocked the target user.
+        /// "Am I blocking them?"
+        /// </summary>
+        Task<bool> IsBlockingUserAsync(Guid currentUserId, Guid targetUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Checks if the current user has been blocked by the target user.
+        /// "Are they blocking me?"
+        /// </summary>
+        Task<bool> IsBlockedByUserIdAsync(Guid currentUserId, Guid targetUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Adds a block entry: <paramref name="currentUserId"/> blocks <paramref name="targetUserId"/>.
+        /// Returns false if the user is already blocked.
+        /// </summary>
+        Task<bool> AddBlockAsync(Guid currentUserId, Guid targetUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Removes a block entry. Returns false if the user wasn't blocked.
+        /// </summary>
+        Task<bool> RemoveBlockAsync(Guid currentUserId, Guid targetUserId, CancellationToken cancellationToken = default);
     }
 }

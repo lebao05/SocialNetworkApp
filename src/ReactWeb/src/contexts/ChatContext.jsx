@@ -83,12 +83,14 @@ function ChatContextInner({ children }) {
     // ── Messages state ──
     const [messages, setMessages] = useState([]);
     const [messagesLoading, setMessagesLoading] = useState(false);
+    const [messagesLoadingDirection, setMessagesLoadingDirection] = useState(null); // "up" | "down" | null
     const [hasMoreUp, setHasMoreUp] = useState(true);
     const [hasMoreDown, setHasMoreDown] = useState(false); // false = at the bottom (newest loaded)
     const [pendingNewMessageCount, setPendingNewMessageCount] = useState(0);
     const [atBottom, setAtBottom] = useState(true); // tracked by MessengerFull scroll listener
+    const [highlightedMessageId, setHighlightedMessageId] = useState(null);
     const isAtBottomRef = useRef(true); // sync ref for SignalR handler
-    const PAGE_SIZE = 20;
+    const PAGE_SIZE = 30;
 
     // Refs that mirror state for synchronous reads inside the SignalR handler
     const hasMoreDownRef = useRef(hasMoreDown);
@@ -340,6 +342,20 @@ function ChatContextInner({ children }) {
                 .then((data) => setConversations(data ?? []))
                 .catch(() => { });
         });
+        connection.on("ConversationUpdated", ({ conversationId, conversation }) => {
+            // Update active conversation if it's the one that changed
+            if (selectedConversation?.id?.toString() === conversationId?.toString()) {
+                setSelectedConversation((prev) => ({
+                    ...prev,
+                    ...conversation,
+                    id: parseInt(conversationId, 10),
+                }));
+            }
+            // Refresh conversation list so name/theme/unread changes are reflected
+            getConversationsApi()
+                .then((data) => setConversations(data ?? []))
+                .catch(() => { });
+        });
 
         return () => {
             connection.off("ReceiveMessage", receiveMessage);
@@ -353,6 +369,7 @@ function ChatContextInner({ children }) {
             connection.off("MessagesSeen", onMessagesSeen);
             connection.off("MemberAdded");
             connection.off("MemberRemoved");
+            connection.off("ConversationUpdated");
         };
     }, [connection, user, selectedConversation]);
 
@@ -394,6 +411,7 @@ function ChatContextInner({ children }) {
         setHasMoreUp(true);
         setHasMoreDown(false);
         setPendingNewMessageCount(0);
+        setHighlightedMessageId(null);
         setConversationMembers([]);
         setMembersTotalCount(0);
         setPinnedMessages([]);
@@ -666,6 +684,7 @@ function ChatContextInner({ children }) {
     const loadOlderMessages = async () => {
         if (!selectedConversation || messagesLoading || !hasMoreUp || messages.length === 0) return;
         setMessagesLoading(true);
+        setMessagesLoadingDirection("up");
         try {
             const oldestId = messages[0]?.id;
             const data = await getMessagesAroundApi(selectedConversation.id, oldestId, "up", PAGE_SIZE);
@@ -680,6 +699,7 @@ function ChatContextInner({ children }) {
             console.error("Failed to load older messages:", err);
         } finally {
             setMessagesLoading(false);
+            setMessagesLoadingDirection(null);
         }
     };
 
@@ -687,6 +707,7 @@ function ChatContextInner({ children }) {
     const loadNewerMessages = async () => {
         if (!selectedConversation || messagesLoading || !hasMoreDown || messages.length === 0) return;
         setMessagesLoading(true);
+        setMessagesLoadingDirection("down");
         try {
             const newestId = messages[messages.length - 1]?.id;
             const data = await getMessagesAroundApi(selectedConversation.id, newestId, "down", PAGE_SIZE);
@@ -701,6 +722,7 @@ function ChatContextInner({ children }) {
             console.error("Failed to load newer messages:", err);
         } finally {
             setMessagesLoading(false);
+            setMessagesLoadingDirection(null);
         }
     };
 
@@ -715,6 +737,16 @@ function ChatContextInner({ children }) {
             setHasMoreUp(data?.hasMoreUp ?? false);
             setHasMoreDown(data?.hasMoreDown ?? true);
             setPendingNewMessageCount(0);
+            // Highlight the target message (yellow ring) for 2s and scroll it into view
+            setHighlightedMessageId(messageId);
+            setTimeout(() => {
+                setHighlightedMessageId((current) => (current === messageId ? null : current));
+            }, 2000);
+            // Wait for the DOM to render the loaded messages before scrolling
+            setTimeout(() => {
+                const el = document.querySelector(`[data-msg-id="${messageId}"]`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 150);
         } catch (err) {
             console.error("Failed to jump to message:", err);
         } finally {
@@ -979,10 +1011,12 @@ function ChatContextInner({ children }) {
         // Messages
         messages,
         messagesLoading,
+        messagesLoadingDirection,
         hasMoreUp,
         hasMoreDown,
         atBottom,
         pendingNewMessageCount,
+        highlightedMessageId,
         setAtBottomState,
         loadMessages,
         loadOlderMessages,

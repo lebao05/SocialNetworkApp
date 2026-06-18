@@ -70,4 +70,22 @@ public class ChatHubNotifier : IChatHubNotifier
                 },
                 cancellationToken);
     }
+
+    public async Task NotifyConversationUpdatedAsync(
+        long conversationId,
+        ConversationDetailDto conversation,
+        CancellationToken cancellationToken = default)
+    {
+        var groupName = conversationId.ToString();
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync(
+                "ConversationUpdated",
+                new
+                {
+                    conversationId,
+                    conversation
+                },
+                cancellationToken);
+    }
 }
