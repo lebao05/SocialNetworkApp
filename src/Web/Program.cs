@@ -162,7 +162,14 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    await RoleSeeder.SeedAsync(scope.ServiceProvider);
+    try
+    {
+        await RoleSeeder.SeedAsync(scope.ServiceProvider);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Role seeding failed. Continuing without seeded roles.");
+    }
 }
 app.UseCors("AllowLocalhost");
 

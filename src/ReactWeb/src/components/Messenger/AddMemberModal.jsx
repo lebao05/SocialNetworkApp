@@ -1,44 +1,76 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Search, Loader2 } from "lucide-react";
+import axios from "../../apis/axios";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
+const normalizeFriend = (item) => ({
+  id: item?.id ?? item?.userId ?? item?.friendUserId,
+  fullName: item?.fullName ?? item?.name ?? "",
+  avatarUrl: item?.avatarUrl ?? item?.avatar ?? null,
+  userName: item?.userName ?? null,
+});
+
 export default function AddMemberModal({ conv, onClose }) {
-  const { friends, friendsLoading, friendsSearchTerm, fetchFriends, addMember, conversationMembers } = useChat();
+  const { addMember, conversationMembers } = useChat();
   const { user } = useAuth();
 
   const [selectedId, setSelectedId] = useState(null);
   const [searchVal, setSearchVal] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]);
 
   const searchTimerRef = useRef(null);
 
   useEffect(() => {
-    fetchFriends(null);
+    loadFriends(null);
   }, []);
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      fetchFriends(searchVal || null);
+      loadFriends(searchVal || null);
     }, 300);
     return () => clearTimeout(searchTimerRef.current);
   }, [searchVal]);
 
-  const friendsList = Array.isArray(friends) ? friends : (friends?.results ?? []);
+  const loadFriends = async (searchTerm) => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await axios.get("/friend", {
+        params: {
+          page: 1,
+          searchTerm: searchTerm || undefined,
+        },
+      });
+      const raw = response.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.items)
+          ? raw.items
+          : Array.isArray(raw?.results)
+            ? raw.results
+            : [];
+      setItems(list.map(normalizeFriend));
+    } catch (err) {
+      setError(err?.message || "Failed to load friends.");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Filter out existing members and the current user
   const existingMemberIds = new Set([
     ...(conversationMembers ?? []).map((m) => m.userId),
     user?.id,
   ]);
 
-  const availableFriends = friendsList.filter(
-    (f) => !existingMemberIds.has(f.id)
-  );
+  const availableFriends = items.filter((f) => !existingMemberIds.has(f.id));
 
   const handleAdd = async () => {
     if (!selectedId) return;
@@ -47,8 +79,8 @@ export default function AddMemberModal({ conv, onClose }) {
     try {
       await addMember(conv.id, selectedId);
       onClose();
-    } catch {
-      setError("Failed to add member. Please try again.");
+    } catch (err) {
+      setError(err?.message || "Failed to add member. Please try again.");
     } finally {
       setAdding(false);
     }
@@ -92,7 +124,7 @@ export default function AddMemberModal({ conv, onClose }) {
 
           {/* Friend list */}
           <div className="flex-1 overflow-y-auto px-3 py-1">
-            {friendsLoading ? (
+            {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 text-fb-blue animate-spin" />
               </div>
@@ -117,7 +149,7 @@ export default function AddMemberModal({ conv, onClose }) {
                       }`}
                     >
                       <img
-                        src={friend.avatar || DEFAULT_AVATAR}
+                        src={friend.avatarUrl || DEFAULT_AVATAR}
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         alt={friend.fullName}
                         onError={(e) => { e.target.src = DEFAULT_AVATAR; }}

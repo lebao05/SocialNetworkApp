@@ -3,7 +3,7 @@ import { X, Check, Loader2 } from "lucide-react";
 import { useChat } from "../../contexts/ChatContext";
 import { CHAT_THEMES } from "../../data/chatThemes";
 
-export default function ChangeThemeModal({ conversationId, currentTheme, onClose }) {
+export default function ChangeThemeModal({ conversationId, currentTheme, currentName, currentDefaultReaction, onClose }) {
   const { updateConversation } = useChat();
   const [selected, setSelected] = useState(currentTheme || "default");
   const [saving, setSaving] = useState(false);
@@ -12,7 +12,7 @@ export default function ChangeThemeModal({ conversationId, currentTheme, onClose
     setSaving(true);
     try {
       const themeValue = selected === "default" ? null : selected;
-      await updateConversation(conversationId, { name: null, theme: themeValue, defaultReaction: null });
+      await updateConversation(conversationId, { name: currentName ?? null, theme: themeValue, defaultReaction: currentDefaultReaction ?? null });
       onClose();
     } catch (err) {
       console.error("Failed to save theme:", err);

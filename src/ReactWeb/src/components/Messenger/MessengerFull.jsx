@@ -10,6 +10,7 @@ import BlockedBanner from "./BlockedBanner";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/authContext";
 import { useCall } from "../../contexts/CallContext";
+import { getSystemMessagePreview } from "../../utils/systemMessage";
 import { CHAT_THEMES, getChatTheme, getThemeAccentColor } from "../../data/chatThemes";
 import {
   isBlockingUserApi,
@@ -224,7 +225,7 @@ function MessageMediaAttachment({ attachment, isMe, theme }) {
       className="mt-2 flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-all duration-200 no-underline shadow-sm w-64 max-w-full text-gray-800 dark:text-zinc-100"
     >
       {/* Circular Document Icon Container */}
-      <div 
+      <div
         className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white"
         style={{ backgroundColor: theme.bubbleSelf }}
       >
@@ -272,6 +273,186 @@ function MessageContent({ message, isMe, theme }) {
   }
 
   return <>{message.content}</>;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Replied message preview — compact quoted block with jump-to click
+// ──────────────────────────────────────────────────────────────────────────────
+function RepliedMessagePreview({ repliedMessage, theme, isMe, onJumpTo, currentUser }) {
+  if (!repliedMessage) return null;
+
+  const isRevoked = repliedMessage.content === "This message was revoked.";
+  const preview = isRevoked
+    ? "This message was revoked."
+    : repliedMessage.content
+    ? repliedMessage.content
+    : "📎 Attachment";
+
+  const repliedIsMine = currentUser && repliedMessage.senderId
+    ? String(repliedMessage.senderId) === String(currentUser.id)
+    : false;
+
+  const handleClick = () => {
+    if (!isRevoked && repliedMessage.id && onJumpTo) {
+      onJumpTo(repliedMessage.id);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full text-left mb-1 flex items-start gap-2 group cursor-pointer"
+      style={{ background: "none", border: "none", padding: "2px 4px", borderRadius: "6px" }}
+      title="Jump to original message"
+    >
+      {/* Accent bar — 2px vertical line */}
+      <div
+        className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5 mb-0.5"
+        style={{ backgroundColor: theme.bubbleSelf || "#0084FF" }}
+      />
+      <div className="flex-1 min-w-0">
+        {/* "You replied to [Name]" pill with avatar */}
+        <span
+          className="inline-flex items-center gap-1 text-[10px] font-semibold leading-tight mb-0.5 px-1.5 py-0.5 rounded-full"
+          style={{
+            backgroundColor: `${theme.bubbleSelf || "#0084FF"}18`,
+            color: theme.bubbleSelf || "#0084FF",
+          }}
+        >
+          <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+          {repliedIsMine ? "You replied to" : `Replied to`}
+          {repliedMessage.senderAvatarUrl ? (
+            <img
+              src={repliedMessage.senderAvatarUrl}
+              alt={repliedMessage.senderName}
+              className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 flex items-center justify-center text-[8px] font-bold"
+              style={{ backgroundColor: `${theme.bubbleSelf || "#0084FF"}30` }}>
+              {(repliedMessage.senderName || "U").charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span className="truncate max-w-[80px]">{repliedMessage.senderName || "Unknown"}</span>
+        </span>
+        {/* Content */}
+        <p
+          className="text-xs leading-tight truncate"
+          style={{
+            color: isRevoked ? "#9CA3AF" : (theme.bubbleSelfText || "#FFFFFF"),
+            opacity: isRevoked ? 0.7 : 0.8,
+            fontStyle: isRevoked ? "italic" : "normal",
+          }}
+        >
+          {preview}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// System message renderer — displays human-readable info from structured payload
+// ──────────────────────────────────────────────────────────────────────────────
+function renderSystemMessageContent(message) {
+  const payload = (() => {
+    try { return message.payload ? JSON.parse(message.payload) : null; } catch { return null; }
+  })();
+
+  const numType = typeof message.systemMessageType === "number"
+    ? message.systemMessageType
+    : parseInt(message.systemMessageType, 10);
+  switch (numType) {
+    case 1: // ConversationImageUpdated
+      return (
+        <span>
+          {message.senderName !== "System" ? (
+            <span><strong>{message.senderName}</strong> updated the group photo</span>
+          ) : (
+            <span>Group photo was updated</span>
+          )}
+        </span>
+      );
+
+    case 2: { // ConversationNameUpdated
+      const oldVal = payload?.oldValue;
+      const newVal = payload?.newValue;
+      return (
+        <span>
+          <strong>{message.senderName !== "System" ? message.senderName : ""}</strong>
+          {message.senderName !== "System" ? " " : ""}
+          changed the group name from <strong>"{oldVal}"</strong> to <strong>"{newVal}"</strong>
+        </span>
+      );
+    }
+
+    case 3: { // ConversationThemeUpdated
+      const oldVal = payload?.oldValue;
+      const newVal = payload?.newValue;
+      return (
+        <span>
+          <strong>{message.senderName !== "System" ? message.senderName : ""}</strong>
+          {message.senderName !== "System" ? " " : ""}
+          changed the theme
+          {oldVal ? ` from "${oldVal}"` : ""}
+          {newVal ? ` to "${newVal}"` : ""}
+        </span>
+      );
+    }
+
+    case 4: { // ConversationDefaultReactionUpdated
+      const newVal = payload?.newValue;
+      return (
+        <span>
+          <strong>{message.senderName !== "System" ? message.senderName : ""}</strong>
+          {message.senderName !== "System" ? " " : ""}
+          set the default reaction to <strong>{newVal || "none"}</strong>
+        </span>
+      );
+    }
+
+    case 10: { // MemberAdded
+      const newMemberUserName = payload?.newMemberUserName;
+      return (
+        <span>
+          <strong>{newMemberUserName || message.senderName}</strong> was added to the group
+        </span>
+      );
+    }
+
+    case 11: { // MemberRemoved
+      const removedUserName = payload?.removedUserName;
+      return (
+        <span>
+          <strong>{removedUserName || message.senderName}</strong> was removed from the group
+        </span>
+      );
+    }
+
+    case 12: { // MemberLeft
+      const leftUserName = payload?.leftUserName;
+      return (
+        <span>
+          <strong>{leftUserName || message.senderName}</strong> left the group
+        </span>
+      );
+    }
+
+    case 13: { // MemberRoleChanged
+      const targetUserName = payload?.targetUserName;
+      const newRole = payload?.newRole;
+      return (
+        <span>
+          <strong>{targetUserName || message.senderName}</strong> was promoted to <strong>{newRole}</strong>
+        </span>
+      );
+    }
+
+    default:
+      return <span>{message.content || "Group settings were updated"}</span>;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -424,21 +605,37 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
                         : ""}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}>
-                      {conv.isOneToOne
-                        ? (conv.lastMessage?.content || (conv.isNotInAConversation ? "Start a conversation" : ""))
-                        : (conv.lastMessage
-                            ? `${conv.lastMessage.senderName}: ${conv.lastMessage.content}`
-                            : (conv.isNotInAConversation ? "Start a conversation" : ""))}
-                    </p>
-                    {conv.unreadCount > 0 && (
-                      <span className="ml-2 flex-shrink-0 min-w-[20px] h-5 rounded-full flex items-center justify-center text-white text-xs font-bold px-1.5"
-                        style={{ backgroundColor: (conv.theme && conv.theme !== "default") ? getThemeAccentColor(conv.theme).color : undefined }}>
-                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
-                      </span>
-                    )}
-                  </div>
+                  {
+                    conv.lastMessage && (
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className={`text-sm truncate ${conv.unreadCount > 0 ? "font-semibold text-fb-text" : "text-fb-subtext"}`}>
+                          {(() => {
+                            const last = conv.lastMessage;
+                            if (!last) return null;
+
+                            if (conv.IsOneToOne) {
+                              return last.isSystemMessage
+                                ? getSystemMessagePreview(last)
+                                : (last.content || "Sent an attachment");
+                            }
+
+                            if (last.isSystemMessage) {
+                              return getSystemMessagePreview(last);
+                            }
+
+                            const sender = last.senderName || "User";
+                            return last.content ? `${sender}: ${last.content}` : `${sender} sent an attachment`;
+                          })()}
+                        </p>
+                        {conv.unreadCount > 0 && (
+                          <span className="ml-2 flex-shrink-0 min-w-[20px] h-5 rounded-full flex items-center justify-center text-white text-xs font-bold px-1.5"
+                            style={{ backgroundColor: (conv.theme && conv.theme !== "default") ? getThemeAccentColor(conv.theme).color : undefined }}>
+                            {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  }
                 </div>
               </div>
             );
@@ -465,7 +662,7 @@ function ConvList({ selected, onSelect, onSelectUser, onCreateGroup }) {
 function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { messages, messagesLoading, messagesLoadingDirection, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, highlightedMessageId, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
+  const { messages, messagesLoading, messagesLoadingDirection, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, highlightedMessageId, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, jumpToMessage, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
   const { initiateCall } = useCall();
 
   const theme = getChatTheme(conv?.theme);
@@ -711,6 +908,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
         )}
         {messages.map((m, idx) => {
           const isMe = m.senderId === user?.id;
+          const isSystemMessage = m.isSystemMessage === true;
 
           const prevMsg = messages[idx - 1];
 
@@ -743,159 +941,175 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
                 </div>
               )}
 
-              <div
-                data-msg-id={m.id}
-                className={`group relative flex mb-0.5 ${isMe ? "justify-end" : "justify-start"
-                  } ${isFirst ? "mt-2" : "mt-0.5"} ${highlightedMessageId === m.id
-                    ? "z-10 rounded-2xl ring-2 ring-yellow-400 transition-shadow"
-                    : ""} ${m.isPinned ? "z-10" : ""}`}
-                onMouseEnter={() => setHoveredMsgId(m.id)}
-                onMouseLeave={() => setHoveredMsgId(null)}
-              >
-                {/* Pinned indicator */}
-                {m.isPinned && (
-                  <div
-                    className={`absolute z-10 flex items-center gap-0.5 text-[10px] font-medium text-fb-blue bg-white px-1.5 py-0.5 rounded-full shadow-sm ring-1 ring-yellow-400 ${isMe ? "-top-3 right-0" : "-top-3 left-0"}`}
+              {/* System message — centered info banner */}
+              {isSystemMessage ? (
+                <div className="flex justify-center my-2">
+                  <div className="max-w-xs px-4 py-2 text-center text-xs rounded-2xl border"
+                    style={{
+                      backgroundColor: theme.bubbleOther + "22",
+                      borderColor: theme.bubbleOther + "44",
+                      color: isMidnight ? "#9FA8DA" : "#65676B",
+                    }}
                   >
-                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                      <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/>
-                    </svg>
-                    <span>Pinned</span>
+                    {renderSystemMessageContent(m)}
                   </div>
-                )}
+                </div>
+              ) : (
                 <div
-                  className={`flex flex-col max-w-[75%] ${isMe ? "items-end" : "items-start"
-                    }`}
+                  data-msg-id={m.id}
+                  className={`group relative flex mb-0.5 ${isMe ? "justify-end" : "justify-start"
+                    } ${isFirst ? "mt-2" : "mt-0.5"} ${highlightedMessageId === m.id
+                      ? "z-10 rounded-2xl ring-2 ring-yellow-400 transition-shadow"
+                      : ""} ${m.isPinned ? "z-10" : ""}`}
+                  onMouseEnter={() => setHoveredMsgId(m.id)}
+                  onMouseLeave={() => setHoveredMsgId(null)}
                 >
-                  {/* Avatar + Sender Name */}
-                  {!isMe && isGroup && isFirst && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <img
-                        src={m.senderAvatarUrl || DEFAULT_AVATAR}
-                        alt={m.senderName ?? ""}
-                        title={m.senderName ?? ""}
-                        className="w-7 h-7 rounded-full object-cover cursor-pointer hover:scale-105 transition-all duration-150"
-                        onClick={() =>
-                          navigate(`/profile/${m.senderId}`)
-                        }
-                        onError={(e) => {
-                          e.target.src = DEFAULT_AVATAR;
-                        }}
-                      />
-
-                      <span
-                        className="text-xs font-medium"
-                        style={{
-                          color: isMidnight
-                            ? "#9FA8DA"
-                            : "#65676B",
-                        }}
-                      >
-                        {m.senderName}
-                      </span>
+                  {/* Pinned indicator */}
+                  {m.isPinned && (
+                    <div
+                      className={`absolute z-10 flex items-center gap-0.5 text-[10px] font-medium text-fb-blue bg-white px-1.5 py-0.5 rounded-full shadow-sm ring-1 ring-yellow-400 ${isMe ? "-top-3 right-0" : "-top-3 left-0"}`}
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z" />
+                      </svg>
+                      <span>Pinned</span>
                     </div>
                   )}
-
-                  {/* Message Bubble + Actions */}
-                  <div className="relative flex items-end gap-1">
-                    {(() => {
-                      const isAttachment = m.messageType === 1 || m.messageType === "Attachment";
-
-                      return (
-                        <div
-                          className={isAttachment ? "rounded-2xl" : "px-3 py-2 text-sm rounded-2xl"}
-                          style={{
-                            backgroundColor: isAttachment
-                              ? undefined
-                              : (isMe ? theme.bubbleSelf : theme.bubbleOther),
-                            color: isAttachment
-                              ? undefined
-                              : (isMe ? theme.bubbleSelfText : theme.bubbleOtherText),
-                            overflowWrap: "break-word",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          <MessageContent
-                            message={m}
-                            isMe={isMe}
-                            theme={theme}
-                          />
-                        </div>
-                      );
-                    })()}
-
-                    <MessageActions
-                      message={m}
-                      isMe={isMe}
-                      isGroup={isGroup}
-                      isHovered={hoveredMsgId === m.id}
-                      onReact={reactToMessage}
-                      onReply={(msg, edit) => {
-                        if (edit) {
-                          setEditingMsg(msg);
-                          setReplyTo(null);
-                        } else {
-                          setReplyTo(msg);
-                          setEditingMsg(null);
-                        }
-                      }}
-                      onTogglePin={() => togglePin(m.id)}
-                      onRevoke={() => revokeMessage(m.id)}
-                      onEdit={() => {
-                        setEditingMsg(m);
-                        setReplyTo(null);
-                      }}
-                      theme={theme}
-                      isMidnight={isMidnight}
-                    />
-                  </div>
-
-                  {/* Reactions */}
-                  {m.reactions?.length > 0 && (
-                    <MessageReactionSummary
-                      reactions={m.reactions}
-                      currentUserId={user?.id}
-                      isMe={isMe}
-                      theme={theme}
-                    />
-                  )}
-
-                  {/* Read Receipts */}
-                  {conversationMembers
-                    ?.filter(
-                      (c) =>
-                        c.lastReadMessageId === m.id &&
-                        c.userId !== user?.id
-                    )
-                    .map((c) => (
-                      <div
-                        key={c.userId}
-                        className="flex items-center gap-1 mt-0.5"
-                      >
+                  <div
+                    className={`flex flex-col max-w-[75%] ${isMe ? "items-end" : "items-start"
+                      }`}
+                  >
+                    {/* Avatar + Sender Name */}
+                    {!isMe && isGroup && isFirst && (
+                      <div className="flex items-center gap-2 mb-1">
                         <img
-                          src={c.avatarUrl || DEFAULT_AVATAR}
-                          alt={c.fullName}
-                          title={`${c.fullName} has read this message`}
-                          className="w-4 h-4 rounded-full object-cover"
+                          src={m.senderAvatarUrl || DEFAULT_AVATAR}
+                          alt={m.senderName ?? ""}
+                          title={m.senderName ?? ""}
+                          className="w-7 h-7 rounded-full object-cover cursor-pointer hover:scale-105 transition-all duration-150"
+                          onClick={() =>
+                            navigate(`/profile/${m.senderId}`)
+                          }
                           onError={(e) => {
                             e.target.src = DEFAULT_AVATAR;
                           }}
                         />
 
                         <span
-                          className="text-xs"
+                          className="text-xs font-medium"
                           style={{
                             color: isMidnight
                               ? "#9FA8DA"
                               : "#65676B",
                           }}
                         >
-                          {c.fullName}
+                          {m.senderName}
                         </span>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Message Bubble + Actions */}
+                    <div className="relative flex items-end gap-1">
+                      {(() => {
+                        const isAttachment = m.messageType === 1 || m.messageType === "Attachment";
+
+                        return (
+                          <div
+                            className={isAttachment ? "rounded-xl" : "px-2 py-1.5 text-sm rounded-xl"}
+                            style={{
+                              backgroundColor: isAttachment
+                                ? undefined
+                                : (isMe ? theme.bubbleSelf : theme.bubbleOther),
+                              color: isAttachment
+                                ? undefined
+                                : (isMe ? theme.bubbleSelfText : theme.bubbleOtherText),
+                              overflowWrap: "break-word",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            <RepliedMessagePreview repliedMessage={m.repliedMessage} theme={theme} isMe={isMe} onJumpTo={jumpToMessage} currentUser={user} />
+                            <MessageContent
+                              message={m}
+                              isMe={isMe}
+                              theme={theme}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      <MessageActions
+                        message={m}
+                        isMe={isMe}
+                        isGroup={isGroup}
+                        isHovered={hoveredMsgId === m.id}
+                        onReact={reactToMessage}
+                        onReply={(msg, edit) => {
+                          if (edit) {
+                            setEditingMsg(msg);
+                            setReplyTo(null);
+                          } else {
+                            setReplyTo(msg);
+                            setEditingMsg(null);
+                          }
+                        }}
+                        onTogglePin={() => togglePin(m.id)}
+                        onRevoke={() => revokeMessage(m.id)}
+                        onEdit={() => {
+                          setEditingMsg(m);
+                          setReplyTo(null);
+                        }}
+                        theme={theme}
+                        isMidnight={isMidnight}
+                      />
+                    </div>
+
+                    {/* Reactions */}
+                    {m.reactions?.length > 0 && (
+                      <MessageReactionSummary
+                        reactions={m.reactions}
+                        currentUserId={user?.id}
+                        isMe={isMe}
+                        theme={theme}
+                      />
+                    )}
+
+                    {/* Read Receipts */}
+                    {conversationMembers
+                      ?.filter(
+                        (c) =>
+                          c.lastReadMessageId === m.id &&
+                          c.userId !== user?.id
+                      )
+                      .map((c) => (
+                        <div
+                          key={c.userId}
+                          className="flex items-center gap-1 mt-0.5"
+                        >
+                          <img
+                            src={c.avatarUrl || DEFAULT_AVATAR}
+                            alt={c.fullName}
+                            title={`${c.fullName} has read this message`}
+                            className="w-4 h-4 rounded-full object-cover"
+                            onError={(e) => {
+                              e.target.src = DEFAULT_AVATAR;
+                            }}
+                          />
+
+                          <span
+                            className="text-xs"
+                            style={{
+                              color: isMidnight
+                                ? "#9FA8DA"
+                                : "#65676B",
+                            }}
+                          >
+                            {c.fullName}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </React.Fragment>
           );
         })}
@@ -924,7 +1138,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
           className="absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-white text-fb-blue text-xs font-semibold rounded-full shadow-lg border border-[#E4E6EB] hover:bg-[#F0F2F5] transition-colors cursor-pointer z-10 flex items-center gap-1.5"
         >
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/>
+            <path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z" />
           </svg>
           {hasMoreDown ? "Jump to latest" : `${pendingNewMessageCount > 0 ? `${pendingNewMessageCount} new ` : ""}Jump to latest`}
         </button>
@@ -1158,14 +1372,15 @@ function MessageReactionSummary({ reactions, currentUserId, isMe, theme }) {
         return (
           <div
             key={type}
-            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors`}
+            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border cursor-pointer transition-all"
             style={{
-              backgroundColor: isActive ? `${theme.bubbleSelf}20` : "white",
-              borderColor: isActive ? theme.bubbleSelf : "#E4E6EB",
+              backgroundColor: isActive ? `${theme.bubbleSelf}18` : "rgba(255,255,255,0.85)",
+              borderColor: isActive ? theme.bubbleSelf : "rgba(0,0,0,0.08)",
+              boxShadow: isActive ? `0 0 0 1px ${theme.bubbleSelf}40, 0 1px 3px rgba(0,0,0,0.08)` : "0 1px 2px rgba(0,0,0,0.06)",
             }}
           >
             <span className="text-sm leading-none">{emoji}</span>
-            <span className="font-medium" style={{ color: isActive ? theme.bubbleSelf : theme.text }}>{users.length}</span>
+            <span className="font-semibold" style={{ color: isActive ? theme.bubbleSelf : theme.text, opacity: isActive ? 1 : 0.7 }}>{users.length}</span>
           </div>
         );
       })}
@@ -1397,18 +1612,19 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
 
       {/* Reply / Edit preview bar */}
       {(replyTo || editingMsg) && (
-        <div className="flex items-center gap-2 px-4 pt-2 pb-1" style={{ borderBottom: "1px solid #E4E6EB" }}>
+        <div className="flex items-center gap-2 px-4 pt-2 pb-1.5" style={{ borderBottom: "1px solid #E4E6EB" }}>
+          <div className="w-0.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: theme.bubbleSelf || "#0084FF" }} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-fb-blue flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ color: theme.bubbleSelf || "#0084FF" }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
-              <span className="text-xs font-semibold text-fb-blue truncate">
-                {editingMsg ? "Editing message" : `Reply to ${replyTo?.senderName || "message"}`}
+              <span className="text-xs font-semibold truncate" style={{ color: theme.bubbleSelf || "#0084FF" }}>
+                {editingMsg ? "Editing message" : `Replying to ${replyTo?.senderName || "message"}`}
               </span>
             </div>
-            <p className="text-xs text-fb-subtext mt-0.5 truncate ml-5">
-              {replyTo?.content || replyTo?.attachment ? "📎 Attachment" : replyTo?.content || editingMsg?.content || ""}
+            <p className="text-xs truncate mt-0.5 ml-[18px]" style={{ color: theme.bubbleOtherText || "#65676B", opacity: 0.7 }}>
+              {replyTo?.content || (replyTo?.attachment ? "📎 Attachment" : "")}
             </p>
           </div>
           <button

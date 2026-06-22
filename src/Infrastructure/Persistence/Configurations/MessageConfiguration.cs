@@ -49,6 +49,17 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(m => m.ForwardFromMessageId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // System message columns
+            builder.Property(m => m.IsSystemMessage)
+                .HasDefaultValue(false);
+
+            builder.Property(m => m.SystemMessageType)
+                .HasConversion<int?>();
+
+            builder.Property(m => m.Payload)
+                .HasMaxLength(4000)
+                .IsRequired(false);
         }
     }
 }

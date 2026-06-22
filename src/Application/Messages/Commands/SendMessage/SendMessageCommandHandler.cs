@@ -75,6 +75,11 @@ namespace Application.Messages.Commands.SendMessage
             var message = new Message(0, conversation.Id, request.SenderId, request.Content);
             message.SetMessageType(messageType);
 
+            if (request.RepliedMessageId.HasValue)
+            {
+                message.SetReplyTo(request.RepliedMessageId.Value);
+            }
+
             if (uploadedFile.HasValue)
             {
                 var (url, contentType, size) = uploadedFile.Value;
@@ -87,6 +92,18 @@ namespace Application.Messages.Commands.SendMessage
 
             // Re-fetch with full includes for DTO mapping
             var reloaded = await _messageRepository.GetByIdWithIncludesAsync(message.Id, cancellationToken);
+
+            // Ensure ReplyToMessage is loaded (EF navigation may be null if it wasn't in the same query)
+            if (reloaded!.ReplyToMessage is null && request.RepliedMessageId.HasValue)
+            {
+                var replyTarget = await _messageRepository.GetByIdAsync(request.RepliedMessageId.Value, cancellationToken);
+                if (replyTarget is not null)
+                {
+                    // Manually attach so EF knows the relationship
+                    reloaded.GetType().GetProperty("ReplyToMessage")!.SetValue(reloaded, replyTarget);
+                }
+            }
+
             return Result.Success(new List<MessageDto> { MessageDto.FromDomain(reloaded!) });
         }
     }

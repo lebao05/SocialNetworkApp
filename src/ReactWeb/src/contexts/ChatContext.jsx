@@ -178,10 +178,11 @@ function ChatContextInner({ children }) {
         const receiveMessage = async (message) => {
             const convId = message.conversationId;
             const isCurrentUser = message.senderId === user?.id;
+            const isSystemMessage = message.isSystemMessage === true;
             const conv = convsRef.current.find((c) => c.id === convId);
             const notificationOn = conv?.isNotificationOn !== false;
 
-            if (!isCurrentUser && notificationOn) {
+            if (!isCurrentUser && notificationOn && !isSystemMessage) {
                 playNotificationSound();
             }
             console.log("message", message);
@@ -222,7 +223,6 @@ function ChatContextInner({ children }) {
                 }
 
                 const conv = prev[idx];
-                const isCurrentUser = message.senderId === user?.id;
                 const lastReadId = conv.lastReadMessageId ?? 0;
                 const isUnread = !isCurrentUser && message.id > lastReadId;
                 const updatedUnread = isUnread ? (conv.unreadCount ?? 0) + 1 : conv.unreadCount;

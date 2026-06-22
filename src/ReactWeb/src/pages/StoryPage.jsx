@@ -1,13 +1,27 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar/Navbar";
 import UserStoryViewer from "../components/Story/UserStoryViewer";
+import { useStories } from "../contexts/StoriesContext";
 import { useProfileStories } from "../hooks/useProfileStories";
 
 export default function StoryPage() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const { group, isLoading, error } = useProfileStories(userId);
+  const { refreshTimeline } = useStories();
+  const isClosingRef = useRef(false);
+
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return;
+
+    isClosingRef.current = true;
+    const refreshPromise = refreshTimeline();
+    navigate(-1);
+    refreshPromise.catch((err) => {
+      console.error("Failed to refresh story timeline:", err);
+    });
+  }, [navigate, refreshTimeline]);
 
   const content = useMemo(() => {
     if (isLoading) {
@@ -25,7 +39,7 @@ export default function StoryPage() {
           <p className="max-w-md text-sm text-white/70">{error || "This user does not have an active story right now."}</p>
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={handleClose}
             className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#111827] transition hover:bg-white/90"
           >
             Go back
@@ -34,8 +48,8 @@ export default function StoryPage() {
       );
     }
 
-    return <UserStoryViewer group={group} onClose={() => navigate(-1)} />;
-  }, [error, group, isLoading, navigate]);
+    return <UserStoryViewer group={group} onClose={handleClose} />;
+  }, [error, group, handleClose, isLoading]);
 
   if (!group && !error && isLoading) {
     return (
@@ -47,7 +61,11 @@ export default function StoryPage() {
   }
 
   if (group && !isLoading) {
-    return <UserStoryViewer group={group} onClose={() => navigate(-1)} />;
+    return (
+      <>
+        <UserStoryViewer group={group} onClose={handleClose} />
+      </>
+    );
   }
 
   return (

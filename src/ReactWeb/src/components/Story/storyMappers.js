@@ -1,17 +1,24 @@
 export function buildStoryGroupFromApi(group) {
   const stories = (group?.stories ?? []).map((story) => {
     const style = resolveTextStyle(story);
+    const mediaUrl = story.mediaUrl || null;
+    const mediaType = resolveMediaType(story.mediaType, mediaUrl);
+
     return {
       id: story.id,
-      bg: story.mediaUrl || import.meta.env.VITE_DEFAULT_AVATAR,
+      mediaUrl,
+      bg: mediaUrl || import.meta.env.VITE_DEFAULT_AVATAR,
       label: story.textContent || "Shared a story",
       timestamp: formatStoryTimestamp(story.createdAt),
       createdAt: story.createdAt,
       expiresAt: story.expiresAt,
-      mediaType: story.mediaType,
+      mediaType,
+      isOwnStory: Boolean(story.isOwnStory),
       isSeenByCurrentUser: story.isSeenByCurrentUser,
       isLikedByCurrentUser: story.isLikedByCurrentUser,
-      backgroundGradient: story.backgroundGradient,
+      likeCount: story.likeCount ?? 0,
+      viewCount: story.viewCount ?? 0,
+      backgroundGradient: mediaUrl ? null : story.backgroundGradient,
       textColor: style.color,
       textStyle: story.textStyle,
       textPositionX: story.textPositionX,
@@ -34,6 +41,26 @@ export function buildStoryGroupFromApi(group) {
     isFriend: group.isFriend ?? false,
     stories,
   };
+}
+
+function resolveMediaType(mediaType, mediaUrl) {
+  const normalizedType = String(mediaType || "").toLowerCase();
+
+  if (normalizedType === "text") return "text";
+  if (normalizedType === "video" || isVideoUrl(mediaUrl)) return "video";
+  if (mediaUrl) return "image";
+
+  return normalizedType || "text";
+}
+
+function isVideoUrl(mediaUrl) {
+  if (!mediaUrl) return false;
+
+  const url = mediaUrl.toLowerCase();
+  return (
+    url.includes("/video/upload/") ||
+    /\.(mp4|mov|webm|m4v|avi)(\?|#|$)/.test(url)
+  );
 }
 
 const TEXT_STYLE_MAP = Object.fromEntries(

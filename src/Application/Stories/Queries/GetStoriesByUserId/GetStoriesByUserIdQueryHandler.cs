@@ -36,7 +36,7 @@ internal sealed class GetStoriesByUserIdQueryHandler : IQueryHandler<GetStoriesB
             && story.Reactions.Any(reaction => reaction.UserId == currentUserId.Value);
 
         var authorName = story.User is null
-            ? "Người dùng"
+            ? "users"
             : $"{story.User.FirstName} {story.User.LastName}".Trim();
 
         return new StoryDto(

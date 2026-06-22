@@ -3,7 +3,7 @@ import { X, Loader2 } from "lucide-react";
 import { useChat } from "../../contexts/ChatContext";
 import { REACTION_TYPES } from "./MessengerFull";
 
-export default function ChangeEmojiModal({ conversationId, currentEmoji, onClose }) {
+export default function ChangeEmojiModal({ conversationId, currentEmoji, currentName, currentTheme, onClose }) {
   const { updateConversation } = useChat();
   const [selected, setSelected] = useState(currentEmoji || "Like");
   const [saving, setSaving] = useState(false);
@@ -14,8 +14,8 @@ export default function ChangeEmojiModal({ conversationId, currentEmoji, onClose
     setSaving(true);
     try {
       await updateConversation(conversationId, {
-        name: null,
-        theme: null,
+        name: currentName ?? null,
+        theme: currentTheme ?? null,
         defaultReaction: selected,
       });
       onClose();

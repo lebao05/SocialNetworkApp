@@ -18,6 +18,7 @@ import {
 import { GrGroup } from "react-icons/gr";
 import { useAuth } from "../../contexts/authContext";
 import { useChat } from "../../contexts/ChatContext";
+import { getSystemMessagePreview } from "../../utils/systemMessage";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -62,32 +63,16 @@ function MessengerDropdown({ onClose }) {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-[22px] font-bold text-fb-text">Chats</h2>
         <div className="flex items-center gap-1">
-          <button className="w-9 h-9 bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors">
-            <MoreHorizontal size={18} />
-          </button>
           <button
             onClick={handleOpenAll}
-            className="w-9 h-9 bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors"
+            className="w-9 h-9 cursor-pointer bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors"
             title="Open Messenger"
           >
             <Maximize2 size={16} />
           </button>
-          <button className="w-9 h-9 bg-fb-bg hover:bg-fb-hover rounded-full flex items-center justify-center text-fb-text transition-colors">
-            <Edit size={16} />
-          </button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center bg-fb-bg rounded-full px-3 py-2 gap-2">
-          <Search size={14} className="text-fb-subtext flex-shrink-0" />
-          <input
-            className="bg-transparent outline-none text-sm flex-1 placeholder-fb-subtext"
-            placeholder="Search on Messenger"
-          />
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 px-4 pb-2">
@@ -127,13 +112,6 @@ function MessengerDropdown({ onClose }) {
               {conv.isOneToOne && conv.otherUserId && isOnline(conv.otherUserId) && (
                 <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
               )}
-              {!conv.isOneToOne && (
-                <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-fb-blue rounded-full border-2 border-white flex items-center justify-center">
-                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                  </svg>
-                </span>
-              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
@@ -147,10 +125,14 @@ function MessengerDropdown({ onClose }) {
                   className={`text-xs flex-shrink-0 ml-2
                   ${(conv.unreadCount ?? 0) > 0 ? "text-fb-blue font-semibold" : "text-fb-subtext"}`}
                 >
-                {formatTime(conv.lastMessage?.createdAt)}
-              </span>
-            </div>
-             z
+                  {formatTime(conv.lastMessage?.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm text-fb-subtext truncate mt-0.5">
+                {conv.lastMessage?.isSystemMessage
+                  ? getSystemMessagePreview(conv.lastMessage)
+                  : (conv.lastMessage?.content || "Sent an attachment")}
+              </p>
             </div>
             {(conv.unreadCount ?? 0) > 0 && (
               <span className="w-5 h-5 bg-fb-blue rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
@@ -165,7 +147,7 @@ function MessengerDropdown({ onClose }) {
       <div style={{ boxShadow: "0 -1px 0 #E4E6EB" }}>
         <button
           onClick={handleOpenAll}
-          className="w-full py-3 text-center text-sm font-semibold text-fb-blue hover:bg-fb-hover transition-colors"
+          className="w-full cursor-pointer py-3 text-center text-sm font-semibold text-fb-blue hover:bg-fb-hover transition-colors"
         >
           See all in Messenger
         </button>

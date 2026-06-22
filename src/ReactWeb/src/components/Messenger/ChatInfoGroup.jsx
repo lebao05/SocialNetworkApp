@@ -7,6 +7,7 @@ import SharedMediaModal from "./SharedMediaModal";
 import AddMemberModal from "./AddMemberModal";
 import ChangeThemeModal from "./ChangeThemeModal";
 import ChangeEmojiModal from "./ChangeEmojiModal";
+import ChangeNameModal from "./ChangeNameModal";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
@@ -205,6 +206,8 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showName, setShowName] = useState(false);
+  const [nameError, setNameError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef(null);
 
@@ -426,6 +429,13 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
           <SectionHeader title="Customize" open={openSections.custom} onToggle={() => toggle("custom")} />
           {openSections.custom && (
             <div className="pb-2 flex flex-col">
+              {!conv.isOneToOne && isOwner && (
+                <InfoRow
+                  icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>}
+                  label="Change name"
+                  onClick={() => setShowName(true)}
+                />
+              )}
               <InfoRow
                 icon={<svg className="w-4 h-4 text-fb-text" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>}
                 label="Change emoji"
@@ -553,6 +563,8 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
         <ChangeThemeModal
           conversationId={conv.id}
           currentTheme={conv.theme}
+          currentName={conv.name}
+          currentDefaultReaction={conv.defaultReaction}
           onClose={() => setShowTheme(false)}
         />
       )}
@@ -561,7 +573,19 @@ export default function ChatInfoGroup({ conv, onOpenSearch }) {
         <ChangeEmojiModal
           conversationId={conv.id}
           currentEmoji={conv.defaultReaction}
+          currentName={conv.name}
+          currentTheme={conv.theme}
           onClose={() => setShowEmoji(false)}
+        />
+      )}
+
+      {showName && (
+        <ChangeNameModal
+          conversationId={conv.id}
+          currentName={conv.name}
+          currentTheme={conv.theme}
+          currentDefaultReaction={conv.defaultReaction}
+          onClose={() => setShowName(false)}
         />
       )}
     </div>

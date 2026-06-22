@@ -1,6 +1,7 @@
 using Application.Abstractions.SignalR;
-using Microsoft.AspNetCore.SignalR;
 using Application.DTOs.Conversations;
+using Application.DTOs.Messages;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Infrastructure.SignalR;
 
@@ -87,5 +88,16 @@ public class ChatHubNotifier : IChatHubNotifier
                     conversation
                 },
                 cancellationToken);
+    }
+
+    public async Task NotifySystemMessageSentAsync(
+        long conversationId,
+        MessageDto systemMessage,
+        CancellationToken cancellationToken = default)
+    {
+        var groupName = conversationId.ToString();
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync("ReceiveMessage", systemMessage, cancellationToken);
     }
 }

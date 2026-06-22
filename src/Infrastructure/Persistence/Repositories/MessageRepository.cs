@@ -20,6 +20,8 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<Message?> GetByIdAsync(long id, CancellationToken cancellationToken)
         {
             return await _context.Messages
+                .Include(m => m.Creator)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Creator)
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
@@ -29,6 +31,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
                 .Include(m => m.Reactions).ThenInclude(r => r.User)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Creator)
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
@@ -64,7 +67,8 @@ namespace Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .Include(m => m.Creator)
                 .Include(m => m.Attachment)
-                .Include(m => m.Reactions).ThenInclude(r => r.User);
+                .Include(m => m.Reactions).ThenInclude(r => r.User)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Creator);
 
             if (direction.ToLower() == "up")
             {

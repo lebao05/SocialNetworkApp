@@ -256,6 +256,7 @@ namespace Presentation.Controllers
         public async Task<IActionResult> SendMessage(
             [FromForm] long conversationId,
             [FromForm] string? content,
+            [FromForm] long? replyToMessageId,
             IFormFileCollection? files,
             CancellationToken cancellationToken)
         {
@@ -277,7 +278,8 @@ namespace Presentation.Controllers
                 conversationId,
                 Guid.Parse(userId),
                 content,
-                sendFiles
+                sendFiles,
+                replyToMessageId
             );
 
             var result = await _sender.Send(command, cancellationToken);

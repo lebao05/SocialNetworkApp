@@ -46,6 +46,8 @@ import ReelViewModal from "../components/Reels/ReelViewModal";
 import { useReels } from "../contexts/ReelsContext";
 import { toggleLikeReelApi, deleteReelApi } from "../apis/reelApi";
 import ProfileRelationshipActions from "../components/Profile/ProfileRelationshipActions";
+import ProfileStoryRing from "../components/Story/ProfileStoryRing";
+import { useProfileStories } from "../hooks/useProfileStories";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -69,6 +71,7 @@ export default function ProfilePage() {
   const { friends: profileFriends, loading: friendsLoading } = useProfileFriends(viewUserId);
   const { reels: profileReels, isLoading: reelsLoading, error: reelsError, refresh: refreshProfileReels, hasMore: reelsHasMore, loadMore: loadMoreReels, toggleLike: toggleReelLike, deleteReel: deleteProfileReel } = useProfileReels(viewUserId, { initialPage: 1, pageSize: 12 });
   const { reelChosen, source, closeReel, updateReel, removeReel, nextReel, prevReel, getChosenIndex, openReel, syncFromProfile } = useReels();
+  const { group: profileStoriesGroup, hasStories: profileHasActiveStories } = useProfileStories(viewUserId);
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -466,8 +469,21 @@ export default function ProfilePage() {
 
             {/* Avatar & Basic Info */}
             <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-[80px] md:-mt-[45px] z-10 w-full md:w-auto text-center md:text-left">
-              {/* Avatar circle */}
+              {/* Avatar with story ring + avatar menu */}
               <div className="relative group w-[168px] h-[168px]">
+                <ProfileStoryRing
+                  userId={viewUserId}
+                  avatarUrl={displayUser.avatar}
+                  name={displayUser.name}
+                  hasActiveStories={profileHasActiveStories}
+                  hasUnseenStories={profileStoriesGroup?.hasUnseenStories}
+                  size="xl"
+                  isOwnProfile={isOwnProfile}
+                  onUploadAvatar={() => avatarInputRef.current?.click()}
+                  onSeeStories={() => navigate(`/profile/${viewUserId}/stories`)}
+                  darkMode={darkMode}
+                />
+                {/* Hidden file input for avatar upload */}
                 <input
                   ref={avatarInputRef}
                   type="file"
@@ -475,23 +491,6 @@ export default function ProfilePage() {
                   className="hidden"
                   onChange={handleAvatarFileSelect}
                 />
-                <img
-                  src={displayUser.avatar || DEFAULT_AVATAR}
-                  alt={displayUser.name}
-                  className={`w-[168px] h-[168px] rounded-full border-4 ${darkMode ? "border-[#242526]" : "border-white"} object-cover shadow-lg`}
-                />
-                {isOwnProfile && (
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <span className="flex items-center gap-2 text-white font-semibold">
-                      <Camera size={24} />
-                      {avatarUploading ? "Uploading..." : "Change Profile Photo"}
-                    </span>
-                  </button>
-                )}
               </div>
 
               {/* Bio & Details text */}

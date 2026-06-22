@@ -14,6 +14,8 @@ public class Message : AggregateRoot
     public MessageType MessageType { get; private set; }
 
     public bool IsSystemMessage { get; private set; }
+    public SystemMessageType? SystemMessageType { get; private set; }
+    public string? Payload { get; private set; }
     public bool IsPinned { get; private set; }
     private readonly List<MessageReaction> _reactions = new();
     public IReadOnlyCollection<MessageReaction> Reactions => _reactions;
@@ -78,6 +80,18 @@ public class Message : AggregateRoot
     }
 
     public void SetMessageType(MessageType type) { MessageType = type; }
+
+    public void SetReplyTo(long? repliedMessageId)
+    {
+        ReplyToMessageId = repliedMessageId;
+    }
+
+    public void SetAsSystemMessage(SystemMessageType type, string? payload = null)
+    {
+        IsSystemMessage = true;
+        SystemMessageType = type;
+        Payload = payload;
+    }
 
     public void AttachFile(MessageAttachment attachment) { Attachment = attachment; }
 

@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Messaging;
+using Application.Abstractions.Messaging;
 
 namespace Application.Messages.Commands.SendMessage
 {
@@ -13,6 +13,7 @@ namespace Application.Messages.Commands.SendMessage
         long ConversationId,
         Guid SenderId,
         string? Content,
-        List<SendMessageFile>? Files
+        List<SendMessageFile>? Files,
+        long? RepliedMessageId
     ) : ICommand<List<Application.DTOs.Messages.MessageDto>>;
 }

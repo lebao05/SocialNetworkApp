@@ -161,11 +161,16 @@ public class Conversation : AggregateRoot
         if (member.Role != ConversationRole.Admin && member.Role != ConversationRole.Owner)
             return Result.Failure(new Error("Conversation.Forbidden", "Only admins or the owner can update conversation settings."));
 
-        if (!IsOneToOne && !string.IsNullOrWhiteSpace(name))
+        if (!IsOneToOne && !string.IsNullOrWhiteSpace(name) && Name != name.Trim())
             Name = name.Trim();
 
-        Theme = string.IsNullOrWhiteSpace(theme) ? null : theme.Trim();
-        DefaultReaction = string.IsNullOrWhiteSpace(defaultReaction) ? null : defaultReaction.Trim();
+        var trimmedTheme = string.IsNullOrWhiteSpace(theme) ? null : theme.Trim();
+        if (Theme != trimmedTheme)
+            Theme = trimmedTheme;
+
+        var trimmedReaction = string.IsNullOrWhiteSpace(defaultReaction) ? null : defaultReaction.Trim();
+        if (DefaultReaction != trimmedReaction)
+            DefaultReaction = trimmedReaction;
 
         return Result.Success();
     }

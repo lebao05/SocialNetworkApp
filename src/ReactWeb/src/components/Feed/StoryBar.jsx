@@ -27,6 +27,7 @@ function StoryCard({ group, onClick }) {
           avatarUrl={group.avatar}
           name={group.user}
           hasActiveStories={group.stories.length > 0}
+          hasUnseenStories={group.hasUnseenStories}
           size="lg"
           onStoryClick={onClick}
         />
@@ -90,20 +91,19 @@ export default function StoryBar() {
 
         <div className="w-px h-10 bg-[#dddfe2] shrink-0 mx-1" />
 
-        {isLoading
-          ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex w-20 shrink-0 flex-col items-center gap-2 animate-pulse">
-                <div className="h-[72px] w-[72px] rounded-full bg-[#eef0f3]" />
-                <div className="h-3 w-14 rounded bg-[#eef0f3]" />
-              </div>
-            ))
-          : groups.map((group) => (
-              <StoryCard
-                key={group.userId}
-                group={group}
-                onClick={handleOpenUserStory}
-              />
-            ))}
+        {isLoading ? (
+          <div className="flex h-[92px] min-w-[160px] flex-1 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#e4e6eb] border-t-[#0866ff]" />
+          </div>
+        ) : (
+          groups.map((group) => (
+            <StoryCard
+              key={group.userId}
+              group={group}
+              onClick={handleOpenUserStory}
+            />
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 using Application.Stories.Commands.CreateStory;
 using Application.Stories.Commands.DeleteStory;
+using Application.Stories.Commands.MarkStoryAsSeen;
 using Application.Stories.Commands.ToggleStoryLike;
+using Application.Stories.Commands.UploadStoryMedia;
 using Application.Stories.Queries.GetStoriesByUserId;
 using Application.Stories.Queries.GetStoryTimeline;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Story;
@@ -117,5 +120,47 @@ public class StoryController : ApiController
         var result = await _sender.Send(command, cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+    }
+
+    [HttpPost("{storyId:long}/seen")]
+    public async Task<IActionResult> MarkStoryAsSeen(long storyId, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var command = new MarkStoryAsSeenCommand(userId, storyId);
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok() : HandleFailure(result);
+    }
+
+    [HttpPost("upload-media")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadStoryMedia(
+        [FromForm] IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("File is empty.");
+        }
+
+        using var stream = file.OpenReadStream();
+        var command = new UploadStoryMediaCommand(userId, stream, file.FileName, file.ContentType);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        return result.IsSuccess ? Ok(new { Url = result.Value }) : HandleFailure(result);
     }
 }

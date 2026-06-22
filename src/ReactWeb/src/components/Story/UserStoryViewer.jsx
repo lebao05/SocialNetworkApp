@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Heart, MessageCircle, Send, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { createConversationApi, getConversationByUserIdApi } from "../../apis/conversationApi";
+import { sendMessageApi } from "../../apis/messageApi";
+import { markStoryAsSeenApi, toggleStoryLikeApi } from "../../apis/storyApi";
 
 const TEXT_IMAGE_DURATION = 10000;
 
@@ -90,27 +93,36 @@ function UserStoryStage({
   onVideoEnded,
   isPaused,
   onTogglePaused,
-  onPrev,
   onNext,
   onStoryPrev,
-  onStoryNext,
   onClose,
+  isLiked,
+  likeCount,
+  viewCount,
+  onLike,
+  replyText,
+  replyStatus,
+  isSendingReply,
+  onReplyTextChange,
+  onSendReply,
 }) {
-  const navigate = useNavigate();
+  const replyInputRef = useRef(null);
   const story = group?.stories?.[storyIndex];
 
   if (!story) return null;
 
+  const canReply = !story.isOwnStory;
+  const mediaUrl = story.mediaUrl || story.bg;
   const isVideo = story?.mediaType === "video";
   const hasBgMedia = Boolean(
-    story.bg &&
-      story.bg !== import.meta.env.VITE_DEFAULT_AVATAR &&
-      !story.backgroundGradient
+    mediaUrl &&
+      mediaUrl !== import.meta.env.VITE_DEFAULT_AVATAR &&
+      story?.mediaType !== "text"
   );
   const bgStyle = story.backgroundGradient
     ? { background: story.backgroundGradient }
     : {
-        backgroundImage: `url(${story.bg || story.mediaUrl})`,
+        backgroundImage: `url(${mediaUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       };
@@ -134,14 +146,14 @@ function UserStoryStage({
       {/* Background: video, image, or gradient */}
       {isVideo ? (
         <VideoStory
-          src={story.mediaUrl || story.bg}
+          src={mediaUrl}
           onEnded={onVideoEnded}
           onProgress={onProgress}
           isPaused={isPaused}
         />
       ) : hasBgMedia ? (
         <img
-          src={story.bg || story.mediaUrl}
+          src={mediaUrl}
           alt={group?.user}
           className="absolute inset-0 h-full w-full object-cover"
           draggable={false}
@@ -175,18 +187,9 @@ function UserStoryStage({
               <span className="text-[13px] font-semibold leading-tight text-white">
                 {group?.user}
               </span>
-              {!group?.isFriend && (
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  className="rounded-md border border-white/40 bg-transparent px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-white/10"
-                >
-                  Follow
-                </button>
-              )}
             </div>
             <span className="text-[11px] leading-tight text-white/60">
-              {story.timestamp || "Just now"}
+              {story.timestamp || "Just now"} · {viewCount} views · {likeCount} likes
             </span>
           </div>
         </Link>
@@ -196,7 +199,6 @@ function UserStoryStage({
           onClick={(e) => {
             e.stopPropagation();
             onClose();
-            navigate(-1);
           }}
           className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95"
           aria-label="Close"
@@ -259,72 +261,185 @@ function UserStoryStage({
         </div>
 
         {/* Reply input + actions */}
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder={`Reply to ${group?.user}...`}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 rounded-full border border-white/25 bg-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none backdrop-blur-sm transition focus:border-white/50 focus:bg-white/20"
-          />
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSendReply();
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {canReply && (
+            <input
+              ref={replyInputRef}
+              type="text"
+              value={replyText}
+              placeholder={`Reply to ${group?.user}...`}
+              onChange={(e) => onReplyTextChange(e.target.value)}
+              className="flex-1 rounded-full border border-white/25 bg-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none backdrop-blur-sm transition focus:border-white/50 focus:bg-white/20 disabled:opacity-70"
+              disabled={isSendingReply}
+            />
+          )}
           <button
             type="button"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onLike(); }}
             className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:bg-white/10 active:scale-95"
-            aria-label="Like"
+            aria-label={isLiked ? "Unlike" : "Like"}
           >
-            <Heart size={21} />
+            <Heart size={21} className={isLiked ? "fill-red-500 text-red-500" : ""} />
           </button>
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:bg-white/10 active:scale-95"
-            aria-label="Message"
-          >
-            <MessageCircle size={21} />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:bg-white/10 active:scale-95"
-            aria-label="Send"
-          >
-            <Send size={21} />
-          </button>
-        </div>
+          {canReply && (
+            <>
+              <button
+                type="button"
+                onClick={() => replyInputRef.current?.focus()}
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:bg-white/10 active:scale-95"
+                aria-label="Message"
+              >
+                <MessageCircle size={21} />
+              </button>
+              <button
+                type="submit"
+                disabled={!replyText.trim() || isSendingReply}
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Send"
+              >
+                <Send size={21} />
+              </button>
+            </>
+          )}
+        </form>
+        {replyStatus && (
+          <p className={`mt-2 px-3 text-xs ${replyStatus.type === "error" ? "text-red-200" : "text-white/70"}`}>
+            {replyStatus.message}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
 export default function UserStoryViewer({ group, onClose }) {
-  const navigate = useNavigate();
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [localLikes, setLocalLikes] = useState({});
+  const [localLikeCounts, setLocalLikeCounts] = useState({});
+  const [replyText, setReplyText] = useState("");
+  const [replyStatus, setReplyStatus] = useState(null);
+  const [isSendingReply, setIsSendingReply] = useState(false);
   const rafRef = useRef(null);
   const touchStartX = useRef(null);
+  const seenStoryIdsRef = useRef(new Set());
+  const pendingSeenRequestsRef = useRef(new Map());
   const totalStoriesInGroup = group?.stories?.length || 0;
 
   const currentStory = group?.stories?.[currentStoryIndex];
   const isVideo = currentStory?.mediaType === "video";
+
+  const handleClose = useCallback(async () => {
+    const pendingSeenRequests = Array.from(pendingSeenRequestsRef.current.values());
+
+    if (pendingSeenRequests.length > 0) {
+      await Promise.allSettled(pendingSeenRequests);
+    }
+
+    await onClose();
+  }, [onClose]);
 
   const goNextStory = useCallback(() => {
     if (currentStoryIndex < totalStoriesInGroup - 1) {
       setCurrentStoryIndex((prev) => prev + 1);
       setProgress(0);
     } else {
-      onClose();
+      handleClose();
     }
-  }, [currentStoryIndex, totalStoriesInGroup, onClose]);
+  }, [currentStoryIndex, totalStoriesInGroup, handleClose]);
 
   const goPrevStory = useCallback(() => {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex((prev) => prev - 1);
       setProgress(0);
     } else {
-      onClose();
+      handleClose();
     }
-  }, [currentStoryIndex, onClose]);
+  }, [currentStoryIndex, handleClose]);
+
+  const handleLike = useCallback(async () => {
+    if (!currentStory) return;
+    const wasLiked = localLikes[currentStory.id] ?? currentStory.isLikedByCurrentUser ?? false;
+    const prevCount = localLikeCounts[currentStory.id] ?? currentStory.likeCount ?? 0;
+
+    setLocalLikes((prev) => ({ ...prev, [currentStory.id]: !wasLiked }));
+    setLocalLikeCounts((prev) => ({
+      ...prev,
+      [currentStory.id]: wasLiked ? prevCount - 1 : prevCount + 1,
+    }));
+    try {
+      const result = await toggleStoryLikeApi(currentStory.id);
+      setLocalLikes((prev) => ({ ...prev, [currentStory.id]: result.isLiked }));
+      setLocalLikeCounts((prev) => ({
+        ...prev,
+        [currentStory.id]: result.likeCount,
+      }));
+    } catch {
+      setLocalLikes((prev) => ({ ...prev, [currentStory.id]: wasLiked }));
+      setLocalLikeCounts((prev) => ({ ...prev, [currentStory.id]: prevCount }));
+    }
+  }, [currentStory, localLikes, localLikeCounts]);
+
+  const handleSendReply = useCallback(async () => {
+    const content = replyText.trim();
+    if (!content || !group?.userId || currentStory?.isOwnStory || isSendingReply) return;
+
+    setIsSendingReply(true);
+    setReplyStatus(null);
+
+    try {
+      let conversation = await getConversationByUserIdApi(group.userId);
+
+      if (conversation?.isVirtual) {
+        conversation = await createConversationApi({
+          participantIds: [group.userId],
+          name: null,
+        });
+      }
+
+      if (!conversation?.id) {
+        throw new Error("Conversation was not created.");
+      }
+
+      await sendMessageApi({
+        conversationId: conversation.id,
+        content,
+      });
+
+      setReplyText("");
+      setReplyStatus({ type: "success", message: "Message sent" });
+    } catch (err) {
+      console.error("Failed to send story reply:", err);
+      setReplyStatus({ type: "error", message: "Could not send message" });
+    } finally {
+      setIsSendingReply(false);
+    }
+  }, [currentStory?.isOwnStory, group?.userId, isSendingReply, replyText]);
+
+  // Mark story as seen when index changes
+  useEffect(() => {
+    if (!currentStory) return;
+    if (seenStoryIdsRef.current.has(currentStory.id)) return;
+
+    const seenRequest = markStoryAsSeenApi(currentStory.id).catch((err) =>
+      console.error("Failed to mark story as seen:", err)
+    );
+
+    seenStoryIdsRef.current.add(currentStory.id);
+    pendingSeenRequestsRef.current.set(currentStory.id, seenRequest);
+    seenRequest.finally(() => {
+      pendingSeenRequestsRef.current.delete(currentStory.id);
+    });
+  }, [currentStoryIndex, currentStory]);
 
   // RAF-based progress for text/image stories
   useEffect(() => {
@@ -349,7 +464,15 @@ export default function UserStoryViewer({ group, onClose }) {
   }, [currentStoryIndex, isPaused, isVideo]);
 
   useEffect(() => {
+    setReplyText("");
+    setReplyStatus(null);
+  }, [currentStoryIndex]);
+
+  useEffect(() => {
     const handleKey = (e) => {
+      const isTyping = ["INPUT", "TEXTAREA"].includes(e.target?.tagName);
+      if (isTyping) return;
+
       if (e.key === "ArrowRight" || e.key === "ArrowDown") goNextStory();
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") goPrevStory();
       if (e.key === " ") {
@@ -357,13 +480,12 @@ export default function UserStoryViewer({ group, onClose }) {
         setIsPaused((prev) => !prev);
       }
       if (e.key === "Escape") {
-        onClose();
-        navigate(-1);
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [goNextStory, goPrevStory, onClose, navigate]);
+  }, [goNextStory, goPrevStory, handleClose]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
@@ -392,11 +514,18 @@ export default function UserStoryViewer({ group, onClose }) {
           onVideoEnded={goNextStory}
           isPaused={isPaused}
           onTogglePaused={() => setIsPaused((prev) => !prev)}
-          onPrev={goPrevStory}
           onNext={goNextStory}
           onStoryPrev={goPrevStory}
-          onStoryNext={goNextStory}
-          onClose={onClose}
+          onClose={handleClose}
+          isLiked={localLikes[currentStory?.id] ?? currentStory?.isLikedByCurrentUser ?? false}
+          likeCount={localLikeCounts[currentStory?.id] ?? currentStory?.likeCount ?? 0}
+          viewCount={currentStory?.viewCount ?? 0}
+          onLike={handleLike}
+          replyText={replyText}
+          replyStatus={replyStatus}
+          isSendingReply={isSendingReply}
+          onReplyTextChange={setReplyText}
+          onSendReply={handleSendReply}
         />
       </div>
     </div>
