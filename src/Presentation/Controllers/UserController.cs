@@ -1,4 +1,6 @@
 using Application.Friend.Commands.AcceptFriendRequest;
+using Application.Users.Queries.GetUpcomingBirthdays;
+using Application.Users.Queries.GetTodayBirthdays;
 using Application.Friend.Commands.CancelFriendRequest;
 using Application.Friend.Commands.RejectFriendRequest;
 using Application.Friend.Commands.SendFriendRequest;
@@ -196,6 +198,28 @@ namespace Presentation.Controllers
             var result = await _sender.Send(command, cancellationToken);
 
             return result.IsSuccess ? NoContent() : HandleFailure(result);
+        }
+
+        [HttpGet("birthdays/today")]
+        public async Task<IActionResult> GetTodayBirthdays(CancellationToken cancellationToken)
+        {
+            var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var query = new GetTodayBirthdaysQuery(currentUserId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("birthdays/upcoming")]
+        public async Task<IActionResult> GetUpcomingBirthdays(CancellationToken cancellationToken)
+        {
+            var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
+
+            var query = new GetUpcomingBirthdaysQuery(currentUserId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
     }
 }

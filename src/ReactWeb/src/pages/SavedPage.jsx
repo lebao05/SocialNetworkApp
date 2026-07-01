@@ -1,12 +1,11 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import Navbar from "../components/Navbar/Navbar";
 import LeftSidebar from "../components/Sidebar/LeftSidebar";
 import PostCard from "../components/Feed/PostCard";
-import { Bookmark, Search, Grid, List, X, Loader } from "lucide-react";
+import { Bookmark, Search, X } from "lucide-react";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
-// ── Mock saved posts — replace with API call once GET /api/posts/saved exists ──
 const MOCK_SAVED = [
   {
     id: 101,
@@ -24,7 +23,6 @@ const MOCK_SAVED = [
       media: [{ id: 1, mediaUrl: "https://picsum.photos/seed/post01/680/400", mediaType: "image" }],
       reactionCounts: [{ reactionType: 0, count: 3241 }, { reactionType: 1, count: 218 }],
       commentCount: 418,
-      commentsData: [],
     },
     savedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -44,7 +42,6 @@ const MOCK_SAVED = [
       media: [{ id: 2, mediaUrl: "https://picsum.photos/seed/post02/680/380", mediaType: "image" }],
       reactionCounts: [{ reactionType: 1, count: 142 }],
       commentCount: 37,
-      commentsData: [],
     },
     savedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -64,7 +61,6 @@ const MOCK_SAVED = [
       media: [{ id: 3, mediaUrl: "https://picsum.photos/seed/post03/680/420", mediaType: "image" }],
       reactionCounts: [{ reactionType: 0, count: 521 }, { reactionType: 1, count: 89 }],
       commentCount: 64,
-      commentsData: [],
     },
     savedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -84,7 +80,6 @@ const MOCK_SAVED = [
       media: [],
       reactionCounts: [{ reactionType: 0, count: 1893 }],
       commentCount: 712,
-      commentsData: [],
     },
     savedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -104,58 +99,61 @@ const MOCK_SAVED = [
       media: [{ id: 4, mediaUrl: "https://picsum.photos/seed/post05/680/400", mediaType: "image" }],
       reactionCounts: [{ reactionType: 0, count: 289 }],
       commentCount: 93,
-      commentsData: [],
     },
     savedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
+  {
+    id: 106,
+    post: {
+      id: 106,
+      content: "Beautiful sunset at the beach 🌅 Nothing beats the calm of the ocean.",
+      visibility: 0,
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      author: {
+        id: 7,
+        firstName: "Lan",
+        lastName: "Anh",
+        avatarUrl: "https://i.pravatar.cc/150?img=47",
+      },
+      media: [{ id: 5, mediaUrl: "https://picsum.photos/seed/post06/680/420", mediaType: "image" }],
+      reactionCounts: [{ reactionType: 0, count: 876 }, { reactionType: 1, count: 45 }],
+      commentCount: 120,
+    },
+    savedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+  },
 ];
 
-function formatRelativeDate(dateStr) {
-  if (!dateStr) return "";
-  const now = new Date();
-  const d = new Date(dateStr);
-  const diffMs = now - d;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d`;
-  return d.toLocaleDateString("vi-VN", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f2f5]">
-        <Bookmark size={36} className="text-[#bcc0c4]" />
-      </div>
-      <h2 className="mb-2 text-2xl font-bold text-[#050505]">No saved posts</h2>
-      <p className="mb-8 max-w-sm text-[15px] text-[#65676b] leading-relaxed">
-        Save posts you want to revisit later. Click the <span className="font-semibold text-[#050505]">bookmark</span> icon on any post to save it here.
-      </p>
-      <button
-        type="button"
-        className="rounded-lg bg-[#1877f2] px-6 py-2.5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#166fe5]"
-      >
-        Find posts to save
-      </button>
-    </div>
-  );
-}
+const COLLECTIONS = [
+  {
+    id: "all",
+    name: "Tất cả ảnh đã lưu",
+    icon: <Bookmark size={16} className="text-[#1877f2]" />,
+  },
+  {
+    id: "profile",
+    name: "Ảnh trên trang cá nhân của bạn",
+    icon: <Bookmark size={16} className="text-[#65676b]" />,
+  },
+  {
+    id: "withyou",
+    name: "Ảnh có bạn",
+    icon: <Bookmark size={16} className="text-[#65676b]" />,
+  },
+  {
+    id: "saveditems",
+    name: "Mục đã lưu",
+    icon: <Bookmark size={16} className="text-[#65676b]" />,
+  },
+];
 
 export default function SavedPage() {
+  const [activeTab, setActiveTab] = useState("saved");
+  const [activeCollection, setActiveCollection] = useState("all");
   const [search, setSearch] = useState("");
-  const [layout, setLayout] = useState("grid"); // "grid" | "list"
-  const [activeFilter, setActiveFilter] = useState("all"); // "all" | "posts" | "reels"
-  const [isLoading, setIsLoading] = useState(false);
   const [savedItems, setSavedItems] = useState(MOCK_SAVED);
   const [removingId, setRemovingId] = useState(null);
 
   const filtered = savedItems.filter((item) => {
-    if (activeFilter === "posts" && (!item.post.media || item.post.media.length === 0)) return false;
-    if (activeFilter === "reels" && item.post.media?.length > 0) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -164,196 +162,176 @@ export default function SavedPage() {
     );
   });
 
-  const handleUnsave = useCallback(async (savedItemId) => {
+  const handleUnsave = async (savedItemId) => {
     setRemovingId(savedItemId);
-    // TODO: call unsavePostApi(savedItem.post.id) once API exists
     await new Promise((r) => setTimeout(r, 400));
     setSavedItems((prev) => prev.filter((s) => s.id !== savedItemId));
     setRemovingId(null);
-  }, []);
-
-  const FILTERS = [
-    { key: "all", label: "All" },
-    { key: "posts", label: "Posts" },
-    { key: "reels", label: "Reels" },
-  ];
+  };
 
   return (
     <div className="bg-[#f0f2f5] min-h-screen">
       <Navbar />
 
-      <div className="pt-14">
-        <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
-          {/* ── Header ── */}
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#e7f3ff]">
-                <Bookmark size={22} className="text-[#1877f2]" />
-              </div>
-              <div>
-                <h1 className="text-[22px] font-bold text-[#050505] leading-tight">Saved</h1>
-                <p className="text-[13px] text-[#65676b]">{savedItems.length} saved items</p>
-              </div>
+      <div className="pt-14 flex">
+        {/* ── Left Sidebar ── */}
+        <LeftSidebar />
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 min-h-[calc(100vh-56px)] ml-[280px]">
+          {/* ── Tabs header ── */}
+          <div className="sticky top-14 z-10 bg-white border-b border-[#ddd]">
+            <div className="flex items-center px-6">
+              <button
+                type="button"
+                onClick={() => setActiveTab("collections")}
+                className={`px-5 py-3 text-[15px] font-semibold border-b-2 transition-colors ${
+                  activeTab === "collections"
+                    ? "border-[#1877f2] text-[#1877f2]"
+                    : "border-transparent text-[#65676b] hover:text-[#050505]"
+                }`}
+              >
+                Bộ sưu tập
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("saved")}
+                className={`px-5 py-3 text-[15px] font-semibold border-b-2 transition-colors ${
+                  activeTab === "saved"
+                    ? "border-[#1877f2] text-[#1877f2]"
+                    : "border-transparent text-[#65676b] hover:text-[#050505]"
+                }`}
+              >
+                Đã lưu
+              </button>
             </div>
           </div>
 
-          {/* ── Toolbar ── */}
-          {savedItems.length > 0 && (
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              {/* Filter tabs */}
-              <div className="flex items-center gap-1 rounded-lg border border-[#ddd] bg-white p-1">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setActiveFilter(f.key)}
-                    className={`rounded-md px-3 py-1.5 text-[14px] font-semibold transition-colors ${
-                      activeFilter === f.key
-                        ? "bg-[#1877f2] text-white"
-                        : "text-[#65676b] hover:bg-[#f2f2f2]"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex-1" />
-
-              {/* Search */}
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#65676b]" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="h-9 w-44 rounded-lg border border-[#ddd] bg-white pl-9 pr-3 text-[14px] text-[#050505] placeholder-[#bcc0c4] outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2]/20 sm:w-56"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#bcc0c4] hover:text-[#65676b]"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              {/* Layout toggle */}
-              <div className="flex items-center gap-0.5 rounded-lg border border-[#ddd] bg-white p-1">
-                <button
-                  type="button"
-                  onClick={() => setLayout("grid")}
-                  className={`rounded p-1.5 transition-colors ${layout === "grid" ? "bg-[#e7f3ff] text-[#1877f2]" : "text-[#65676b] hover:bg-[#f2f2f2]"}`}
-                  title="Grid"
-                >
-                  <Grid size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLayout("list")}
-                  className={`rounded p-1.5 transition-colors ${layout === "list" ? "bg-[#e7f3ff] text-[#1877f2]" : "text-[#65676b] hover:bg-[#f2f2f2]"}`}
-                  title="List"
-                >
-                  <List size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Content ── */}
-        <div className="mx-auto max-w-2xl px-4 pb-8 sm:px-6">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader size={28} className="animate-spin text-[#1877f2]" />
-              <p className="text-[14px] text-[#65676b]">Loading saved posts...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            search ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f2f5]">
-                  <Search size={24} className="text-[#bcc0c4]" />
+          <div className="p-6">
+            {activeTab === "collections" && (
+              <div className="max-w-sm">
+                <p className="mb-4 text-[13px] text-[#65676b] font-medium">Bộ sưu tập của bạn</p>
+                <div className="space-y-1">
+                  {COLLECTIONS.map((col) => (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => setActiveCollection(col.id)}
+                      className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                        activeCollection === col.id
+                          ? "bg-[#e7f3ff] text-[#1877f2]"
+                          : "text-[#050505] hover:bg-[#f2f2f2]"
+                      }`}
+                    >
+                      {col.icon}
+                      <span className="text-[14px] font-medium">{col.name}</span>
+                    </button>
+                  ))}
                 </div>
-                <p className="text-[15px] font-semibold text-[#050505]">No results found</p>
-                <p className="mt-1 text-[13px] text-[#65676b]">Try different keywords</p>
               </div>
-            ) : (
-              <EmptyState />
-            )
-          ) : layout === "grid" ? (
-            <div className="grid grid-cols-3 gap-2">
-              {filtered.map((item) => (
-                <div
-                  key={item.id}
-                  className="group relative aspect-square overflow-hidden rounded-lg bg-[#f0f2f5] cursor-pointer"
-                >
-                  {item.post.media?.[0] ? (
-                    <img
-                      src={item.post.media[0].mediaUrl}
-                      alt="saved"
-                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-white">
-                      <p className="line-clamp-4 px-3 text-[13px] text-[#65676b]">{item.post.content}</p>
-                    </div>
+            )}
+
+            {activeTab === "saved" && (
+              <>
+                {/* Search bar */}
+                <div className="relative mb-5 max-w-md">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#65676b]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search your saved posts"
+                    className="h-9 w-full rounded-lg border border-[#ddd] bg-white pl-9 pr-3 text-[14px] text-[#050505] placeholder-[#bcc0c4] outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2]/20"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#bcc0c4] hover:text-[#65676b]"
+                    >
+                      <X size={14} />
+                    </button>
                   )}
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 opacity-0 transition-opacity group-hover:opacity-100">
-                    <div className="flex items-center gap-1.5 text-white text-[13px] font-semibold">
-                      <span>
-                        {(item.post.reactionCounts || []).reduce((s, r) => s + r.count, 0).toLocaleString()}
-                      </span>
-                      <span>👍</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleUnsave(item.id); }}
-                      disabled={removingId === item.id}
-                      className="flex items-center gap-1 rounded-md bg-white/20 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/30 disabled:opacity-50"
-                    >
-                      <Bookmark size={12} className="fill-white" />
-                      {removingId === item.id ? "..." : "Unsave"}
-                    </button>
-                  </div>
-                  {/* Saved date */}
-                  <div className="absolute top-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
-                    Saved {formatRelativeDate(item.savedAt)}
-                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {filtered.map((item) => (
-                <div key={item.id} className="relative">
-                  <PostCard key={item.id} post={item.post} />
-                  <div className="absolute right-4 top-4 flex items-center gap-2">
-                    <span className="rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
-                      Saved {formatRelativeDate(item.savedAt)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleUnsave(item.id)}
-                      disabled={removingId === item.id}
-                      className="flex items-center gap-1 rounded-md bg-white/90 px-3 py-1.5 text-[13px] font-semibold text-[#050505] shadow-sm backdrop-blur-sm transition-colors hover:bg-white disabled:opacity-50"
-                    >
-                      <Bookmark size={14} className="text-[#65676b]" />
-                      {removingId === item.id ? "..." : "Unsave"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      <LeftSidebar />
+                {/* Saved count */}
+                <p className="mb-4 text-[14px] text-[#65676b] font-medium">
+                  {savedItems.length} mục đã lưu
+                </p>
+
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f2f5]">
+                      <Bookmark size={36} className="text-[#bcc0c4]" />
+                    </div>
+                    <h2 className="mb-2 text-2xl font-bold text-[#050505]">No saved posts</h2>
+                    <p className="max-w-sm text-[15px] text-[#65676b] leading-relaxed">
+                      Save posts you want to revisit later. Click the <span className="font-semibold text-[#050505]">bookmark</span> icon on any post to save it here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {filtered.map((item) => (
+                      <div key={item.id} className="bg-white rounded-lg overflow-hidden shadow-sm border border-[#ddd]">
+                        {/* Author header */}
+                        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+                          <img
+                            src={item.post.author.avatarUrl || DEFAULT_AVATAR}
+                            alt={item.post.author.firstName}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-semibold text-[#050505]">
+                              {item.post.author.firstName} {item.post.author.lastName}
+                            </p>
+                            <p className="text-[12px] text-[#65676b]">
+                              {new Date(item.post.createdAt).toLocaleDateString("vi-VN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                              {item.post.visibility === 0 ? " · 🌎" : " · 👥"}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleUnsave(item.id)}
+                            disabled={removingId === item.id}
+                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-[#65676b] border border-[#ddd] transition-colors hover:bg-[#f2f2f2] hover:text-[#050505] disabled:opacity-50"
+                          >
+                            <Bookmark size={14} />
+                            {removingId === item.id ? "..." : "Unsave"}
+                          </button>
+                        </div>
+
+                        {/* Content */}
+                        {item.post.content && (
+                          <div className="px-4 pb-3">
+                            <p className="text-[14px] text-[#050505] whitespace-pre-line leading-relaxed">
+                              {item.post.content}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Media */}
+                        {item.post.media?.[0] && (
+                          <div className="w-full">
+                            <img
+                              src={item.post.media[0].mediaUrl}
+                              alt="post"
+                              className="w-full object-cover max-h-96"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

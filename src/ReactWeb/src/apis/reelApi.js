@@ -14,6 +14,13 @@ export async function getRecommendedReelsApi(pageSize = 12) {
   return response.data;
 }
 
+export async function getTopReelsApi(pageSize = 6) {
+  const response = await axios.get("/reels/top", {
+    params: { pageSize },
+  });
+  return response.data;
+}
+
 export async function getRecommendedReelsWithReelApi(targetReelId) {
   const [reelData, listData] = await Promise.all([
     axios.get(`/reels/${targetReelId}`),
@@ -34,6 +41,15 @@ export async function getReelByIdApi(reelId) {
 export async function getReelCommentsApi(reelId, { parentCommentId = null, page = 1, pageSize = 10 } = {}) {
   const response = await axios.get(`/reels/${reelId}/comments`, {
     params: { parentCommentId, page, pageSize },
+  });
+  return response.data;
+}
+
+export async function createReelCommentApi(reelId, { content, parentCommentId = null, repliedUserId = null } = {}) {
+  const response = await axios.post(`/reels/${reelId}/comments`, {
+    content,
+    parentCommentId,
+    repliedUserId,
   });
   return response.data;
 }
@@ -61,5 +77,10 @@ export async function toggleLikeReelApi(reelId) {
 
 export async function deleteReelApi(reelId) {
   const response = await axios.delete(`/reels/${reelId}`);
+  return response.data;
+}
+
+export async function recordReelViewApi(reelId) {
+  const response = await axios.post(`/reels/${reelId}/view`);
   return response.data;
 }

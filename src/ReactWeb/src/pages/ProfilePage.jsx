@@ -42,9 +42,6 @@ import {
 import PostCard from "../components/Feed/PostCard";
 import { useProfileFriends } from "../hooks/useProfileFriends";
 import { useProfileReels } from "../hooks/useProfileReels";
-import ReelViewModal from "../components/Reels/ReelViewModal";
-import { useReels } from "../contexts/ReelsContext";
-import { toggleLikeReelApi, deleteReelApi } from "../apis/reelApi";
 import ProfileRelationshipActions from "../components/Profile/ProfileRelationshipActions";
 import ProfileStoryRing from "../components/Story/ProfileStoryRing";
 import { useProfileStories } from "../hooks/useProfileStories";
@@ -70,7 +67,6 @@ export default function ProfilePage() {
   const { medias: userVideos, isLoading: videosLoading, error: videosError, loadMore: loadMoreVideos } = useUserMedias({ userId: viewUserId, mediaType: "video", pageSize: 12 });
   const { friends: profileFriends, loading: friendsLoading } = useProfileFriends(viewUserId);
   const { reels: profileReels, isLoading: reelsLoading, error: reelsError, refresh: refreshProfileReels, hasMore: reelsHasMore, loadMore: loadMoreReels, toggleLike: toggleReelLike, deleteReel: deleteProfileReel } = useProfileReels(viewUserId, { initialPage: 1, pageSize: 12 });
-  const { reelChosen, source, closeReel, updateReel, removeReel, nextReel, prevReel, getChosenIndex, openReel, syncFromProfile } = useReels();
   const { group: profileStoriesGroup, hasStories: profileHasActiveStories } = useProfileStories(viewUserId);
 
   const avatarInputRef = useRef(null);
@@ -341,46 +337,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLikeReelFromModal = async (reelId) => {
-    const target = profileReels.find((r) => r.id === reelId);
-    if (!target) return;
-    const wasLiked = target.isLikedByCurrentUser;
-    updateReel({
-      id: reelId,
-      isLikedByCurrentUser: !wasLiked,
-      likeCount: wasLiked ? target.likeCount - 1 : target.likeCount + 1,
-      likes: formatCompactCount(wasLiked ? target.likeCount - 1 : target.likeCount + 1),
-    });
-    try {
-      const result = await toggleLikeReelApi(reelId);
-      updateReel({
-        id: reelId,
-        isLikedByCurrentUser: result.isLiked,
-        likeCount: result.likeCount ?? target.likeCount,
-        likes: formatCompactCount(result.likeCount ?? target.likeCount),
-      });
-    } catch {
-      updateReel({
-        id: reelId,
-        isLikedByCurrentUser: wasLiked,
-        likeCount: target.likeCount,
-        likes: formatCompactCount(target.likeCount),
-      });
-    }
-  };
-
-  const handleDeleteReelFromModal = async (reelId) => {
-    await deleteProfileReel(reelId);
-  };
-
-  // Sync profile reels into context when they change (for scroll navigation)
-  useEffect(() => {
-    if (profileReels.length > 0 && source === "profile") {
-      syncFromProfile(profileReels, reelsHasMore);
-    }
-  }, [profileReels, reelsHasMore, source, syncFromProfile]);
-
-  // Likes are handled within PostCard component; no local like handling required.
 
   // Set page title
   useEffect(() => {
@@ -934,8 +890,6 @@ export default function ProfilePage() {
             {/* ========================================================
           3. DIALOGS & OVERLAYS (Post Creator, Details Editor)
           ======================================================== */}
-
-            {/* A. CREATE POST MODAL DIALOG */}
             <CreatePostModal
               isOpen={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
@@ -957,21 +911,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Unified Reel Viewer Modal */}
-      {reelChosen && source === "profile" && (
-        <ReelViewModal
-          reel={reelChosen}
-          reelsList={profileReels}
-          onClose={closeReel}
-          onLike={handleLikeReelFromModal}
-          onDelete={handleDeleteReelFromModal}
-          canDelete={isOwnProfile}
-          onNext={nextReel}
-          onPrev={prevReel}
-          hasPrev={getChosenIndex() > 0}
-          hasNext={getChosenIndex() < profileReels.length - 1}
-        />
-      )}
     </div>
   );
 }

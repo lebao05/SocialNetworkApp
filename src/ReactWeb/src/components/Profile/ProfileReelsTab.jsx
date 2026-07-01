@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Eye, Heart, Play } from "lucide-react";
-import ReelView from "../Reels/ReelView";
-import { toggleLikeReelApi } from "../../apis/reelApi";
+import { useNavigate } from "react-router-dom";
 
 function ReelCard({ reel, onClick, onLike }) {
   const [isLiking, setIsLiking] = useState(false);
@@ -80,12 +79,8 @@ export default function ProfileReelsTab({
   onLike,
   onDelete,
 }) {
-  const [chosenReel, setChosenReel] = useState(null);
+  const navigate = useNavigate();
   const loadMoreRef = useRef(null);
-
-  const chosenIndex = chosenReel
-    ? reels.findIndex((r) => r.id === chosenReel.id)
-    : -1;
 
   // Infinite scroll
   useEffect(() => {
@@ -99,68 +94,12 @@ export default function ProfileReelsTab({
     return () => { if (sentinel) observer.unobserve(sentinel); };
   }, [hasMore, loadMore]);
 
-  const handleOpenReel = (reel) => setChosenReel(reel);
-  const handleCloseReel = () => setChosenReel(null);
-  const handleNextReel = () => {
-    if (chosenIndex < reels.length - 1) setChosenReel(reels[chosenIndex + 1]);
+  const handleOpenReel = (reel) => {
+    navigate(`/watch?reelId=${reel.id}`);
   };
-  const handlePrevReel = () => {
-    if (chosenIndex > 0) setChosenReel(reels[chosenIndex - 1]);
-  };
-
-  const handleLike = useCallback(async (reelId) => {
-    const target = reels.find((r) => r.id === reelId);
-    if (!target) return;
-    const wasLiked = target.isLikedByCurrentUser;
-    onLike?.(reelId);
-    if (chosenReel?.id === reelId) {
-      setChosenReel((prev) => ({
-        ...prev,
-        isLikedByCurrentUser: !wasLiked,
-        likeCount: wasLiked ? prev.likeCount - 1 : prev.likeCount + 1,
-      }));
-    }
-    try {
-      const result = await toggleLikeReelApi(reelId);
-      if (chosenReel?.id === reelId) {
-        setChosenReel((prev) => ({
-          ...prev,
-          isLikedByCurrentUser: result.isLiked,
-          likeCount: result.likeCount ?? prev.likeCount,
-        }));
-      }
-    } catch {
-      onLike?.(reelId); // revert
-    }
-  }, [reels, chosenReel, onLike]);
-
-  const handleDelete = useCallback(async (reelId) => {
-    onDelete?.(reelId);
-    setChosenReel(null);
-  }, [onDelete]);
 
   return (
     <>
-      {/* Profile reel viewer — local state, full-screen centered */}
-      {chosenReel && (
-        <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/80 pt-16">
-          <div className="h-[95%] w-[40%]">
-            <ReelView
-              key={chosenReel.id}
-              reel={chosenReel}
-              onClose={handleCloseReel}
-              onLike={handleLike}
-              onDelete={handleDelete}
-              canDelete={canCreate}
-              onNext={handleNextReel}
-              onPrev={handlePrevReel}
-              hasPrev={chosenIndex > 0}
-              hasNext={chosenIndex < reels.length - 1}
-            />
-          </div>
-        </div>
-      )}
-
       <div className={`${theme.card} rounded-xl shadow p-6 transition-colors duration-200`}>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -215,7 +154,7 @@ export default function ProfileReelsTab({
                   key={reel.id}
                   reel={reel}
                   onClick={() => handleOpenReel(reel)}
-                  onLike={handleLike}
+                  onLike={onLike}
                 />
               ))}
             </div>

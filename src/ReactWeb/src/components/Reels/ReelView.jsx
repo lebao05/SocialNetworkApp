@@ -11,6 +11,9 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { useReelComments } from "../../hooks/useReelComments";
+import { recordReelViewApi } from "../../apis/reelApi";
+import ReelCommentModal from "./ReelCommentModal";
 
 function formatCount(value) {
   const num = Number(value || 0);
@@ -32,7 +35,40 @@ export default function ReelView({
   const [isMuted, setIsMuted] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [directionVisible, setDirectionVisible] = useState(false);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
   const directionHintRef = useRef(null);
+  const viewedRef = useRef(false);
+
+  const {
+    comments,
+    hasMore: hasMoreComments,
+    isLoading: isLoadingComments,
+    isSubmitting,
+    error: commentError,
+    replyTarget,
+    loadingReplyParentIds,
+    loadMore: loadMoreComments,
+    refresh: refreshComments,
+    submitComment,
+    startReply,
+    cancelReply,
+    loadReplies,
+  } = useReelComments(isCommentModalOpen ? reel?.id : null);
+
+  const handleSubmitComment = useCallback(async () => {
+    if (!newComment.trim()) return;
+    try {
+      await submitComment({
+        content: newComment,
+        parentCommentId: replyTarget?.id ?? null,
+        repliedUserId: null,
+      });
+      setNewComment("");
+    } catch {
+      // error handled in hook
+    }
+  }, [newComment, replyTarget, submitComment]);
 
   // Show direction hint, fade out after 600ms
   useEffect(() => {
@@ -43,19 +79,30 @@ export default function ReelView({
     return () => clearTimeout(directionHintRef.current);
   }, [direction, reel?.id]);
 
-  // Reset video when reel changes + auto-play
+  // Reset video + record view when reel changes
   useEffect(() => {
     setIsPlaying(false);
     setIsMuted(false);
+    viewedRef.current = false;
+
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       videoRef.current.pause();
-      // Start playing after a brief paint to ensure readiness
       const id = setTimeout(() => {
         videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => {});
       }, 80);
       return () => clearTimeout(id);
     }
+  }, [reel?.id]);
+
+  // Record a view — fires once per reel session (debounced by viewedRef)
+  useEffect(() => {
+    if (!reel?.id || viewedRef.current) return;
+    viewedRef.current = true;
+    const timer = setTimeout(() => {
+      recordReelViewApi(reel.id).catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [reel?.id]);
 
   const togglePlay = useCallback(() => {
@@ -84,6 +131,14 @@ export default function ReelView({
     if (!reel || !canDelete) return;
     onDelete(reel.id);
   }, [reel, canDelete, onDelete]);
+
+  const handleOpenComments = useCallback(() => {
+    setIsCommentModalOpen(true);
+  }, []);
+
+  const handleCloseComments = useCallback(() => {
+    setIsCommentModalOpen(false);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -250,7 +305,7 @@ export default function ReelView({
         </button>
 
         {/* Comment */}
-        <button type="button" className="flex flex-col items-center gap-0.5 text-white">
+        <button type="button" onClick={handleOpenComments} className="flex flex-col items-center gap-0.5 text-white">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 hover:scale-110">
             <MessageCircle size={20} />
           </span>
@@ -314,6 +369,28 @@ export default function ReelView({
           />
         </div>
       </div>
+
+      {/* Comment modal */}
+      <ReelCommentModal
+        isOpen={isCommentModalOpen}
+        onClose={handleCloseComments}
+        reel={reel}
+        comments={comments}
+        newComment={newComment}
+        onNewCommentChange={setNewComment}
+        onSubmitComment={handleSubmitComment}
+        isSubmitting={isSubmitting}
+        isLoadingComments={isLoadingComments}
+        error={commentError}
+        hasMoreComments={hasMoreComments}
+        onLoadMoreComments={loadMoreComments}
+        onLoadReplies={loadReplies}
+        loadingReplyParentIds={loadingReplyParentIds}
+        replyTarget={replyTarget}
+        onStartReply={startReply}
+        onCancelReply={cancelReply}
+        onReactComment={() => {}}
+      />
     </div>
   );
 }

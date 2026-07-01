@@ -140,6 +140,9 @@ public class StoryController : ApiController
 
     [HttpPost("upload-media")]
     [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UploadStoryMedia(
         [FromForm] IFormFile file,
         CancellationToken cancellationToken)

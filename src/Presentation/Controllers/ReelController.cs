@@ -1,11 +1,14 @@
 using Application.Reels.Commands.CreateReel;
+using Application.Reels.Commands.CreateReelComment;
 using Application.Reels.Commands.MarkStoryAsSeen;
+using Application.Reels.Commands.RecordReelView;
 using Application.Reels.Commands.ToggleLikeReel;
 using Application.Reels.Commands.DeleteReel;
 using Application.Reels.Queries.GetReelsByUser;
 using Application.Reels.Queries.GetRecommendedReels;
 using Application.Reels.Queries.GetReelById;
 using Application.Reels.Queries.GetReelComments;
+using Application.Reels.Queries.GetTopReels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -57,6 +60,17 @@ namespace Presentation.Controllers
             }
 
             var query = new GetRecommendedReelsQuery(userId, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("top")]
+        public async Task<IActionResult> GetTopReels(
+            [FromQuery] int pageSize = 6,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetTopReelsQuery(pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -155,8 +169,11 @@ namespace Presentation.Controllers
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
 
-        [HttpDelete("{reelId:long}")]
-        public async Task<IActionResult> DeleteReel(long reelId, CancellationToken cancellationToken)
+        [HttpPost("{reelId:long}/comments")]
+        public async Task<IActionResult> CreateReelComment(
+            long reelId,
+            [FromBody] CreateReelCommentRequest request,
+            CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -165,11 +182,37 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var command = new DeleteReelCommand(userId, reelId);
+            var command = new CreateReelCommentCommand(
+                reelId,
+                userId,
+                request.Content,
+                request.ParentCommentId,
+                request.RepliedUserId);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess
+                ? CreatedAtAction(nameof(GetReelById), new { reelId = reelId }, result.Value)
+                : HandleFailure(result);
+        }
+
+        [HttpPost("{reelId:long}/view")]
+        public async Task<IActionResult> RecordReelView(long reelId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new RecordReelViewCommand(reelId, userId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.IsSuccess ? Ok() : HandleFailure(result);
         }
+
+        [HttpDelete("{reelId:long}")]
 
         [HttpPost("{storyId:long}/seen")]
         public async Task<IActionResult> MarkStoryAsSeen(long storyId, CancellationToken cancellationToken = default)

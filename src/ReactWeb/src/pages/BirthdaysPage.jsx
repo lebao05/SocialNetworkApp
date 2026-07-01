@@ -1,67 +1,25 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Navbar from "../components/Navbar/Navbar";
 import {
-  Search,
   MoreHorizontal,
   Send,
   ChevronDown,
 } from "lucide-react";
-import { birthdays as birthdayData } from "../data/mockData";
+import { useBirthdays } from "../hooks/useBirthdays";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
-const MAX_PER_MONTH = 10;
-const MONTH_LABELS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-const YEARLY_BIRTHDAYS = [
-  { id: 101, name: "Hà Linh", avatar: "https://i.pravatar.cc/150?img=44", month: 1, day: 18, mutualFriends: 18, age: 22 },
-  { id: 102, name: "Khánh Vy", avatar: "https://i.pravatar.cc/150?img=45", month: 1, day: 24, mutualFriends: 6, age: 23 },
-  { id: 103, name: "Thanh Tâm", avatar: "https://i.pravatar.cc/150?img=46", month: 1, day: 30, mutualFriends: 9, age: 21 },
-  { id: 104, name: "Ngọc Hân", avatar: "https://i.pravatar.cc/150?img=49", month: 2, day: 9, mutualFriends: 9, age: 21 },
-  { id: 105, name: "Minh Anh", avatar: "https://i.pravatar.cc/150?img=50", month: 2, day: 13, mutualFriends: 11, age: 22 },
-  { id: 106, name: "Thảo Nhi", avatar: "https://i.pravatar.cc/150?img=51", month: 2, day: 22, mutualFriends: 5, age: 20 },
-  { id: 107, name: "Duy Anh", avatar: "https://i.pravatar.cc/150?img=12", month: 3, day: 27, mutualFriends: 26, age: 24 },
-  { id: 108, name: "Gia Huy", avatar: "https://i.pravatar.cc/150?img=13", month: 3, day: 6, mutualFriends: 8, age: 25 },
-  { id: 109, name: "Hoài Nam", avatar: "https://i.pravatar.cc/150?img=16", month: 3, day: 19, mutualFriends: 10, age: 23 },
-  { id: 110, name: "Mai Anh", avatar: "https://i.pravatar.cc/150?img=32", month: 4, day: 14, mutualFriends: 12, age: 23 },
-  { id: 111, name: "Yến Nhi", avatar: "https://i.pravatar.cc/150?img=33", month: 4, day: 18, mutualFriends: 4, age: 22 },
-  { id: 112, name: "Thu Trang", avatar: "https://i.pravatar.cc/150?img=34", month: 4, day: 28, mutualFriends: 7, age: 24 },
-  { id: 113, name: "Quốc Bảo", avatar: "https://i.pravatar.cc/150?img=15", month: 5, day: 5, mutualFriends: 14, age: 25 },
-  { id: 114, name: "Nhật Minh", avatar: "https://i.pravatar.cc/150?img=17", month: 5, day: 12, mutualFriends: 9, age: 22 },
-  { id: 115, name: "Kim Oanh", avatar: "https://i.pravatar.cc/150?img=18", month: 5, day: 25, mutualFriends: 6, age: 21 },
-  { id: 116, name: "Bảo Châu", avatar: "https://i.pravatar.cc/150?img=47", month: 6, day: 21, mutualFriends: 16, age: 22 },
-  { id: 117, name: "Lan Hương", avatar: "https://i.pravatar.cc/150?img=52", month: 6, day: 4, mutualFriends: 12, age: 24 },
-  { id: 118, name: "Khôi Nguyên", avatar: "https://i.pravatar.cc/150?img=53", month: 6, day: 16, mutualFriends: 3, age: 23 },
-  { id: 119, name: "Tuấn Kiệt", avatar: "https://i.pravatar.cc/150?img=11", month: 7, day: 11, mutualFriends: 11, age: 24 },
-  { id: 120, name: "Hải Đăng", avatar: "https://i.pravatar.cc/150?img=54", month: 7, day: 20, mutualFriends: 13, age: 22 },
-  { id: 121, name: "Uyên Nhi", avatar: "https://i.pravatar.cc/150?img=55", month: 7, day: 28, mutualFriends: 7, age: 21 },
-  { id: 122, name: "Minh Khôi", avatar: "https://i.pravatar.cc/150?img=8", month: 8, day: 3, mutualFriends: 19, age: 23 },
-  { id: 123, name: "Tường Vy", avatar: "https://i.pravatar.cc/150?img=56", month: 8, day: 8, mutualFriends: 5, age: 22 },
-  { id: 124, name: "Bảo Trâm", avatar: "https://i.pravatar.cc/150?img=57", month: 8, day: 31, mutualFriends: 8, age: 24 },
-  { id: 125, name: "Linh Hoa", avatar: "https://i.pravatar.cc/150?img=14", month: 9, day: 29, mutualFriends: 8, age: 20 },
-  { id: 126, name: "Tuệ Lâm", avatar: "https://i.pravatar.cc/150?img=58", month: 9, day: 2, mutualFriends: 10, age: 23 },
-  { id: 127, name: "Đức Huy", avatar: "https://i.pravatar.cc/150?img=59", month: 9, day: 17, mutualFriends: 6, age: 25 },
-  { id: 128, name: "Phong", avatar: "https://i.pravatar.cc/150?img=22", month: 10, day: 12, mutualFriends: 7, age: 26 },
-  { id: 129, name: "Gia Bảo", avatar: "https://i.pravatar.cc/150?img=20", month: 10, day: 18, mutualFriends: 11, age: 22 },
-  { id: 130, name: "Hồng Nhung", avatar: "https://i.pravatar.cc/150?img=21", month: 10, day: 26, mutualFriends: 4, age: 21 },
-  { id: 131, name: "Nam", avatar: "https://i.pravatar.cc/150?img=28", month: 11, day: 8, mutualFriends: 5, age: 22 },
-  { id: 132, name: "Kiều Anh", avatar: "https://i.pravatar.cc/150?img=23", month: 11, day: 15, mutualFriends: 8, age: 24 },
-  { id: 133, name: "Bích Ngọc", avatar: "https://i.pravatar.cc/150?img=24", month: 11, day: 27, mutualFriends: 6, age: 23 },
-  { id: 134, name: "Mai Nguyen", avatar: "https://i.pravatar.cc/150?img=39", month: 12, day: 24, mutualFriends: 13, age: 24 },
-  { id: 135, name: "An Nhiên", avatar: "https://i.pravatar.cc/150?img=25", month: 12, day: 5, mutualFriends: 9, age: 22 },
-  { id: 136, name: "Trọng Nhân", avatar: "https://i.pravatar.cc/150?img=26", month: 12, day: 14, mutualFriends: 7, age: 25 },
-];
 
 function BirthdayListItem({ person, note, actionLabel = "Send message" }) {
   return (
     <article className="flex flex-col gap-4 rounded-2xl border border-[#e4e6eb] bg-white p-4 transition hover:shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         <img
-          src={person.avatar || DEFAULT_AVATAR}
-          alt={person.name}
+          src={person.avatarUrl || DEFAULT_AVATAR}
+          alt={person.fullName}
           className="h-14 w-14 rounded-full object-cover ring-1 ring-black/5"
         />
         <div className="min-w-0">
-          <p className="truncate text-[16px] font-semibold text-[#050505]">{person.name}</p>
+          <p className="truncate text-[16px] font-semibold text-[#050505]">{person.fullName}</p>
           <p className="mt-0.5 text-[13px] leading-5 text-[#65676b]">{note}</p>
         </div>
       </div>
@@ -107,7 +65,7 @@ function MonthSection({ monthLabel, friends, totalCount }) {
         <div>
           <h3 className="text-[20px] font-bold text-[#050505]">{monthLabel}</h3>
           <p className="mt-1 text-[14px] text-[#65676b]">
-            Showing {friends.length}/{Math.min(totalCount, MAX_PER_MONTH)} of {MAX_PER_MONTH} max per month
+            Showing {friends.length}/{Math.min(totalCount, 10)} of 10 max per month
           </p>
         </div>
         <div className="rounded-full bg-[#f0f2f5] px-3 py-1 text-xs font-semibold text-[#65676b]">{totalCount}</div>
@@ -115,9 +73,9 @@ function MonthSection({ monthLabel, friends, totalCount }) {
       <div className="space-y-3 p-5 sm:p-6">
         {friends.map((person) => (
           <BirthdayListItem
-            key={person.id}
+            key={person.userId}
             person={person}
-            note={`Day ${person.day} • Turning ${person.age} • ${person.mutualFriends} mutual friends`}
+            note={`Day ${person.day} • Turning ${person.ageTurning} • ${person.mutualFriendsCount} mutual friends`}
             actionLabel="Send early wish"
           />
         ))}
@@ -127,46 +85,7 @@ function MonthSection({ monthLabel, friends, totalCount }) {
 }
 
 export default function BirthdaysPage() {
-  const [search, setSearch] = useState("");
-
-  const todayBirthdays = useMemo(
-    () =>
-      birthdayData.map((person, index) => ({
-        ...person,
-        age: 20 + index + 1,
-        mutualFriends: [14, 21, 8, 17][index] ?? 10,
-      })),
-    []
-  );
-
-  const allBirthdays = useMemo(() => [...todayBirthdays, ...YEARLY_BIRTHDAYS], [todayBirthdays]);
-
-  const filteredTodayBirthdays = useMemo(() => {
-    if (!search.trim()) return todayBirthdays;
-    const q = search.toLowerCase();
-    return todayBirthdays.filter((person) => person.name.toLowerCase().includes(q));
-  }, [search, todayBirthdays]);
-
-  const filteredYearlyBirthdays = useMemo(() => {
-    if (!search.trim()) return YEARLY_BIRTHDAYS;
-    const q = search.toLowerCase();
-    return YEARLY_BIRTHDAYS.filter((person) => person.name.toLowerCase().includes(q));
-  }, [search]);
-
-  const monthlyBirthdays = useMemo(() => {
-    return MONTH_LABELS.map((label, index) => {
-      const monthFriends = filteredYearlyBirthdays
-        .filter((person) => person.month === index + 1)
-        .sort((a, b) => a.day - b.day);
-
-      return {
-        month: index + 1,
-        label,
-        totalCount: monthFriends.length,
-        friends: monthFriends.slice(0, MAX_PER_MONTH),
-      };
-    }).filter((group) => group.totalCount > 0);
-  }, [filteredYearlyBirthdays]);
+  const { todayBirthdays, upcomingBirthdays, monthlyBirthdays, allBirthdays, isLoading, error } = useBirthdays();
 
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
@@ -189,46 +108,51 @@ export default function BirthdaysPage() {
                 </div>
               </div>
             </div>
-
-            <div className="relative mt-5">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#65676b]" size={18} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search birthdays"
-                className="w-full rounded-full border border-transparent bg-[#f0f2f5] py-2.5 pl-10 pr-4 text-[15px] text-[#050505] outline-none transition focus:border-[#1877f2] focus:bg-white"
-              />
-            </div>
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
 
           <div className="space-y-6">
             <SectionCard
               title="Birthdays today"
-              subtitle={`${filteredTodayBirthdays.length} friends having birthdays today`}
+              subtitle={`${todayBirthdays.length} friends having birthdays today`}
               rightNode={
                 <div className="rounded-full bg-[#fff4df] px-3 py-1.5 text-xs font-semibold text-[#b7791f]">
-                  Don't miss a wish
+                  Don&apos;t miss a wish
                 </div>
               }
             >
-              {filteredTodayBirthdays.length > 0 ? (
+              {isLoading ? (
                 <div className="space-y-3">
-                  {filteredTodayBirthdays.map((person) => (
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex animate-pulse gap-3 rounded-2xl border border-[#e4e6eb] bg-white p-4">
+                      <div className="h-14 w-14 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2 pt-2">
+                        <div className="h-4 w-32 rounded bg-gray-200" />
+                        <div className="h-3 w-48 rounded bg-gray-200" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : todayBirthdays.length > 0 ? (
+                <div className="space-y-3">
+                  {todayBirthdays.map((person) => (
                     <BirthdayListItem
-                      key={person.id}
+                      key={person.userId}
                       person={person}
-                      note={`Today ${person.name} turns ${person.age} • ${person.mutualFriends} mutual friends`}
+                      note={`Today ${person.fullName} turns ${person.ageTurning} • ${person.mutualFriendsCount} mutual friends`}
                       actionLabel="Send wish"
                     />
                   ))}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-[#d8dadf] bg-[#fafbfc] px-6 py-14 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f2f5] text-[#65676b]">
-                    <Search size={22} />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#050505]">No birthdays found today</h3>
-                  <p className="mt-2 text-sm text-[#65676b]">Try a different name or clear the search.</p>
+                  <h3 className="text-lg font-bold text-[#050505]">No birthdays today</h3>
+                  <p className="mt-2 text-sm text-[#65676b]">Check back tomorrow to wish your friends happy birthday.</p>
                 </div>
               )}
             </SectionCard>
@@ -243,16 +167,27 @@ export default function BirthdaysPage() {
                 </div>
               }
             >
-              <div className="space-y-4">
-                {monthlyBirthdays.map((group) => (
-                  <MonthSection
-                    key={group.month}
-                    monthLabel={group.label}
-                    friends={group.friends}
-                    totalCount={group.totalCount}
-                  />
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 animate-pulse rounded-2xl border border-[#e4e6eb] bg-gray-100" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {monthlyBirthdays.map((group) => (
+                    <MonthSection
+                      key={group.month}
+                      monthLabel={group.label}
+                      friends={group.friends}
+                      totalCount={group.totalCount}
+                    />
+                  ))}
+                  {monthlyBirthdays.length === 0 && (
+                    <p className="text-sm text-[#65676b]">No upcoming birthdays found.</p>
+                  )}
+                </div>
+              )}
             </SectionCard>
 
             <section className="rounded-2xl border border-[#e4e6eb] bg-white px-5 py-4 shadow-sm sm:px-6">

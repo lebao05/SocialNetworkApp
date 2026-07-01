@@ -1,23 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import {
   Bookmark,
-  BriefcaseBusiness,
-  ChevronDown,
-  ChevronUp,
   Clapperboard,
   Clock3,
   FileText,
   Gift,
   MessageCircle,
-  Mountain,
   Sparkles,
   Users,
 } from "lucide-react";
-import { FaChessPawn, FaMotorcycle } from "react-icons/fa";
-import { GiEightBall, GiFinishLine, GiSchoolBag } from "react-icons/gi";
-import { IoPeople } from "react-icons/io5";
-import { MdGroups, MdOutlineComputer, MdOutlineDesignServices } from "react-icons/md";
+import { MdGroups } from "react-icons/md";
 import { currentUser } from "../../data/mockData";
 
 const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => {
@@ -50,18 +43,8 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => 
   return <div className={className}>{content}</div>;
 };
 
-const ShortcutItem = ({ icon: Icon, name }) => (
-  <div className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]">
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-gradient-to-tr from-gray-200 to-gray-300 shadow-sm">
-      <Icon size={19} className="text-[#374151]" />
-    </div>
-    <span className="truncate text-[14.5px] font-medium leading-tight">{name}</span>
-  </div>
-);
 
 export default function LeftSidebar() {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const primaryMenu = [
     { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", active: true },
     { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500" },
@@ -77,20 +60,7 @@ export default function LeftSidebar() {
     { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500", to: "/birthdays" },
   ];
 
-  const userShortcuts = [
-    { id: "group-1", name: "Big Bike Enthusiasts Forum", icon: FaMotorcycle },
-    { id: "group-2", name: "Adventure Riders Community", icon: Mountain },
-    { id: "group-3", name: "EC-23HTTT", icon: MdOutlineComputer },
-    { id: "group-4", name: "Chess Club", icon: FaChessPawn },
-    { id: "group-5", name: "Software Design 23KTPM1", icon: MdOutlineDesignServices },
-    { id: "group-6", name: "NodeJS/ReactJS Jobs Vietnam", icon: BriefcaseBusiness },
-    { id: "group-7", name: "HCMUS Documents", icon: GiSchoolBag },
-    { id: "group-8", name: "University of Science - VNUH HCM", icon: IoPeople },
-    { id: "group-9", name: "Vietnam Big Bike Market", icon: GiFinishLine },
-    { id: "group-10", name: "Motorbike Travel Group", icon: FaMotorcycle },
-    { id: "group-11", name: "IELTS Forum Community", icon: FileText },
-    { id: "group-12", name: "8 Ball Pool", icon: GiEightBall },
-  ];
+  const userShortcuts = [];
 
   return (
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
@@ -107,57 +77,11 @@ export default function LeftSidebar() {
         <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} active={item.active} to={item.to} />
       ))}
 
-      {isExpanded &&
-        extendedMenu.map((item) => (
-          <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} />
-        ))}
-
-      <button
-        type="button"
-        onClick={() => setIsExpanded((value) => !value)}
-        className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-[#050505] transition-colors hover:bg-[#F2F2F2]"
-      >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300/40 bg-[#E4E6EB] text-black shadow-sm">
-          {isExpanded ? <ChevronUp size={20} strokeWidth={2.5} /> : <ChevronDown size={20} strokeWidth={2.5} />}
-        </div>
-        <span className="text-[15px] font-medium">{isExpanded ? "See less" : "See more"}</span>
-      </button>
+      {extendedMenu.map((item) => (
+        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} />
+      ))}
 
       <hr className="my-2 border-[#ced0d4]" />
-
-      <div className="mb-1.5 flex items-center justify-between px-2">
-        <p className="text-[15px] font-semibold text-[#65676B]">Your Shortcuts</p>
-        <button type="button" className="cursor-pointer rounded-md px-2 py-0.5 text-[14px] text-[#1877F2] transition hover:bg-[#F2F2F2]">
-          Edit
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-0.5">
-        {userShortcuts.map((shortcut) => (
-          <ShortcutItem key={shortcut.id} icon={shortcut.icon} name={shortcut.name} />
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="mt-1 flex items-center gap-3 rounded-lg px-2 py-2 text-[#050505] hover:bg-[#F2F2F2]"
-      >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E4E6EB] text-black shadow-sm">
-          <ChevronUp size={18} />
-        </div>
-        <span className="text-[14.5px] font-medium">See less</span>
-      </button>
-
-      <div className="mt-2 border-t border-[#ced0d4]/60 px-2 py-4 text-[12px] leading-normal tracking-wide text-[#65676B]">
-        <p className="inline cursor-pointer hover:underline">Privacy</p> {" · "}
-        <p className="inline cursor-pointer hover:underline">Terms</p> {" · "}
-        <p className="inline cursor-pointer hover:underline">Ads</p> {" · "}
-        <p className="inline cursor-pointer hover:underline">Ad Choices</p> {" · "}
-        <p className="inline cursor-pointer hover:underline">Cookies</p> {" · "}
-        <p className="inline cursor-pointer hover:underline">See more</p>
-        <p className="mt-1 select-none text-gray-400">Meta © 2026</p>
-      </div>
     </aside>
   );
 }

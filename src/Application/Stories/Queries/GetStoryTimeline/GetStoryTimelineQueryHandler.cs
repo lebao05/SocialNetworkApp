@@ -65,10 +65,6 @@ internal sealed class GetStoryTimelineQueryHandler : IQueryHandler<GetStoryTimel
         Guid currentUserId,
         bool hasUnseenStories)
     {
-        var storyItems = orderedStories
-            .Select(story => MapStory(story, currentUserId))
-            .ToList();
-
         var firstStory = orderedStories[0];
         var authorName = string.Join(" ", new[] { firstStory.User?.FirstName, firstStory.User?.LastName }
             .Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -77,8 +73,7 @@ internal sealed class GetStoryTimelineQueryHandler : IQueryHandler<GetStoryTimel
             firstStory.UserId,
             authorName,
             firstStory.User?.AvatarUrl,
-            hasUnseenStories,
-            storyItems);
+            hasUnseenStories);
     }
 
     private static StoryDto MapStory(Story story, Guid currentUserId)

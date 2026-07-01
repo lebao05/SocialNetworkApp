@@ -1,6 +1,7 @@
 using Application.Abstractions.Repositories;
 using Application.Shared;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,6 +46,22 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(reel => reel.Reactions)
                 .Where(reel => reel.CreatedAt >= since)
                 .OrderByDescending(reel => reel.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<Reel>> GetTopReelsAsync(DateTime since, int pageSize, CancellationToken cancellationToken = default)
+        {
+            return await _context.Reels
+                .AsNoTracking()
+                .Include(reel => reel.Author)
+                .Include(reel => reel.Comments)
+                .Include(reel => reel.Reactions)
+                .Where(reel => reel.CreatedAt >= since
+                    && reel.DeletedAt == null
+                    && reel.Visibility != ReelVisibility.Private)
+                .OrderByDescending(reel => reel.ViewCount)
+                .ThenByDescending(reel => reel.CreatedAt)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
         }
 
@@ -96,6 +113,11 @@ namespace Infrastructure.Persistence.Repositories
         public void Add(Reel reel)
         {
             _context.Reels.Add(reel);
+        }
+
+        public void AddComment(ReelComment comment)
+        {
+            _context.ReelComments.Add(comment);
         }
 
         public void AddReaction(ReelReaction reaction)
