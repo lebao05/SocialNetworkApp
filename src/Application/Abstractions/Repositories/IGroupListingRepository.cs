@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
+using Application.DTOs.Search;
 using Application.Shared;
 
 namespace Application.Abstractions.Repositories;
@@ -18,4 +19,6 @@ public interface IGroupListingRepository
         int pageSize,
         string? searchTerm,
         CancellationToken cancellationToken = default);
+
+    Task<PagedList<SearchGroupDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
 }

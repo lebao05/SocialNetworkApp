@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function MediaGallery({ media }) {
+export default function MediaGallery({ media, compact = false }) {
   const images = (media || []).filter(
     (m) => m.mediaType === "Image" || m.mediaType === "image"
   );
@@ -8,6 +8,8 @@ export default function MediaGallery({ media }) {
     (m) => m.mediaType === "Video" || m.mediaType === "video"
   );
   const count = images.length;
+
+  const maxH = compact ? "max-h-[180px]" : "max-h-[500px]";
 
   const [lightboxIdx, setLightboxIdx] = useState(null);
 
@@ -64,7 +66,7 @@ export default function MediaGallery({ media }) {
           <img
             src={images[0].mediaUrl}
             alt=""
-            className="w-full object-cover max-h-[500px] cursor-pointer hover:brightness-95 transition-all"
+            className={`w-full object-cover ${maxH} cursor-pointer hover:brightness-95 transition-all`}
             onClick={() => setLightboxIdx(0)}
           />
         </div>
@@ -73,7 +75,7 @@ export default function MediaGallery({ media }) {
             <video
               src={v.mediaUrl}
               controls
-              className="w-full max-h-[500px] object-contain bg-black rounded"
+              className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
         ))}
@@ -87,11 +89,11 @@ export default function MediaGallery({ media }) {
         {lightbox}
         <div className="grid grid-cols-2 gap-0.5">
           {images.map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
+            <div key={img.id} className={`overflow-hidden ${compact ? "max-h-[180px]" : ""}`}>
               <img
                 src={img.mediaUrl}
                 alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
+                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
                 onClick={() => setLightboxIdx(i)}
               />
             </div>
@@ -102,7 +104,7 @@ export default function MediaGallery({ media }) {
             <video
               src={v.mediaUrl}
               controls
-              className="w-full max-h-[500px] object-contain bg-black rounded"
+              className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
         ))}
@@ -115,20 +117,20 @@ export default function MediaGallery({ media }) {
       <>
         {lightbox}
         <div className="grid grid-cols-2 gap-0.5">
-          <div className="row-span-2 overflow-hidden">
+          <div className={`row-span-2 overflow-hidden ${compact ? "max-h-[360px]" : ""}`}>
             <img
               src={images[0].mediaUrl}
               alt=""
-              className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
+              className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[360px]" : ""}`}
               onClick={() => setLightboxIdx(0)}
             />
           </div>
           {images.slice(1).map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
+            <div key={img.id} className={`overflow-hidden ${compact ? "max-h-[180px]" : ""}`}>
               <img
                 src={img.mediaUrl}
                 alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
+                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
                 onClick={() => setLightboxIdx(i + 1)}
               />
             </div>
@@ -139,7 +141,7 @@ export default function MediaGallery({ media }) {
             <video
               src={v.mediaUrl}
               controls
-              className="w-full max-h-[500px] object-contain bg-black rounded"
+              className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
         ))}
@@ -153,11 +155,11 @@ export default function MediaGallery({ media }) {
         {lightbox}
         <div className="grid grid-cols-2 gap-0.5">
           {images.map((img, i) => (
-            <div key={img.id} className="aspect-square overflow-hidden">
+            <div key={img.id} className={`overflow-hidden ${compact ? "max-h-[180px]" : ""}`}>
               <img
                 src={img.mediaUrl}
                 alt=""
-                className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
+                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
                 onClick={() => setLightboxIdx(i)}
               />
             </div>
@@ -168,7 +170,7 @@ export default function MediaGallery({ media }) {
             <video
               src={v.mediaUrl}
               controls
-              className="w-full max-h-[500px] object-contain bg-black rounded"
+              className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
         ))}
@@ -184,11 +186,11 @@ export default function MediaGallery({ media }) {
       {lightbox}
       <div className="grid grid-cols-2 gap-0.5">
         {displayImages.map((img, i) => (
-          <div key={img.id} className="aspect-square overflow-hidden relative">
+          <div key={img.id} className={`overflow-hidden relative ${compact ? "max-h-[180px]" : ""}`}>
             <img
               src={img.mediaUrl}
               alt=""
-              className="w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all"
+              className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
               onClick={() => setLightboxIdx(i)}
             />
             {i === 3 && remaining > 0 && (
@@ -207,7 +209,7 @@ export default function MediaGallery({ media }) {
           <video
             src={v.mediaUrl}
             controls
-            className="w-full max-h-[500px] object-contain bg-black rounded"
+            className={`w-full ${maxH} object-contain bg-black rounded`}
           />
         </div>
       ))}

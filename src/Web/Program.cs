@@ -214,5 +214,6 @@ app.MapStaticAssets(); // if you have static assets
 
 app.MapHub<ChatHub>("hubs/chat");
 app.MapHub<CallHub>("hubs/call");
+app.MapHub<NotificationHub>("hubs/notifications");
 app.MapControllers();   // map API controllers
 app.Run();

@@ -9,13 +9,22 @@ namespace Domain.Entities
         public Guid? ActorUserId { get; private set; }
         public NotificationType NotificationType { get; private set; }
         public NotificationEntityType EntityType { get; private set; }
-        public string MessageTemplate { get; private set; } = string.Empty;
+        public long? FriendRequestId { get; private set; }
+        public long? GroupJoinRequestId { get; private set; }
+        public long? GroupId { get; private set; }
+        public long? PostId { get; private set; }
+        public long? CommentId { get; private set; }
         public string? Metadata { get; private set; } // JSONB representing structured details
         public bool IsSeen { get; private set; }
 
         // Navigation
         public User RecipientUser { get; private set; } = null!;
         public User? ActorUser { get; private set; }
+        public FriendRequest? FriendRequest { get; private set; }
+        public GroupJoinRequest? GroupJoinRequest { get; private set; }
+        public Group? Group { get; private set; }
+        public Post? Post { get; private set; }
+        public PostComment? Comment { get; private set; }
 
         private Notification(long id) : base(id) { }
 
@@ -25,14 +34,12 @@ namespace Domain.Entities
             Guid? actorUserId,
             NotificationType notificationType,
             NotificationEntityType entityType,
-            string messageTemplate,
             string? metadata) : base(id)
         {
             RecipientUserId = recipientUserId;
             ActorUserId = actorUserId;
             NotificationType = notificationType;
             EntityType = entityType;
-            MessageTemplate = messageTemplate.Trim();
             Metadata = metadata;
             IsSeen = false;
             CreatedAt = DateTime.UtcNow;
@@ -42,6 +49,31 @@ namespace Domain.Entities
         {
             IsSeen = true;
             UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void SetFriendRequestId(long friendRequestId)
+        {
+            FriendRequestId = friendRequestId;
+        }
+
+        public void SetGroupJoinRequestId(long groupJoinRequestId)
+        {
+            GroupJoinRequestId = groupJoinRequestId;
+        }
+
+        public void SetGroupId(long groupId)
+        {
+            GroupId = groupId;
+        }
+
+        public void SetPostId(long postId)
+        {
+            PostId = postId;
+        }
+
+        public void SetCommentId(long commentId)
+        {
+            CommentId = commentId;
         }
     }
 }

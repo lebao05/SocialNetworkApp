@@ -26,11 +26,6 @@ namespace Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasColumnType("SMALLINT");
 
-            // MessageTemplate configuration (VARCHAR(255))
-            builder.Property(n => n.MessageTemplate)
-                .IsRequired()
-                .HasMaxLength(255);
-
             // Metadata configuration (JSONB)
             builder.Property(n => n.Metadata)
                 .HasColumnType("jsonb")
@@ -45,6 +40,36 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(n => n.ActorUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Relationship: Notification -> FriendRequest
+            builder.HasOne(n => n.FriendRequest)
+                .WithMany()
+                .HasForeignKey(n => n.FriendRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Relationship: Notification -> GroupJoinRequest
+            builder.HasOne(n => n.GroupJoinRequest)
+                .WithMany()
+                .HasForeignKey(n => n.GroupJoinRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Relationship: Notification -> Group
+            builder.HasOne(n => n.Group)
+                .WithMany()
+                .HasForeignKey(n => n.GroupId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Relationship: Notification -> Post
+            builder.HasOne(n => n.Post)
+                .WithMany()
+                .HasForeignKey(n => n.PostId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Relationship: Notification -> Comment
+            builder.HasOne(n => n.Comment)
+                .WithMany()
+                .HasForeignKey(n => n.CommentId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Composite indexes for inbox performance
             builder.HasIndex(n => new { n.RecipientUserId, n.IsSeen, n.CreatedAt });

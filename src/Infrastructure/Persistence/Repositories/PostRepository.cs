@@ -4,6 +4,7 @@ using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Repositories
 {
@@ -262,6 +263,41 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(saved => saved.PostId == postId && saved.UserId == userId, cancellationToken);
         }
 
+        public async Task<PagedList<SavedPost>> GetSavedPostsPagedAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.SavedPosts
+                .AsNoTracking()
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Author)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Group)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharedPost => sharedPost!.Group)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharedPost => sharedPost!.Author)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharedPost => sharedPost!.Media)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharedPost => sharedPost!.Reactions)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.SharePost)
+                        .ThenInclude(sharedPost => sharedPost!.Comments)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Media)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Reactions)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Comments)
+                .Where(saved => saved.UserId == userId)
+                .OrderByDescending(saved => saved.CreatedAt);
+
+            return await PagedList<SavedPost>.CreateAsync(query, page, pageSize, cancellationToken);
+        }
+
         public void AddSavedPost(SavedPost savedPost)
         {
             _context.SavedPosts.Add(savedPost);
@@ -365,6 +401,26 @@ namespace Infrastructure.Persistence.Repositories
                 .GroupBy(p => p.GroupId!.Value)
                 .Select(g => new { GroupId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.GroupId, x => x.Count, cancellationToken);
+        }
+
+        public async Task<PagedList<Post>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Posts
+                .AsNoTracking()
+                .Include(post => post.Author)
+                .Include(post => post.Media)
+                .Include(post => post.Reactions)
+                .Include(post => post.Comments)
+                .Where(post => post.DeletedAt == null && post.ApprovalStatus == PostApprovalStatus.Approved);
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(post => EF.Property<NpgsqlTsVector>(post, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
+            }
+
+            query = query.OrderByDescending(post => post.CreatedAt);
+
+            return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);
         }
     }
 }

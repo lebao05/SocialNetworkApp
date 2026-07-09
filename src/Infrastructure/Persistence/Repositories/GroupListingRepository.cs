@@ -1,8 +1,11 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
+using Application.DTOs.Search;
 using Application.Shared;
+using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Repositories;
 
@@ -107,5 +110,35 @@ public sealed class GroupListingRepository : IGroupListingRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         return new PagedList<GroupCardDto>(cards, page, pageSize, totalCount);
+    }
+
+    public async Task<PagedList<SearchGroupDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        IQueryable<Group> query = _context.Groups
+            .AsNoTracking()
+            .Include(g => g.Members);
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(g => EF.Property<NpgsqlTsVector>(g, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
+            }
+
+        var groups = await query
+            .OrderByDescending(g => g.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var dtos = groups.Select(g => new SearchGroupDto(
+            g.Id,
+            g.Name,
+            g.CoverPhotoUrl,
+            g.PrivacyType,
+            g.Members.Count
+        )).ToList();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        return new PagedList<SearchGroupDto>(dtos, page, pageSize, totalCount);
     }
 }

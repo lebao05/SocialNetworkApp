@@ -9,6 +9,7 @@ using Application.Reels.Queries.GetRecommendedReels;
 using Application.Reels.Queries.GetReelById;
 using Application.Reels.Queries.GetReelComments;
 using Application.Reels.Queries.GetTopReels;
+using Application.Reels.Queries.SearchReels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +72,19 @@ namespace Presentation.Controllers
             CancellationToken cancellationToken = default)
         {
             var query = new GetTopReelsQuery(pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchReels(
+            [FromQuery] string? q = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new SearchReelsQuery(q, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

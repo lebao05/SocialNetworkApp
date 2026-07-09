@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -9,6 +10,11 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<User> builder)
         {
             builder.ToTable("Users");
+
+            // SearchVector (shadow property — DB-generated GIN-indexed column)
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd();
 
             // ✅ Required fields
             builder.Property(u => u.FirstName)

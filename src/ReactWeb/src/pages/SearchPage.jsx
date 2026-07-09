@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { Clapperboard, FileText, MoreHorizontal, Search, ThumbsUp, Users, UsersRound } from "lucide-react";
+import { Clapperboard, FileText, Search, Users, UsersRound } from "lucide-react";
 import Navbar from "../components/Navbar/Navbar";
-import { searchGroups, searchPeople, searchPosts, searchQuery, searchReels, searchTabs } from "../data/searchMockData";
+import PostCard from "../components/Feed/PostCard";
+import { searchPeople, searchGroups, searchReels, searchQuery, searchTabs, searchPosts } from "../data/searchMockData";
 
 const iconMap = {
   Clapperboard,
@@ -80,61 +81,9 @@ function GroupsCard() {
   );
 }
 
-function ImageGrid({ images }) {
-  return (
-    <div className="mt-3 grid grid-cols-3 gap-1 overflow-hidden rounded-md">
-      <img src={images[0]} alt="" className="col-span-2 row-span-2 aspect-square h-full w-full object-cover" />
-      <img src={images[1]} alt="" className="aspect-square w-full object-cover" />
-      <img src={images[2]} alt="" className="aspect-square w-full object-cover" />
-      <img src={images[3]} alt="" className="aspect-square w-full object-cover" />
-      <div className="relative">
-        <img src={images[4]} alt="" className="aspect-square w-full object-cover" />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-[28px] font-bold text-white">+10</div>
-      </div>
-    </div>
-  );
-}
-
-function PostCard({ post }) {
-  return (
-    <article className="rounded-lg border border-[#dddfe2] bg-white shadow-sm">
-      <div className="p-4">
-        <div className="mb-2 text-[13px]">
-          <span className="font-bold">{post.actor}</span> is a member.
-        </div>
-        <div className="flex items-start gap-2">
-          <img src={post.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="truncate text-[14px] font-bold">{post.group} · <span className="text-[#0866ff]">Join</span></h3>
-                <p className="text-[12px] text-[#65676b]">{post.time}</p>
-              </div>
-              <MoreHorizontal size={20} className="text-[#65676b]" />
-            </div>
-            <p className="mt-3 text-[13px] leading-relaxed">{post.content}</p>
-          </div>
-        </div>
-      </div>
-      <ImageGrid images={post.images} />
-      <div className="flex items-center justify-between border-t border-[#dddfe2] px-4 py-2 text-[13px] text-[#65676b]">
-        <div className="flex items-center gap-5">
-          <span className="flex items-center gap-1"><ThumbsUp size={16} /> {post.reactions}</span>
-          <span>{post.comments}</span>
-          <span>{post.shares}</span>
-        </div>
-        <div className="flex -space-x-1">
-          <span className="h-4 w-4 rounded-full bg-[#0866ff]" />
-          <span className="h-4 w-4 rounded-full bg-[#f02849]" />
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function PostsResults() {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <GroupsCard />
       {searchPosts.map((post) => (
         <PostCard key={post.id} post={post} />
@@ -204,6 +153,7 @@ export default function SearchPage() {
             <span className="text-[14px] text-[#65676b]">{searchQuery}</span>
           </div>
           <h1 className="mb-3 text-[20px] font-bold lg:hidden">{title}</h1>
+
           {activeTab === "posts" && <PostsResults />}
           {activeTab === "people" && <PeopleResults />}
           {activeTab === "groups" && <GroupsResults />}

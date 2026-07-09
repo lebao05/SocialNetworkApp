@@ -14,6 +14,8 @@ using Application.Posts.Queries.GetPostsByGroup;
 using Application.Posts.Queries.GetPostsByPerson;
 using Application.Posts.Queries.GetPossibleTags;
 using Application.Posts.Queries.GetFeedPosts;
+using Application.Posts.Queries.GetSavedPosts;
+using Application.Posts.Queries.SearchPosts;
 using Application.Posts.Commands.MarkLatestFeedAsSeen;
 using Application.Abstractions;
 using Domain.Enums;
@@ -96,6 +98,19 @@ namespace Presentation.Controllers
             }
 
             var query = new GetPostQuery(id, userId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchPosts(
+            [FromQuery] string? q = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new SearchPostsQuery(q, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -325,6 +340,23 @@ namespace Presentation.Controllers
             var command = new UnsavePostCommand(id, userId);
             var result = await _sender.Send(command, cancellationToken);
             return result.IsSuccess ? Ok() : HandleFailure(result);
+        }
+
+        [HttpGet("saved")]
+        public async Task<IActionResult> GetSavedPosts(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            if (!TryGetUserId(out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetSavedPostsQuery(userId, page, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
 
         [HttpGet("tags/search")]

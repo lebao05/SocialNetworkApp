@@ -18,6 +18,7 @@ using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
 using Application.Groups.Queries.GetReportedContents;
 using Application.Groups.Queries.GetGroups;
+using Application.Groups.Queries.SearchGroups;
 using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -401,6 +402,19 @@ namespace Presentation.Controllers
             }
 
             var query = new GetGroupsQuery(userId, isJoining, page, pageSize, searchTerm);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchGroups(
+            [FromQuery] string? q = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new SearchGroupsQuery(q, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

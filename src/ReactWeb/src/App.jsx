@@ -15,6 +15,7 @@ import SavedPage from "./pages/SavedPage";
 import BirthdaysPage from "./pages/BirthdaysPage";
 import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryPage from "./pages/StoryPage";
+import PostDetailPage from "./pages/PostDetailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
       <Route path="/groups/create" element={<ProtectedRoute><GroupsCreatePage /></ProtectedRoute>} />
       <Route path="/groups/:groupId" element={<ProtectedRoute><GroupPage /></ProtectedRoute>} />
+      <Route path="/post/:postId" element={<ProtectedRoute><PostDetailPage /></ProtectedRoute>} />
     </Routes>
   );
 }

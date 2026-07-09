@@ -144,5 +144,45 @@ namespace Infrastructure.Persistence.Repositories
         {
             _context.Reels.Remove(reel);
         }
+
+        public async Task<PagedList<Application.DTOs.Search.SearchReelDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Reels
+                .AsNoTracking()
+                .Include(r => r.Author)
+                .Where(r => r.DeletedAt == null);
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var term = searchQuery.ToLower();
+                query = query.Where(r =>
+                    (r.Caption != null && r.Caption.ToLower().Contains(term)) ||
+                    (r.AudioTitle != null && r.AudioTitle.ToLower().Contains(term)));
+            }
+
+            var reels = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var dtos = reels.Select(r => new Application.DTOs.Search.SearchReelDto(
+                r.Id,
+                r.VideoUrl,
+                r.ThumbnailUrl,
+                r.Caption,
+                r.AuthorId,
+                $"{r.Author.FirstName} {r.Author.LastName}".Trim(),
+                r.Author.AvatarUrl,
+                r.Reactions.Count,
+                r.Comments.Count,
+                r.ViewCount,
+                r.CreatedAt
+            )).ToList();
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            return new PagedList<Application.DTOs.Search.SearchReelDto>(dtos, page, pageSize, totalCount);
+        }
     }
 }

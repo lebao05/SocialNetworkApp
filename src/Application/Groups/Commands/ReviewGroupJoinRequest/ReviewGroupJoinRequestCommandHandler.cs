@@ -6,6 +6,7 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Domain.Enums;
+using Domain.Events;
 using Domain.Shared;
 
 namespace Application.Groups.Commands.ReviewGroupJoinRequest
@@ -13,13 +14,16 @@ namespace Application.Groups.Commands.ReviewGroupJoinRequest
     internal sealed class ReviewGroupJoinRequestCommandHandler : ICommandHandler<ReviewGroupJoinRequestCommand>
     {
         private readonly IGroupRepository _groupRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public ReviewGroupJoinRequestCommandHandler(
             IGroupRepository groupRepository,
+            IUserRepository userRepository,
             IUnitOfWork unitOfWork)
         {
             _groupRepository = groupRepository;
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -55,6 +59,19 @@ namespace Application.Groups.Commands.ReviewGroupJoinRequest
             if (request.Approve)
             {
                 group.ApproveJoinRequest(request.RequestId);
+
+                // Raise domain event
+                var approvingUser = await _userRepository.GetByIdAsync(request.RequesterUserId, cancellationToken);
+                if (approvingUser != null)
+                {
+                    approvingUser.AddDomainEvent(new GroupJoinRequestAcceptedDomainEvent(
+                        GroupId: request.GroupId,
+                        GroupJoinRequestId: request.RequestId,
+                        UserId: joinRequest.UserId,
+                        ApprovedByUserId: request.RequesterUserId,
+                        ApprovedAt: DateTime.UtcNow
+                    ));
+                }
             }
             else
             {

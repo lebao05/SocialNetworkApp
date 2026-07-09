@@ -2,6 +2,7 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Domain.Entities;
+using Domain.Events;
 using Domain.Shared;
 
 namespace Application.Posts.Commands.CreateComment
@@ -31,8 +32,8 @@ namespace Application.Posts.Commands.CreateComment
                     "Comment content cannot be empty."));
             }
 
-            var userExists = await _userRepository.ExistsAsync(request.UserId, cancellationToken);
-            if (!userExists)
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (user == null)
             {
                 return Result.Failure<long>(new Error(
                     "User.NotFound",
@@ -97,6 +98,18 @@ namespace Application.Posts.Commands.CreateComment
                 repliedUserId: request.RepliedUserId);
 
             _postRepository.AddComment(comment);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Raise CommentCreatedDomainEvent
+            user.AddDomainEvent(new CommentCreatedDomainEvent(
+                CommentId: comment.Id,
+                PostId: request.PostId,
+                CommenterId: request.UserId,
+                RepliedUserId: request.RepliedUserId,
+                ParentCommentId: request.ParentCommentId,
+                CreatedAt: DateTime.UtcNow
+            ));
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.Success(comment.Id);

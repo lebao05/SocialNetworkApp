@@ -8,6 +8,7 @@ using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Events;
 using Domain.Shared;
 
 namespace Application.Posts.Commands.CreatePost
@@ -36,8 +37,8 @@ namespace Application.Posts.Commands.CreatePost
 
         public async Task<Result<long>> Handle(CreatePostCommand request, CancellationToken cancellationToken)
         {
-            var authorExists = await _userRepository.ExistsAsync(request.AuthorId, cancellationToken);
-            if (!authorExists)
+            var author = await _userRepository.GetByIdAsync(request.AuthorId, cancellationToken);
+            if (author == null)
             {
                 return Result.Failure<long>(new Error(
                     "User.NotFound",
@@ -172,7 +173,9 @@ namespace Application.Posts.Commands.CreatePost
                 return Result.Failure<long>(new Error("Post.UploadFailed", ex.Message));
             }
 
-            foreach (var taggedUserId in request.TaggedUserIds ?? Array.Empty<Guid>())
+            var taggedUserIds = request.TaggedUserIds?.ToList() ?? new List<Guid>();
+
+            foreach (var taggedUserId in taggedUserIds)
             {
                 post.AddTag(new PostTag(
                     id: 0,
@@ -196,6 +199,20 @@ namespace Application.Posts.Commands.CreatePost
             try
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Raise PostCreatedDomainEvent for tagged users notification
+                if (taggedUserIds.Count > 0)
+                {
+                    author.AddDomainEvent(new PostCreatedDomainEvent(
+                        PostId: post.Id,
+                        AuthorId: request.AuthorId,
+                        Content: request.Content,
+                        TaggedUserIds: taggedUserIds,
+                        CreatedAt: DateTime.UtcNow
+                    ));
+
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
             }
             catch (Exception ex)
             {

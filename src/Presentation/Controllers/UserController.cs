@@ -16,6 +16,7 @@ using Application.Users.Commands.FollowUser;
 using Application.Users.Commands.UnfollowUser;
 using Application.Users.Queries.GetPersonalInfo;
 using Application.Users.Queries.GetUserHoverCard;
+using Application.Users.Queries.SearchUsers;
 using Application.Users.Commands.UploadAvatar;
 using Application.Users.Commands.UploadCoverPhoto;
 using Application.Users.Commands.UpdateInfo;
@@ -87,6 +88,20 @@ namespace Presentation.Controllers
 
             var query = new GetUserHoverCardQuery(id, currentUserId);
 
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchUsers(
+            [FromQuery] string? q = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            var query = new SearchUsersQuery(q, userId, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -220,6 +235,12 @@ namespace Presentation.Controllers
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        private Guid? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
         }
     }
 }

@@ -9,6 +9,8 @@ namespace Application.Abstractions.Repositories
 
         Task<FriendRequest?> GetPendingRequestAsync(Guid senderId, Guid receiverId);
 
+        Task<FriendRequest?> GetBySenderAndReceiverAsync(Guid senderId, Guid receiverId);
+
         Task<bool> ExistsPendingRequestAsync(Guid senderId, Guid receiverId);
 
         Task<PagedList<FriendRequest>> GetIncomingPendingAsync(

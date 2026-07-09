@@ -1,3 +1,4 @@
+using Application.DTOs.Search;
 using Domain.Entities;
 using Application.Shared;
 
@@ -19,5 +20,6 @@ namespace Application.Abstractions.Repositories
         void RemoveReaction(ReelReaction reaction);
         void Update(Reel reel);
         void Delete(Reel reel);
+        Task<PagedList<SearchReelDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
     }
 }

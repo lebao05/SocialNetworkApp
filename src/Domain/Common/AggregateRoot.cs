@@ -9,7 +9,6 @@ public abstract class AggregateRoot : BaseEntity, IHasDomainEvents
 
     protected AggregateRoot(long id) : base(id)
     {
-
     }
 
     protected void AddDomainEvent(IDomainEvent domainEvent)

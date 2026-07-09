@@ -1,9 +1,11 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
+using Application.DTOs.Search;
 using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 namespace Infrastructure.Persistence.Repositories
 {
     public class UserRepository : IUserRepository
@@ -63,6 +65,57 @@ namespace Infrastructure.Persistence.Repositories
         {
             var connections = _presenceTracker.GetConnections(userId.ToString());
             return Task.FromResult(connections);
+        }
+
+        public async Task<PagedList<SearchUserDto>> SearchAsync(string? searchQuery, Guid? currentUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Users.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(u => EF.Property<NpgsqlTsVector>(u, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
+            }
+
+            var users = await query
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
+                .ThenBy(u => u.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var userIds = users.Select(u => u.Id).ToList();
+
+            // Mutual friend counts
+            Dictionary<Guid, int> mutualCounts = new();
+            if (currentUserId.HasValue)
+            {
+                var friendships = await _context.Friendships
+                    .AsNoTracking()
+                    .Where(f => (f.User1Id == currentUserId.Value || f.User2Id == currentUserId.Value) && userIds.Contains(f.User1Id == currentUserId.Value ? f.User2Id : f.User1Id))
+                    .ToListAsync(cancellationToken);
+
+                var friendIds = friendships
+                    .SelectMany(f => new[] { f.User1Id, f.User2Id })
+                    .Where(id => id != currentUserId.Value && userIds.Contains(id))
+                    .ToList();
+
+                mutualCounts = friendIds
+                    .GroupBy(id => id)
+                    .ToDictionary(g => g.Key, g => g.Count());
+            }
+
+            var dtos = users.Select(u => new SearchUserDto(
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.AvatarUrl,
+                mutualCounts.GetValueOrDefault(u.Id)
+            )).ToList();
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            return new PagedList<SearchUserDto>(dtos, page, pageSize, totalCount);
         }
     }
 }

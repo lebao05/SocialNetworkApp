@@ -16,7 +16,12 @@ namespace Infrastructure.Persistence.Configurations
             
             builder.Property(p => p.Id)
                 .HasColumnName("PostId");
-                
+
+            // SearchVector (shadow property — DB-generated GIN-indexed column)
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd();
+
             // Post -> Group (many-to-one)
             builder.HasOne(p => p.Group)
                 .WithMany(g => g.Posts)

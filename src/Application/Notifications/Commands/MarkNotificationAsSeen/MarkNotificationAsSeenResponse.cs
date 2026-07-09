@@ -1,0 +1,3 @@
+namespace Application.Notifications.Commands.MarkNotificationAsSeen;
+
+public sealed record MarkNotificationAsSeenResponse;

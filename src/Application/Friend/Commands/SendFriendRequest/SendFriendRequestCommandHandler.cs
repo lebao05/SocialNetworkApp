@@ -2,6 +2,7 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Domain.Entities;
+using Domain.Events;
 using Domain.Shared;
 
 namespace Application.Friend.Commands.SendFriendRequest;
@@ -40,7 +41,6 @@ internal sealed class SendFriendRequestCommandHandler
         // ❌ Users must exist
         var sender = await _userRepository.GetByIdAsync(request.SenderId, cancellationToken);
         var receiver = await _userRepository.GetByIdAsync(request.ReceiverId, cancellationToken);
-
         if (sender == null || receiver == null)
         {
             return Result.Failure<bool>(
@@ -75,6 +75,13 @@ internal sealed class SendFriendRequestCommandHandler
             request.ReceiverId,
             id: 0
         );
+
+        // Add domain event to the sender
+        sender.AddDomainEvent(new FriendRequestCreatedDomainEvent(
+            SenderId: request.SenderId,
+            ReceiverId: request.ReceiverId,
+            CreatedAt: DateTime.UtcNow
+        ));
 
         await _friendRequestRepository.AddAsync(friendRequest);
         await _unitOfWork.SaveChangesAsync();

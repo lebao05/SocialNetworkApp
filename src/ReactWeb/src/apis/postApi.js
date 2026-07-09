@@ -204,6 +204,18 @@ export async function unsavePostApi(postId) {
 }
 
 /**
+ * Get saved posts for the current user:
+ * GET /api/posts/saved?page=&pageSize=
+ * Returns { items: SavedPostDto[], pageNumber, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage }
+ */
+export async function getSavedPostsApi(page = 1, pageSize = 20) {
+  const response = await axios.get("/posts/saved", {
+    params: { page, pageSize },
+  });
+  return response.data;
+}
+
+/**
  * Get possible tags: GET /api/posts/tags/search
  */
 export async function getPossibleTagsApi(searchQuery = null, groupId = null, page = 1, pageSize = 10) {

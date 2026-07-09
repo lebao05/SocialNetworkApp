@@ -34,7 +34,9 @@ namespace Application.Abstractions.Repositories
         Task<Dictionary<long, int>> GetPostCountsByGroupIdsAsync(IEnumerable<long> groupIds, DateTime? fromDate = null, CancellationToken cancellationToken = default);
         void AddComment(PostComment comment);
         Task<SavedPost?> GetSavedPostAsync(long postId, Guid userId, CancellationToken cancellationToken = default);
+        Task<PagedList<SavedPost>> GetSavedPostsPagedAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
         void AddSavedPost(SavedPost savedPost);
         void RemoveSavedPost(SavedPost savedPost);
+        Task<PagedList<Post>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
     }
 }

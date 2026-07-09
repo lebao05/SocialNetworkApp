@@ -35,6 +35,8 @@ namespace Infrastructure
             services.AddScoped<IBirthdayRepository, BirthdayRepository>();
             services.AddScoped<IChatHubNotifier, ChatHubNotifier>();
             services.AddScoped<ICallHubNotifier, CallHubNotifier>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<INotificationHubNotifier, NotificationHubNotifier>();
 
             services.AddScoped<IUploadService>(provider =>
             {
