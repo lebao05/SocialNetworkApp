@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Bookmark,
   Clapperboard,
@@ -13,7 +13,7 @@ import {
 import { MdGroups } from "react-icons/md";
 import { currentUser } from "../../data/mockData";
 
-const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => {
+const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, to, isActive = false }) => {
   const content = (
     <>
       <div className="flex h-9 w-9 shrink-0 items-center justify-center">
@@ -25,11 +25,11 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => 
           </div>
         )}
       </div>
-      <span className={`truncate text-[15px] ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+      <span className={`truncate text-[15px] ${isActive ? "font-semibold" : "font-medium"}`}>{label}</span>
     </>
   );
   const className = `flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
-    active ? "bg-[#E7F3FF] text-[#1877F2]" : "text-[#050505] hover:bg-[#F2F2F2]"
+    isActive ? "bg-[#E7F3FF] text-[#1877F2]" : "text-[#050505] hover:bg-[#F2F2F2]"
   }`;
 
   if (to) {
@@ -45,18 +45,20 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, active = false, to }) => 
 
 
 export default function LeftSidebar() {
+  const location = useLocation();
+
   const primaryMenu = [
-    { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", active: true },
-    { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500" },
+    { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", to: "/friends" },
+    { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500", to: "/memories" },
     { id: "saved", label: "Saved", icon: Bookmark, iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600", to: "/saved" },
-    { id: "groups", label: "Groups", icon: MdGroups, iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500" },
+    { id: "groups", label: "Groups", icon: MdGroups, iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500", to: "/groups" },
     { id: "reels", label: "Reels", icon: Clapperboard, iconBg: "bg-gradient-to-r from-pink-500 to-rose-500", to: "/watch" },
-    { id: "feeds", label: "Feed", icon: FileText, iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600" },
+    { id: "feeds", label: "Feed", icon: FileText, iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600", to: "/feeds" },
   ];
 
   const extendedMenu = [
-    { id: "chat-ai", label: "Chat with AI", icon: Sparkles, iconBg: "bg-gradient-to-r from-sky-400 to-blue-500" },
-    { id: "messenger", label: "Messenger", icon: MessageCircle, iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500" },
+    { id: "chat-ai", label: "Chat with AI", icon: Sparkles, iconBg: "bg-gradient-to-r from-sky-400 to-blue-500", to: "/chat-ai" },
+    { id: "messenger", label: "Messenger", icon: MessageCircle, iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500", to: "/messenger" },
     { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500", to: "/birthdays" },
   ];
 
@@ -74,11 +76,11 @@ export default function LeftSidebar() {
       </Link>
 
       {primaryMenu.map((item) => (
-        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} active={item.active} to={item.to} />
+        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} to={item.to} />
       ))}
 
       {extendedMenu.map((item) => (
-        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} />
+        <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} to={item.to} />
       ))}
 
       <hr className="my-2 border-[#ced0d4]" />

@@ -7,7 +7,7 @@ using Application.Posts.Commands.SavePost;
 using Application.Posts.Commands.UnsavePost;
 using Application.Posts.Commands.UpdatePost;
 using Application.Posts.Queries.GetComments;
-using Application.Posts.Queries.GetPost;
+using Application.Posts.Queries.GetDetailPost;
 using Application.Posts.Queries.GetPostMediasByGroup;
 using Application.Posts.Queries.GetPostMediasByUser;
 using Application.Posts.Queries.GetPostsByGroup;
@@ -75,7 +75,7 @@ namespace Presentation.Controllers
 
                 var result = await _sender.Send(command, cancellationToken);
 
-                return result.IsSuccess ? CreatedAtAction(nameof(GetPost), new { id = result.Value }, result.Value) : HandleFailure(result);
+                return result.IsSuccess ? CreatedAtAction(nameof(GetDetailPost), new { id = result.Value }, result.Value) : HandleFailure(result);
             }
             finally
             {
@@ -87,7 +87,7 @@ namespace Presentation.Controllers
         }
 
         [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetPost(long id, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetDetailPost(long id, CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             Guid? userId = null;
@@ -97,11 +97,12 @@ namespace Presentation.Controllers
                 userId = parsedUserId;
             }
 
-            var query = new GetPostQuery(id, userId);
+            var query = new GetDetailPostQuery(id, userId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
+
 
         [HttpGet("search")]
         public async Task<IActionResult> SearchPosts(
@@ -283,7 +284,7 @@ namespace Presentation.Controllers
                 request.RepliedUserId);
 
             var result = await _sender.Send(command, cancellationToken);
-            return result.IsSuccess ? CreatedAtAction(nameof(GetPost), new { id = result.Value }, result.Value) : HandleFailure(result);
+            return result.IsSuccess ? CreatedAtAction(nameof(GetDetailPost), new { id = result.Value }, result.Value) : HandleFailure(result);
         }
 
         [HttpGet("{postId:long}/comments")]

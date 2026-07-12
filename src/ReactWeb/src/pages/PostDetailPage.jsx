@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { GrLike } from "react-icons/gr";
-import { PiShareFatLight } from "react-icons/pi";
 import PostModal from "../components/Feed/PostModal";
 import { getPostApi, getCommentsApi, createCommentApi, reactToPostApi, reactToCommentApi } from "../apis/postApi";
 import { useAuth } from "../contexts/authContext";
@@ -150,7 +148,7 @@ function normalizePost(raw) {
   };
 }
 
-export default function PostDetailPage() {
+export default function PostDetailPage({backgroundLocation}) {
   const { postId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -442,8 +440,8 @@ export default function PostDetailPage() {
   }, [post, commentsLoaded, loadComments]);
 
   const handleClose = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
+    navigate(backgroundLocation);
+  }, [backgroundLocation, navigate]);
 
   // ─── Derived values ─────────────────────────────────────────────────────
   const authorName = post

@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { GrLike } from "react-icons/gr";
 import { PiShareFatLight } from "react-icons/pi";
 import PostComment from "./PostComment";
 import MediaGallery from "./MediaGallery";
+import ShareModal from "./ShareModal";
 
 const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave }) => (
   <button
@@ -70,7 +71,10 @@ export default function PostModal({
   onReactComment,
   topReactionIcon,
   transparentOverlay = false,
+  currentUserAvatar,
 }) {
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
   if (!isOpen) return null;
 
   return (
@@ -164,7 +168,7 @@ export default function PostModal({
                     )}
                   </div>
 
-                  <ReactionBtn icon={<PiShareFatLight size={18} />} label="Share" />
+                  <ReactionBtn icon={<PiShareFatLight size={18} />} label="Share" onClick={() => setShareModalOpen(true)} />
                 </div>
                 <div className="flex items-center text-gray-500 text-xs"></div>
               </div>
@@ -191,6 +195,15 @@ export default function PostModal({
           </div>
         </div>
       </div>
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        post={post}
+        authorName={authorName}
+        authorAvatar={authorAvatar}
+        currentUserAvatar={currentUserAvatar}
+      />
     </div>
   );
 }

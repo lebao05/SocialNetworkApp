@@ -15,6 +15,7 @@ import { useAuth } from "../../contexts/authContext";
 import PostComment from "./PostComment";
 import MediaGallery from "./MediaGallery";
 import PostModal from "./PostModal";
+import ShareModal from "./ShareModal";
 import { Bookmark, Flag, MoreHorizontal, X, Check, AlertTriangle } from "lucide-react";
 
 // ─── Feeling map (matches Domain.Enums.Feeling) ───
@@ -221,6 +222,7 @@ export default function PostCard({ post }) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportDetail, setReportDetail] = useState("");
   const [isReporting, setIsReporting] = useState(false);
@@ -597,6 +599,7 @@ export default function PostCard({ post }) {
   const authorId   = post.authorId ?? post.AuthorId ?? null;
   const authorName = post.authorName ?? post.user ?? null;
   const authorAvatar = post.authorAvatarUrl ?? post.avatar ?? null;
+  const currentUserAvatar = user?.avatarUrl || null;
   const showAnonymous = isAnonymous && authorId === null;
   const feeling = post.feelingActivity != null ? FEELING_MAP[post.feelingActivity] : null;
   const displayTime = post.createdAt ? timeAgo(post.createdAt) : (post.time || "");
@@ -752,10 +755,19 @@ export default function PostCard({ post }) {
           </div>
 
           <ReactionBtn icon={<FaRegComment size={18} />} label="Comment" onClick={openCommentsModal} />
-          <ReactionBtn icon={<PiShareFatLight size={18} />} label="Share" />
+          <ReactionBtn icon={<PiShareFatLight size={18} />} label="Share" onClick={() => setShareModalOpen(true)} />
         </div>
         <div className="flex items-center text-gray-500 text-xs"></div>
       </div>
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        post={post}
+        authorName={authorName}
+        authorAvatar={authorAvatar}
+        currentUserAvatar={currentUserAvatar}
+      />
 
       <PostModal
         isOpen={openPostModal}
@@ -790,6 +802,7 @@ export default function PostCard({ post }) {
         handleReactionSelect={handleReactionSelect}
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
+        currentUserAvatar={currentUserAvatar}
       />
 
       {/* Report to Admin Modal */}

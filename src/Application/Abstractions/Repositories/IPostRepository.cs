@@ -1,12 +1,14 @@
+using Application.DTOs.Posts;
+using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
-using Application.Shared;
 
 namespace Application.Abstractions.Repositories
 {
     public interface IPostRepository
     {
         Task<Post?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+        Task<PostDto?> GetDetailPostAsync(long id, Guid? viewerId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Post>> GetByGroupIdAsync(long groupId, Guid? authorId = null, CancellationToken cancellationToken = default);
         Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, Guid? authorId = null, CancellationToken cancellationToken = default);
         Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, PostApprovalStatus approvalStatus, CancellationToken cancellationToken = default);

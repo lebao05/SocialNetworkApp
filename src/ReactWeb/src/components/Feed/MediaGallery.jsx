@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function MediaGallery({ media, compact = false }) {
+export default function MediaGallery({ media, compact = false, disableInteraction = false }) {
   const images = (media || []).filter(
     (m) => m.mediaType === "Image" || m.mediaType === "image"
   );
@@ -15,19 +15,31 @@ export default function MediaGallery({ media, compact = false }) {
 
   if (count === 0 && videos.length === 0) return null;
 
+  const handleImgClick = (idx) => {
+    if (disableInteraction) return;
+    setLightboxIdx(idx);
+  };
+
+  const closeLightbox = () => {
+    if (disableInteraction) return;
+    setLightboxIdx(null);
+  };
+
+  const imgCursorClass = disableInteraction ? "" : "cursor-pointer hover:brightness-95";
+
   const lightbox = lightboxIdx !== null && (
     <div
       className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
-      onClick={() => setLightboxIdx(null)}
+      onClick={closeLightbox}
     >
       <button
-        onClick={() => setLightboxIdx(null)}
+        onClick={closeLightbox}
         className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center z-10 transition-colors"
       >
         ✕
       </button>
 
-      {lightboxIdx > 0 && (
+      {lightboxIdx > 0 && !disableInteraction && (
         <button
           onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx - 1); }}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center transition-colors"
@@ -36,7 +48,7 @@ export default function MediaGallery({ media, compact = false }) {
         </button>
       )}
 
-      {lightboxIdx < images.length - 1 && (
+      {lightboxIdx < images.length - 1 && !disableInteraction && (
         <button
           onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx + 1); }}
           className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white text-2xl flex items-center justify-center transition-colors"
@@ -52,9 +64,11 @@ export default function MediaGallery({ media, compact = false }) {
         onClick={(e) => e.stopPropagation()}
       />
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium bg-black/50 px-4 py-1.5 rounded-full">
-        {lightboxIdx + 1} / {images.length}
-      </div>
+      {!disableInteraction && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium bg-black/50 px-4 py-1.5 rounded-full">
+          {lightboxIdx + 1} / {images.length}
+        </div>
+      )}
     </div>
   );
 
@@ -66,15 +80,15 @@ export default function MediaGallery({ media, compact = false }) {
           <img
             src={images[0].mediaUrl}
             alt=""
-            className={`w-full object-cover ${maxH} cursor-pointer hover:brightness-95 transition-all`}
-            onClick={() => setLightboxIdx(0)}
+            className={`w-full object-cover ${maxH} ${imgCursorClass} transition-all`}
+            onClick={() => handleImgClick(0)}
           />
         </div>
         {videos.map((v) => (
           <div key={v.id} className="w-full mt-3">
             <video
               src={v.mediaUrl}
-              controls
+              controls={!disableInteraction}
               className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
@@ -93,8 +107,8 @@ export default function MediaGallery({ media, compact = false }) {
               <img
                 src={img.mediaUrl}
                 alt=""
-                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
-                onClick={() => setLightboxIdx(i)}
+                className={`w-full h-full object-cover ${imgCursorClass} transition-all ${compact ? "max-h-[180px]" : ""}`}
+                onClick={() => handleImgClick(i)}
               />
             </div>
           ))}
@@ -103,7 +117,7 @@ export default function MediaGallery({ media, compact = false }) {
           <div key={v.id} className="w-full mt-3">
             <video
               src={v.mediaUrl}
-              controls
+              controls={!disableInteraction}
               className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
@@ -121,8 +135,8 @@ export default function MediaGallery({ media, compact = false }) {
             <img
               src={images[0].mediaUrl}
               alt=""
-              className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[360px]" : ""}`}
-              onClick={() => setLightboxIdx(0)}
+              className={`w-full h-full object-cover ${imgCursorClass} transition-all ${compact ? "max-h-[360px]" : ""}`}
+              onClick={() => handleImgClick(0)}
             />
           </div>
           {images.slice(1).map((img, i) => (
@@ -130,8 +144,8 @@ export default function MediaGallery({ media, compact = false }) {
               <img
                 src={img.mediaUrl}
                 alt=""
-                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
-                onClick={() => setLightboxIdx(i + 1)}
+                className={`w-full h-full object-cover ${imgCursorClass} transition-all ${compact ? "max-h-[180px]" : ""}`}
+                onClick={() => handleImgClick(i + 1)}
               />
             </div>
           ))}
@@ -140,7 +154,7 @@ export default function MediaGallery({ media, compact = false }) {
           <div key={v.id} className="w-full mt-3">
             <video
               src={v.mediaUrl}
-              controls
+              controls={!disableInteraction}
               className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
@@ -159,8 +173,8 @@ export default function MediaGallery({ media, compact = false }) {
               <img
                 src={img.mediaUrl}
                 alt=""
-                className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
-                onClick={() => setLightboxIdx(i)}
+                className={`w-full h-full object-cover ${imgCursorClass} transition-all ${compact ? "max-h-[180px]" : ""}`}
+                onClick={() => handleImgClick(i)}
               />
             </div>
           ))}
@@ -169,7 +183,7 @@ export default function MediaGallery({ media, compact = false }) {
           <div key={v.id} className="w-full mt-3">
             <video
               src={v.mediaUrl}
-              controls
+              controls={!disableInteraction}
               className={`w-full ${maxH} object-contain bg-black rounded`}
             />
           </div>
@@ -190,13 +204,13 @@ export default function MediaGallery({ media, compact = false }) {
             <img
               src={img.mediaUrl}
               alt=""
-              className={`w-full h-full object-cover cursor-pointer hover:brightness-95 transition-all ${compact ? "max-h-[180px]" : ""}`}
-              onClick={() => setLightboxIdx(i)}
+              className={`w-full h-full object-cover ${imgCursorClass} transition-all ${compact ? "max-h-[180px]" : ""}`}
+              onClick={() => handleImgClick(i)}
             />
             {i === 3 && remaining > 0 && (
               <div
-                className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/60 transition-colors"
-                onClick={() => setLightboxIdx(3)}
+                className={`absolute inset-0 bg-black/50 flex items-center justify-center ${disableInteraction ? "" : "cursor-pointer hover:bg-black/60"} transition-colors`}
+                onClick={() => handleImgClick(3)}
               >
                 <span className="text-white text-3xl font-bold">+{remaining}</span>
               </div>
@@ -208,7 +222,7 @@ export default function MediaGallery({ media, compact = false }) {
         <div key={v.id} className="w-full mt-3">
           <video
             src={v.mediaUrl}
-            controls
+            controls={!disableInteraction}
             className={`w-full ${maxH} object-contain bg-black rounded`}
           />
         </div>
