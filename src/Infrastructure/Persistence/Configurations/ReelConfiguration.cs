@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -11,6 +12,11 @@ namespace Infrastructure.Persistence.Configurations
             builder.ToTable("Reels");
 
             builder.HasKey(r => r.Id);
+
+            // SearchVector (shadow property — DB-generated GIN-indexed column)
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd();
 
             builder.Property(r => r.Id)
                 .HasColumnName("ReelId");

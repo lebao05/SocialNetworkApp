@@ -7,11 +7,11 @@ namespace Infrastructure.SignalR;
 public class NotificationHubNotifier : INotificationHubNotifier
 {
     private readonly IHubContext<NotificationHub> _hubContext;
-    private readonly IPresenceTracker _presenceTracker;
+    private readonly INotificationPresenceTracker _presenceTracker;
 
     public NotificationHubNotifier(
         IHubContext<NotificationHub> hubContext,
-        IPresenceTracker presenceTracker)
+        INotificationPresenceTracker presenceTracker)
     {
         _hubContext = hubContext;
         _presenceTracker = presenceTracker;

@@ -20,6 +20,6 @@ namespace Application.Abstractions.Repositories
         void RemoveReaction(ReelReaction reaction);
         void Update(Reel reel);
         void Delete(Reel reel);
-        Task<PagedList<SearchReelDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedList<SearchReelDto>> SearchAsync(Guid userId,string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
     }
 }

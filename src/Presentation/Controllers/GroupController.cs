@@ -18,7 +18,6 @@ using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
 using Application.Groups.Queries.GetReportedContents;
 using Application.Groups.Queries.GetGroups;
-using Application.Groups.Queries.SearchGroups;
 using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -405,37 +404,6 @@ namespace Presentation.Controllers
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
-        }
-
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchGroups(
-            [FromQuery] string? q = null,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            CancellationToken cancellationToken = default)
-        {
-            var query = new SearchGroupsQuery(q, page, pageSize);
-            var result = await _sender.Send(query, cancellationToken);
-
-            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
-        }
-
-        [HttpPost("{groupId:long}/rules")]
-        public async Task<IActionResult> CreateGroupRule(
-            long groupId,
-            [FromBody] CreateGroupRuleRequest request,
-            CancellationToken cancellationToken)
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized();
-            }
-
-            var command = new CreateGroupRuleCommand(userId, groupId, request.Title, request.Description);
-            var result = await _sender.Send(command, cancellationToken);
-
-            return result.IsSuccess ? StatusCode(StatusCodes.Status201Created) : HandleFailure(result);
         }
 
         [HttpPut("{groupId:long}/rules/{ruleId:long}")]

@@ -155,7 +155,6 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("token");
         setUser(null);
         setToken(null);
-        setSellerRequest(null);
     };
 
 

@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Mvc;
 using Presentation.Abstractions;
 using Presentation.Contracts.Post;
 using System.Security.Claims;
+using Infrastructure.Extensions;
 
 namespace Presentation.Controllers
 {
@@ -111,7 +112,8 @@ namespace Presentation.Controllers
             [FromQuery] int pageSize = 20,
             CancellationToken cancellationToken = default)
         {
-            var query = new SearchPostsQuery(q, page, pageSize);
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+            var query = new SearchPostsQuery(userId, q, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

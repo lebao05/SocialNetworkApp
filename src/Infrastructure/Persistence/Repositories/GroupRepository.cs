@@ -1,9 +1,12 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Groups;
+using Application.DTOs.Search;
 using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Repositories
 {
@@ -131,6 +134,78 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Groups
                 .Where(g => g.Id == groupId)
                 .AnyAsync(g => g.Members.Any(m => m.UserId == userId), cancellationToken);
+        }
+
+        public async Task<PagedList<GroupCardDto>> GetGroupsAsync(
+            Guid currentUserId,
+            bool isJoining,
+            int page,
+            int pageSize,
+            string? searchTerm,
+            CancellationToken cancellationToken = default)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-30);
+
+            // 1. Define subquery expressions (These do NOT execute yet; they stay as IQueryable SQL definitions)
+            var joinedGroupIds = _context.GroupMembers
+                .Where(gm => gm.UserId == currentUserId)
+                .Select(gm => gm.GroupId);
+
+            var friendIds = _context.Friendships
+                .Where(f => f.User1Id == currentUserId || f.User2Id == currentUserId)
+                .Select(f => f.User1Id == currentUserId ? f.User2Id : f.User1Id)
+                .Where(id => id != currentUserId);
+
+            // 2. Prepare the primary source query
+            var query = _context.Groups
+                .AsNoTracking()
+                .Where(g => isJoining ? joinedGroupIds.Contains(g.Id) : true);
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(g => EF.Property<NpgsqlTsVector>(g, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchTerm)));
+            }
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(g => g.Name.ToLower().Contains(term));
+            }
+
+            // 3. Get the total matching count before pagination
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            // 4. Project everything cleanly at the SQL server level
+            var pagedQuery = query
+                .OrderBy(g => g.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(g => new GroupCardDto(
+                    g.Id,
+                    g.Name,
+                    g.CoverPhotoUrl,
+                    g.PrivacyType.ToString(),
+                    g.Members.Count,
+
+                    // Inline Database Subquery: Post count over trailing 30 days
+                    _context.Posts.Count(p => p.GroupId == g.Id && p.CreatedAt >= cutoff),
+
+                    // Inline Database Subquery: Fetch up to 3 friend member records
+                    g.Members
+                        .Where(gm => friendIds.Contains(gm.UserId))
+                        .Select(gm => new GroupCardMemberDto(
+                            gm.UserId,
+                            (gm.User.FirstName + " " + gm.User.LastName).Trim(),
+                            gm.User.AvatarUrl
+                        ))
+                        .Take(3)
+                        .ToList(),
+
+                    // Inline Database Subquery: Total count of mutual friend members
+                    g.Members.Count(gm => friendIds.Contains(gm.UserId))
+                ));
+
+            var cards = await pagedQuery.ToListAsync(cancellationToken);
+
+            return new PagedList<GroupCardDto>(cards, page, pageSize, totalCount);
         }
     }
 }

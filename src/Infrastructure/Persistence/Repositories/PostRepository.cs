@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Feeds;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
 using Application.Shared;
@@ -43,167 +44,23 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<PostDto?> GetDetailPostAsync(long id, Guid? viewerId, CancellationToken cancellationToken = default)
         {
-            var post = await _context.Posts
+            // 1. Start with the root post query matching the target ID
+            var query = _context.Posts
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Include(post => post.Author)
-                .Include(post => post.Group!)
-                    .ThenInclude(g => g!.Members)
-                .Include(post => post.Media)
-                .Include(post => post.Reactions)
-                .Include(post => post.Comments)
-                    .ThenInclude(c => c.Reactions)
-                .Include(post => post.Comments)
-                    .ThenInclude(c => c.User)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sp => sp!.Author)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sp => sp!.Group)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sp => sp!.Media)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sp => sp!.Reactions)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sp => sp!.Comments)
-                .Include(post => post.Tags)
-                .FirstOrDefaultAsync(post => post.Id == id, cancellationToken);
+                .Where(p => p.Id == id && p.DeletedAt == null && p.ApprovalStatus == PostApprovalStatus.Approved
+                );
 
-            if (post is null)
-            {
-                return null;
-            }
+            // 2. Apply the updated visibility engine (handles anonymous/null viewers safely)
+            query = ApplyPostVisibility(query, viewerId);
 
-            ReactionType? userReaction = null;
-            if (viewerId.HasValue)
-            {
-                var currentViewerId = viewerId.Value;
-                userReaction = post.Reactions
-                    .FirstOrDefault(reaction => reaction.UserId == currentViewerId)
-                    ?.ReactionType;
-            }
+            // 3. Project directly into PostDto using our single-source projection rules
+            var projectedQuery = ApplySelect(query, viewerId);
 
-            var canSeeAuthor = CanSeeAuthor(post, viewerId);
-
-            return MapToPostDto(post, userReaction, canSeeAuthor);
+            // 4. Return the calculated detail object or null if unauthorized/not found
+            return await projectedQuery.FirstOrDefaultAsync(cancellationToken);
         }
 
-        private static bool CanSeeAuthor(Post post, Guid? viewerId)
-        {
-            if (viewerId is null || post.GroupId is null) return true;
-            if (post.AuthorId == viewerId.Value) return true;
-
-            var group = post.Group;
-            if (group is null) return true;
-            if (group.OwnerUserId == viewerId.Value) return true;
-
-            var member = group.Members.FirstOrDefault(m => m.UserId == viewerId.Value);
-            return member?.Role is GroupMemberRole.Admin or GroupMemberRole.Moderator;
-        }
-
-        private static PostDto MapToPostDto(Post post, ReactionType? userReaction, bool canSeeAuthor)
-        {
-            var shouldReveal = !post.IsAnonymous || canSeeAuthor;
-            var authorId = shouldReveal ? post.AuthorId : (Guid?)null;
-            var authorName = shouldReveal && post.Author != null ? $"{post.Author.FirstName} {post.Author.LastName}" : null;
-            var authorAvatar = shouldReveal ? post.Author?.AvatarUrl : null;
-
-            return new PostDto(
-                post.Id,
-                authorId,
-                authorName,
-                authorAvatar,
-                post.GroupId,
-                post.Content,
-                post.Visibility,
-                post.SharePostId,
-                post.LocationTag,
-                post.FeelingActivity,
-                post.CreatedAt,
-                post.UpdatedAt,
-                post.DeletedAt,
-                post.Media.Select(media => new PostMediaDto(
-                    media.Id,
-                    media.MediaType,
-                    media.MediaUrl,
-                    media.ThumbnailUrl,
-                    media.Metadata,
-                    media.UploadedAt
-                )).ToList(),
-                MapReactionCounts(post),
-                post.Comments.Count,
-                MapGroup(post.Group),
-                post.SharePost is null ? null : MapSharedPostToPostDto(post.SharePost, canSeeAuthor),
-                userReaction,
-                post.IsHiddenFromGroup,
-                post.HiddenAt,
-                post.HideReason,
-                post.ApprovalStatus,
-                post.ApprovalStatus == PostApprovalStatus.Pending,
-                post.IsAnonymous);
-        }
-
-        private static PostDto MapSharedPostToPostDto(Post post, bool canSeeAuthor)
-        {
-            var shouldReveal = !post.IsAnonymous || canSeeAuthor;
-            var authorId = shouldReveal ? post.AuthorId : (Guid?)null;
-            var authorName = shouldReveal && post.Author != null ? $"{post.Author.FirstName} {post.Author.LastName}" : null;
-            var authorAvatar = shouldReveal ? post.Author?.AvatarUrl : null;
-
-            return new PostDto(
-                post.Id,
-                authorId,
-                authorName,
-                authorAvatar,
-                post.GroupId,
-                post.Content,
-                post.Visibility,
-                post.SharePostId,
-                post.LocationTag,
-                post.FeelingActivity,
-                post.CreatedAt,
-                post.UpdatedAt,
-                post.DeletedAt,
-                post.Media.Select(media => new PostMediaDto(
-                    media.Id,
-                    media.MediaType,
-                    media.MediaUrl,
-                    media.ThumbnailUrl,
-                    media.Metadata,
-                    media.UploadedAt
-                )).ToList(),
-                MapReactionCounts(post),
-                post.Comments.Count,
-                MapGroup(post.Group),
-                null,
-                null,
-                post.IsHiddenFromGroup,
-                post.HiddenAt,
-                post.HideReason,
-                post.ApprovalStatus,
-                post.ApprovalStatus == PostApprovalStatus.Pending,
-                post.IsAnonymous);
-        }
-
-        private static IReadOnlyCollection<ReactionCountDto> MapReactionCounts(Post post)
-        {
-            return post.Reactions
-                .GroupBy(reaction => reaction.ReactionType)
-                .Select(group => new ReactionCountDto(group.Key, group.Count()))
-                .ToList();
-        }
-
-        private static GroupDto? MapGroup(Group? group)
-        {
-            return group is null
-                ? null
-                : new GroupDto(
-                    group.Id,
-                    group.OwnerUserId,
-                    group.Name,
-                    group.Description,
-                    group.PrivacyType,
-                    group.CoverPhotoUrl);
-        }
 
         public async Task<IEnumerable<Post>> GetByGroupIdAsync(long groupId, Guid? authorId = null, CancellationToken cancellationToken = default)
         {
@@ -570,24 +427,186 @@ namespace Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.GroupId, x => x.Count, cancellationToken);
         }
 
-        public async Task<PagedList<Post>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<PagedList<PostDto>> SearchAsync(Guid userId, string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
         {
+            // 1. Initialize root filter query
             var query = _context.Posts
                 .AsNoTracking()
-                .Include(post => post.Author)
-                .Include(post => post.Media)
-                .Include(post => post.Reactions)
-                .Include(post => post.Comments)
                 .Where(post => post.DeletedAt == null && post.ApprovalStatus == PostApprovalStatus.Approved);
 
+            // 2. Apply Full-Text Search Vector rule if query parameter exists
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 query = query.Where(post => EF.Property<NpgsqlTsVector>(post, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
             }
 
-            query = query.OrderByDescending(post => post.CreatedAt);
+            // 3. Order and apply identical visibility logic used in GetDetailPostAsync
+            query = ApplyPostVisibility(query, userId);
 
-            return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);
+            // 4. Project into IQueryable<PostDto> using your established projection rule method
+            var projectedQuery = ApplySelect(query, userId);
+
+            // 5. Build and return the specialized PagedList utilizing the projected query
+            return await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
         }
+
+
+        /// <summary>
+        /// Applies visibility rules directly onto an IQueryable of Posts.
+        /// </summary>
+        private IQueryable<Post> ApplyPostVisibility(IQueryable<Post> query, Guid? viewerId)
+        {
+            // If viewerId is null, we treat them as an unauthenticated/guest user (can only see Public content)
+            return query.Where(p =>
+                p.Visibility == PostVisibility.Public
+                || (viewerId != null && (
+                    (p.Visibility == PostVisibility.Private 
+                        && p.AuthorId == viewerId)
+                    || (p.Visibility == PostVisibility.Friends 
+                        && (p.AuthorId == viewerId 
+                            || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == p.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == p.AuthorId))))
+                    || (p.Visibility == PostVisibility.Group 
+                        && p.GroupId != null 
+                        && ((p.Group != null && p.Group.PrivacyType == GroupPrivacyType.Public) 
+                            || _context.GroupMembers.Any(gm => gm.GroupId == p.GroupId && gm.UserId == viewerId)))
+                ))
+            );
+        }
+    /// <summary>
+    /// Projects an IQueryable of Posts into PostDto while handling the nested SharePost authorization safely.
+    /// </summary>
+    private IQueryable<PostDto> ApplySelect(IQueryable<Post> query, Guid? viewerId)
+    {
+        return query.Select(post => new PostDto(
+            post.Id,
+            post.AuthorId,
+            post.Author.FirstName + " " + post.Author.LastName,
+            post.Author.AvatarUrl,
+            post.GroupId,
+            post.Content,
+            post.Visibility,
+            post.SharePostId,
+            post.LocationTag,
+            post.FeelingActivity,
+            post.CreatedAt,
+            post.UpdatedAt,
+            post.DeletedAt,
+
+            post.Media
+                .Select(m => new PostMediaDto(
+                    m.Id,
+                    m.MediaType,
+                    m.MediaUrl,
+                    m.ThumbnailUrl,
+                    m.Metadata,
+                    m.UploadedAt))
+                .ToList(),
+
+            post.Reactions
+                .GroupBy(r => r.ReactionType)
+                .Select(g => new ReactionCountDto(g.Key, g.Count()))
+                .ToList(),
+
+            post.Comments.Count(c => c.DeletedAt == null),
+
+            post.Group == null
+                ? null
+                : new GroupDto(
+                    post.Group.Id,
+                    post.Group.OwnerUserId,
+                    post.Group.Name,
+                    post.Group.Description,
+                    post.Group.PrivacyType,
+                    post.Group.CoverPhotoUrl),
+
+            // ====== NESTED SHAREPOST INLINE VISIBILITY CHECK ======
+            (post.SharePost == null ||
+            !(post.SharePost.Visibility == PostVisibility.Public
+            || (viewerId != null && (
+                (post.SharePost.Visibility == PostVisibility.Private 
+                    && post.SharePost.AuthorId == viewerId)
+                || (post.SharePost.Visibility == PostVisibility.Friends 
+                    && (post.SharePost.AuthorId == viewerId 
+                        || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == post.SharePost.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == post.SharePost.AuthorId))))
+                || (post.SharePost.Visibility == PostVisibility.Group 
+                    && post.SharePost.GroupId != null 
+                    && ((post.SharePost.Group != null && post.SharePost.Group.PrivacyType == GroupPrivacyType.Public) 
+                        || _context.GroupMembers.Any(gm => gm.GroupId == post.SharePost.GroupId && gm.UserId == viewerId)))
+            ))))
+                ? null // If nested validation fails or entity is absent, shared block is explicitly hidden
+                : new PostDto(
+                    post.SharePost.Id,
+                    post.SharePost.AuthorId,
+                    post.SharePost.Author.FirstName + " " + post.SharePost.Author.LastName,
+                    post.SharePost.Author.AvatarUrl,
+                    post.SharePost.GroupId,
+                    post.SharePost.Content,
+                    post.SharePost.Visibility,
+                    post.SharePost.SharePostId,
+                    post.SharePost.LocationTag,
+                    post.SharePost.FeelingActivity,
+                    post.SharePost.CreatedAt,
+                    post.SharePost.UpdatedAt,
+                    post.SharePost.DeletedAt,
+
+                    post.SharePost.Media
+                        .Select(m => new PostMediaDto(
+                            m.Id,
+                            m.MediaType,
+                            m.MediaUrl,
+                            m.ThumbnailUrl,
+                            m.Metadata,
+                            m.UploadedAt))
+                        .ToList(),
+
+                    post.SharePost.Reactions
+                        .GroupBy(r => r.ReactionType)
+                        .Select(g => new ReactionCountDto(g.Key, g.Count()))
+                        .ToList(),
+
+                    post.SharePost.Comments.Count(c => c.DeletedAt == null),
+
+                    post.SharePost.Group == null
+                        ? null
+                        : new GroupDto(
+                            post.SharePost.Group.Id,
+                            post.SharePost.Group.OwnerUserId,
+                            post.SharePost.Group.Name,
+                            post.SharePost.Group.Description,
+                            post.SharePost.Group.PrivacyType,
+                            post.SharePost.Group.CoverPhotoUrl),
+
+                    null, // Terminate nested lookups here
+
+                    viewerId == null 
+                        ? null 
+                        : post.SharePost.Reactions
+                            .Where(r => r.UserId == viewerId)
+                            .Select(r => (ReactionType?)r.ReactionType)
+                            .FirstOrDefault(),
+
+                    post.SharePost.IsHiddenFromGroup,
+                    post.SharePost.HiddenAt,
+                    post.SharePost.HideReason,
+                    post.SharePost.ApprovalStatus,
+                    post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
+                    post.SharePost.IsAnonymous
+                ),
+
+            viewerId == null 
+                ? null 
+                : post.Reactions
+                    .Where(r => r.UserId == viewerId)
+                    .Select(r => (ReactionType?)r.ReactionType)
+                    .FirstOrDefault(),
+
+            post.IsHiddenFromGroup,
+            post.HiddenAt,
+            post.HideReason,
+            post.ApprovalStatus,
+            post.ApprovalStatus == PostApprovalStatus.Pending,
+            post.IsAnonymous
+        ));
+    }
     }
 }

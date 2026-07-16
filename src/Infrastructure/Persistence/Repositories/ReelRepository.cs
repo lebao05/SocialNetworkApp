@@ -4,6 +4,8 @@ using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
+using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Repositories
 {
@@ -22,6 +24,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(reel => reel.Author)
                 .Include(reel => reel.Comments)
                 .Include(reel => reel.Reactions)
+                .Where(reel => reel.DeletedAt == null && reel.Visibility != ReelVisibility.Private)
                 .FirstOrDefaultAsync(reel => reel.Id == id, cancellationToken);
         }
 
@@ -145,19 +148,18 @@ namespace Infrastructure.Persistence.Repositories
             _context.Reels.Remove(reel);
         }
 
-        public async Task<PagedList<Application.DTOs.Search.SearchReelDto>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<PagedList<Application.DTOs.Search.SearchReelDto>> SearchAsync(Guid userId,string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.Reels
                 .AsNoTracking()
                 .Include(r => r.Author)
                 .Where(r => r.DeletedAt == null);
+            query = ApplyReelVisibility(query, userId);
 
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
-                var term = searchQuery.ToLower();
-                query = query.Where(r =>
-                    (r.Caption != null && r.Caption.ToLower().Contains(term)) ||
-                    (r.AudioTitle != null && r.AudioTitle.ToLower().Contains(term)));
+                query = query.Where(u => EF.Property<NpgsqlTsVector>(u, "SearchVector")
+                    .Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
             }
 
             var reels = await query
@@ -184,5 +186,24 @@ namespace Infrastructure.Persistence.Repositories
 
             return new PagedList<Application.DTOs.Search.SearchReelDto>(dtos, page, pageSize, totalCount);
         }
+
+        private IQueryable<Reel> ApplyReelVisibility(IQueryable<Reel> query, Guid viewerId)
+        {
+            // If viewerId is null, treat them as an unauthenticated guest user (Public only)
+            return query.Where(r =>
+                r.Visibility == ReelVisibility.Public
+                || 
+                    (r.Visibility == ReelVisibility.Private
+                        && r.AuthorId == viewerId)
+                    || (r.Visibility == ReelVisibility.Friends
+                        && (r.AuthorId == viewerId
+                            || _context.Friendships.Any(fr =>
+                                (fr.User1Id == viewerId && fr.User2Id == r.AuthorId) ||
+                                (fr.User2Id == viewerId && fr.User1Id == r.AuthorId))))              
+                
+            );
+        }
     }
+
+     
 }

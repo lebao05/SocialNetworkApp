@@ -21,6 +21,7 @@ namespace Application.Reels.Queries.SearchReels
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
             var result = await _reelRepository.SearchAsync(
+                request.userId,
                 request.SearchQuery,
                 page,
                 pageSize,

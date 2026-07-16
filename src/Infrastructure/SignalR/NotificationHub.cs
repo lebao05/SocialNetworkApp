@@ -8,9 +8,9 @@ namespace Infrastructure.SignalR;
 [Authorize]
 public class NotificationHub : Hub
 {
-    private readonly IPresenceTracker _presenceTracker;
+    private readonly INotificationPresenceTracker _presenceTracker;
 
-    public NotificationHub(IPresenceTracker presenceTracker)
+    public NotificationHub(INotificationPresenceTracker presenceTracker)
     {
         _presenceTracker = presenceTracker;
     }

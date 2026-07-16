@@ -6,7 +6,7 @@ namespace Application.Users.Queries.SearchUsers
 {
     public sealed record SearchUsersQuery(
         string? SearchQuery,
-        Guid? CurrentUserId,
+        Guid CurrentUserId,
         int Page = 1,
         int PageSize = 20
     ) : IQuery<PagedList<SearchUserDto>>;

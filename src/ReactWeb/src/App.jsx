@@ -21,7 +21,10 @@ import BirthdaysPage from "./pages/BirthdaysPage";
 import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryPage from "./pages/StoryPage";
 import PostDetailPage from "./pages/PostDetailPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { SearchEngineProvider } from "./contexts/SearchEngineContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 export default function App() {
   const location = useLocation();
@@ -36,7 +39,8 @@ export default function App() {
       }
       : location);
   return (
-    <>
+    <SearchEngineProvider>
+      <NotificationProvider>
       {/* Background routes */}
       <Routes location={backgroundLocation || location}>
         <Route path="/sign-in" element={<SigninPage />} />
@@ -46,6 +50,7 @@ export default function App() {
         <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
         <Route path="/saved" element={<ProtectedRoute><SavedPage /></ProtectedRoute>} />
         <Route path="/birthdays" element={<ProtectedRoute><BirthdaysPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/watch" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
         <Route path="/watch/:reelId" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
         <Route path="/reels" element={<ProtectedRoute><ReelsPage /></ProtectedRoute>} />
@@ -75,6 +80,7 @@ export default function App() {
           />
         </Routes>
       )}
-    </>
+    </NotificationProvider>
+    </SearchEngineProvider>
   );
 }

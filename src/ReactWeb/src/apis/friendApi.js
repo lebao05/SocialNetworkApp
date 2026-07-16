@@ -105,6 +105,17 @@ export async function unfollowUserApi(userId) {
 }
 
 /**
+ * Returns online states for a batch of user ids.
+ * Maps to POST /api/users/online-state.
+ * @param {string[]} userIds - Array of Guid strings.
+ * @returns {Promise<Record<string, boolean>>} { "<userId>": true|false, ... }
+ */
+export async function getPeopleOnlineStateApi(userIds) {
+    const response = await axios.post("/users/online-state", { userIds });
+    return response.data;
+}
+
+/**
  * Removes a friendship (unfriends a user).
  * Maps to DELETE /api/friend/{friendUserId}.
  */

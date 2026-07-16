@@ -20,15 +20,15 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 const privacyOptions = [
   {
     value: "public",
-    label: "Cong khai",
+    label: "Public",
     icon: Globe2,
-    description: "Bat ky ai cung co the nhin thay moi nguoi trong nhom va nhung gi ho dang.",
+    description: "Anyone can see everyone in the group and what they post.",
   },
   {
     value: "private",
-    label: "Rieng tu",
+    label: "Private",
     icon: LockKeyhole,
-    description: "Chi thanh vien moi nhin thay moi nguoi trong nhom va nhung gi ho dang.",
+    description: "Only members can see everyone in the group and what they post.",
   },
 ];
 
@@ -60,7 +60,7 @@ export default function GroupsCreatePage() {
   );
   const selectedPrivacy = privacyOptions.find((option) => option.value === privacy) || privacyOptions[0];
   const SelectedPrivacyIcon = selectedPrivacy.icon;
-  const previewName = groupName.trim() || "Ten nhom";
+  const previewName = groupName.trim() || "Group name";
 
   const handleCreate = async () => {
     const name = groupName.trim();
@@ -81,9 +81,9 @@ export default function GroupsCreatePage() {
 
       <aside className="fixed bottom-0 left-0 top-14 z-30 flex w-full flex-col border-r border-[#dddfe2] bg-white shadow-sm sm:w-[360px]">
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <p className="text-[12px] text-[#65676b]">Nhom / Tao nhom</p>
+          <p className="text-[12px] text-[#65676b]">Groups / Create group</p>
           <div className="mt-1 flex items-center justify-between gap-3">
-            <h1 className="text-[24px] font-bold">Tao nhom</h1>
+            <h1 className="text-[24px] font-bold">Create group</h1>
             <Link to="/groups" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4e6eb] hover:bg-[#d8dadf]">
               <X size={20} />
             </Link>
@@ -93,16 +93,16 @@ export default function GroupsCreatePage() {
             <img src={displayUser.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
             <div>
               <div className="text-[14px] font-semibold">{displayUser.name}</div>
-              <div className="text-[12px] text-[#65676b]">Quan tri vien</div>
+              <div className="text-[12px] text-[#65676b]">Admin</div>
             </div>
           </div>
 
           <label className="mt-6 block">
-            <span className="sr-only">Ten nhom</span>
+            <span className="sr-only">Group name</span>
             <input
               value={groupName}
               onChange={(event) => setGroupName(event.target.value)}
-              placeholder="Ten nhom"
+              placeholder="Group name"
               className="h-14 w-full rounded-lg border border-[#ccd0d5] px-4 text-[15px] outline-none focus:border-[#0866ff] focus:ring-2 focus:ring-[#0866ff]/25"
             />
           </label>
@@ -117,7 +117,7 @@ export default function GroupsCreatePage() {
                 <SelectedPrivacyIcon size={18} fill="currentColor" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-semibold text-[#0866ff]">Chon quyen rieng tu</span>
+                        <span className="block text-[12px] font-semibold text-[#0866ff]">Choose privacy</span>
                 <span className="block text-[15px] font-semibold">{selectedPrivacy.label}</span>
               </span>
               <ChevronDown size={18} />
@@ -156,9 +156,9 @@ export default function GroupsCreatePage() {
           </div>
 
           <p className="mt-3 text-[13px] leading-snug text-[#65676b]">
-            Bat ky ai cung co the nhin thay moi nguoi trong nhom va nhung gi ho dang. Ban co the thay doi nhom thanh rieng tu sau. Tim hieu them ve{" "}
+            Anyone can see everyone in the group and what they post. You can change the group to private later. Learn more about{" "}
             <button type="button" className="font-semibold text-[#0866ff] hover:underline">
-              quyen rieng tu cua nhom
+              group privacy
             </button>
             .
           </p>
@@ -173,7 +173,7 @@ export default function GroupsCreatePage() {
             disabled={!groupName.trim() || loading}
             className="h-10 w-full rounded-md bg-[#0866ff] text-[14px] font-semibold text-white hover:bg-[#075ce5] disabled:cursor-not-allowed disabled:bg-[#e4e6eb] disabled:text-[#bcc0c4]"
           >
-            {loading ? "Dang tao..." : "Tao"}
+            {loading ? "Creating..." : "Create"}
           </button>
         </div>
       </aside>
@@ -182,7 +182,7 @@ export default function GroupsCreatePage() {
         <div className="flex min-h-[calc(100vh-56px)] items-start justify-center p-8">
           <section className="w-full max-w-[900px] rounded-lg bg-white p-4 shadow-md ring-1 ring-black/10">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[14px] font-bold">Xem truoc tren may tinh</h2>
+              <h2 className="text-[14px] font-bold">Preview on desktop</h2>
               <div className="flex items-center gap-2 text-[#65676b]">
                 <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f3ff] text-[#0866ff]">
                   <Monitor size={18} />
@@ -204,17 +204,17 @@ export default function GroupsCreatePage() {
                 <h1 className="text-[28px] font-bold leading-tight">{previewName}</h1>
                 <div className="mt-1 flex items-center gap-1 text-[14px] text-[#65676b]">
                   <SelectedPrivacyIcon size={14} fill="currentColor" />
-                  <span>Nhom {selectedPrivacy.label}</span>
+                  <span>{selectedPrivacy.label} group</span>
                   <span>-</span>
-                  <span>1 thanh vien</span>
+                  <span>1 member</span>
                 </div>
 
                 <div className="mt-5 border-t border-[#ced0d4]">
                   <nav className="flex items-center gap-2">
-                    <PreviewTab active>Gioi thieu</PreviewTab>
-                    <PreviewTab>Bai viet</PreviewTab>
-                    <PreviewTab>Thanh vien</PreviewTab>
-                    <PreviewTab>Su kien</PreviewTab>
+                    <PreviewTab active>Intro</PreviewTab>
+                    <PreviewTab>Posts</PreviewTab>
+                    <PreviewTab>Members</PreviewTab>
+                    <PreviewTab>Events</PreviewTab>
                   </nav>
                 </div>
               </div>
@@ -223,17 +223,17 @@ export default function GroupsCreatePage() {
                 <div className="rounded-lg border border-[#dddfe2] bg-white p-4 opacity-60">
                   <div className="flex items-center gap-3">
                     <UserCircle size={36} className="text-[#bcc0c4]" />
-                    <div className="h-10 flex-1 rounded-full bg-[#f0f2f5] px-4 py-3 text-[14px] text-[#8a8d91]">Ban dang nghi gi?</div>
+                    <div className="h-10 flex-1 rounded-full bg-[#f0f2f5] px-4 py-3 text-[14px] text-[#8a8d91]">What's on your mind?</div>
                   </div>
                   <div className="mt-4 grid grid-cols-3 border-t border-[#f0f2f5] pt-3 text-center text-[13px] font-semibold text-[#8a8d91]">
-                    <span>Anh/video</span>
-                    <span>Gan the nguoi khac</span>
-                    <span>Cam xuc/Hoat dong</span>
+                    <span>Photo/video</span>
+                    <span>Tag people</span>
+                    <span>Feeling/activity</span>
                   </div>
                 </div>
 
                 <aside className="rounded-lg border border-[#dddfe2] bg-white p-4">
-                  <h2 className="mb-3 text-[17px] font-bold">Gioi thieu</h2>
+                  <h2 className="mb-3 text-[17px] font-bold">Intro</h2>
                   <div className="space-y-3">
                     <div className="flex gap-3">
                       <SelectedPrivacyIcon size={18} fill="currentColor" />
@@ -245,8 +245,8 @@ export default function GroupsCreatePage() {
                     <div className="flex gap-3">
                       <Circle size={18} fill="currentColor" />
                       <div>
-                        <div className="text-[14px] font-bold">Hien thi</div>
-                        <div className="text-[13px] leading-snug text-[#65676b]">Ai cung co the tim thay nhom nay.</div>
+                        <div className="text-[14px] font-bold">Visibility</div>
+                        <div className="text-[13px] leading-snug text-[#65676b]">Anyone can find this group.</div>
                       </div>
                     </div>
                   </div>

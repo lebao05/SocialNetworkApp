@@ -1,3 +1,4 @@
+using Application.Abstractions.SignalR;
 using Application.Friend.Commands.AcceptFriendRequest;
 using Application.Users.Queries.GetUpcomingBirthdays;
 using Application.Users.Queries.GetTodayBirthdays;
@@ -36,8 +37,13 @@ namespace Presentation.Controllers
     [Route("api/users")]
     public class UserController : ApiController
     {
-        public UserController(ISender sender) : base(sender)
+        private readonly IPresenceTracker _presenceTracker;
+
+        public UserController(
+            ISender sender,
+            IPresenceTracker presenceTracker) : base(sender)
         {
+            _presenceTracker = presenceTracker;
         }
 
         [HttpGet("profile")]
@@ -101,7 +107,11 @@ namespace Presentation.Controllers
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
-            var query = new SearchUsersQuery(q, userId, page, pageSize);
+            if(userId == null)
+            {
+                return Unauthorized();
+            }
+            var query = new SearchUsersQuery(q, userId.Value, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -235,6 +245,39 @@ namespace Presentation.Controllers
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        /// <summary>
+        /// Returns the online state of the requested users. Backed by the shared
+        /// chat presence tracker, which is populated by <see cref="ChatHub"/>
+        /// on connect/disconnect.
+        /// </summary>
+        [HttpPost("online-state")]
+        public IActionResult GetPeopleOnlineState(
+            [FromBody] GetOnlineStateRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (request?.UserIds is null || request.UserIds.Count == 0)
+            {
+                return Ok(new Dictionary<string, bool>());
+            }
+
+            // Cap the input to avoid abuse / oversized payloads.
+            const int MaxBatchSize = 200;
+            if (request.UserIds.Count > MaxBatchSize)
+            {
+                return BadRequest($"At most {MaxBatchSize} user ids are allowed per request.");
+            }
+
+            var uniqueIds = new HashSet<Guid>(request.UserIds);
+            var states = new Dictionary<string, bool>(uniqueIds.Count);
+            foreach (var userId in uniqueIds)
+            {
+                var isOnline = _presenceTracker.IsOnline(userId.ToString());
+                states[userId.ToString()] = isOnline;
+            }
+
+            return Ok(states);
         }
 
         private Guid? GetCurrentUserId()

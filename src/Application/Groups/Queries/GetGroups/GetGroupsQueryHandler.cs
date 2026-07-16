@@ -9,9 +9,9 @@ namespace Application.Groups.Queries.GetGroups;
 internal sealed class GetGroupsQueryHandler
     : IQueryHandler<GetGroupsQuery, PagedList<GroupCardDto>>
 {
-    private readonly IGroupListingRepository _repository;
+    private readonly IGroupRepository _repository;
 
-    public GetGroupsQueryHandler(IGroupListingRepository repository) => _repository = repository;
+    public GetGroupsQueryHandler(IGroupRepository repository) => _repository = repository;
 
     public async Task<Result<PagedList<GroupCardDto>>> Handle(
         GetGroupsQuery request,

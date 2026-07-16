@@ -11,7 +11,6 @@ public class CallHub : Hub
 {
     private readonly IUserRepository _userRepository;
     private readonly ICallHubNotifier _callHubNotifier;
-
     public CallHub(
         IUserRepository userRepository,
         ICallHubNotifier callHubNotifier)

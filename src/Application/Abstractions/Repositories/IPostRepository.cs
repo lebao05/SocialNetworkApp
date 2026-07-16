@@ -39,6 +39,6 @@ namespace Application.Abstractions.Repositories
         Task<PagedList<SavedPost>> GetSavedPostsPagedAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
         void AddSavedPost(SavedPost savedPost);
         void RemoveSavedPost(SavedPost savedPost);
-        Task<PagedList<Post>> SearchAsync(string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedList<PostDto>> SearchAsync(Guid userId, string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
     }
 }

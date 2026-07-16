@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
-  MessageCircle,
   Bell,
   Grid3X3,
   ChevronDown,
@@ -18,6 +17,9 @@ import {
 import { GrGroup } from "react-icons/gr";
 import { useAuth } from "../../contexts/authContext";
 import { useChat } from "../../contexts/ChatContext";
+import { useNotificationContext } from "../../contexts/NotificationContext";
+import { useSearchEngineContext } from "../../contexts/SearchEngineContext";
+import NotificationDropdown from "./NotificationDropdown";
 import { getSystemMessagePreview } from "../../utils/systemMessage";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
@@ -198,18 +200,26 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const { conversations } = useChat();
+  const { unseenCount } = useNotificationContext();
+  const { query, search } = useSearchEngineContext();
   const [showMessenger, setShowMessenger] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const [searchInputValue, setSearchInputValue] = useState("");
   const messengerRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const isMessengerPage = location.pathname.startsWith("/messenger");
+  const isNotificationsPage = location.pathname.startsWith("/notifications");
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
 
   useEffect(() => {
     const handler = (e) => {
       if (messengerRef.current && !messengerRef.current.contains(e.target)) {
         setShowMessenger(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -223,10 +233,15 @@ export default function Navbar() {
     { icon: GrGroup, path: "/groups" },
   ];
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    const query = searchValue.trim();
-    navigate(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+  const handleSearchKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      search(searchInputValue.trim());
+      setSearchFocused(false);
+      if (location.pathname !== "/search") {
+        navigate("/search");
+      }
+    }
   };
 
   return (
@@ -241,8 +256,7 @@ export default function Navbar() {
             <path d="M36 18C36 8.059 27.941 0 18 0S0 8.059 0 18c0 8.988 6.584 16.436 15.188 17.79V23.25h-4.57V18h4.57v-3.956c0-4.513 2.686-7.006 6.797-7.006 1.97 0 4.03.352 4.03.352v4.43h-2.27c-2.236 0-2.932 1.387-2.932 2.81V18h4.992l-.798 5.25h-4.194V35.79C29.416 34.437 36 26.988 36 18z" />
           </svg>
         </Link>
-        <form
-          onSubmit={handleSearchSubmit}
+        <div
           className={`flex items-center bg-[#F0F2F5] rounded-full px-3 py-2 gap-2 transition-all
             ${searchFocused ? "ring-2 ring-fb-blue" : ""}`}
         >
@@ -250,12 +264,13 @@ export default function Navbar() {
           <input
             className="bg-transparent outline-none text-sm w-44 placeholder-fb-subtext"
             placeholder="Search on Facebook"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
+            value={searchInputValue}
+            onChange={(event) => setSearchInputValue(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
-        </form>
+        </div>
       </div>
 
       {/* ── Center Tabs ── */}
@@ -283,9 +298,14 @@ export default function Navbar() {
           </div>
         )}
 
-        <ActionBtn badge={5}>
-          <Bell size={18} />
-        </ActionBtn>
+        {!isNotificationsPage && (
+          <div className="relative" ref={notificationRef}>
+            <ActionBtn badge={unseenCount} active={showNotifications} onClick={() => setShowNotifications((v) => !v)}>
+              <Bell size={18} />
+            </ActionBtn>
+            {showNotifications && <NotificationDropdown onClose={() => setShowNotifications(false)} />}
+          </div>
+        )}
 
         <Link to="/profile" className="flex items-center gap-0.5 cursor-pointer group">
           <img
