@@ -20,20 +20,27 @@ namespace Application.Reels.Queries.GetRecommendedReels
 
         public async Task<Result<PagedList<ReelDto>>> Handle(GetRecommendedReelsQuery request, CancellationToken cancellationToken)
         {
-            var since = DateTime.UtcNow - TimeSpan.FromDays(3);
+            var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
-            var recentReels = (await _reelRepository.GetRecentReelsAsync(since, cancellationToken))
+            var query = (await _reelRepository.GetRecentReelsAsync(request.UserId, DateTime.UtcNow - TimeSpan.FromDays(100), cancellationToken))
                 .Where(r => r.DeletedAt is null && r.Visibility != ReelVisibility.Private)
                 .OrderByDescending(r => r.CreatedAt)
-                .ToList();
+                .ThenByDescending(r => r.Id);
 
-            var pageSize = Math.Clamp(request.PageSize, 1, 100);
-            var taken = recentReels.Take(pageSize).ToList();
+            // Keyset pagination: skip past the cursor so we never return duplicate reels.
+            if (request.LastReelId is { } lastId)
+            {
+                var cursor = query.FirstOrDefault(r => r.Id == lastId);
+                if (cursor is not null)
+                {
+                    var cursorCreatedAt = cursor.CreatedAt;
+                    query = (IOrderedEnumerable<Reel>)query.Where(r => r.Id != lastId);
+                }
+            }
 
-            var items = taken.Select(r => Map(r, request.UserId)).ToList();
-            var totalCount = recentReels.Count;
+            var items = query.Take(pageSize).Select(r => Map(r, request.UserId)).ToList();
 
-            return Result.Success(new PagedList<ReelDto>(items, 1, pageSize, totalCount));
+            return Result.Success(new PagedList<ReelDto>(items, 1, pageSize, items.Count));
         }
 
         private static ReelDto Map(Reel reel, Guid currentUserId)
@@ -60,7 +67,7 @@ namespace Application.Reels.Queries.GetRecommendedReels
                 reel.ViewCount,
                 reel.CreatedAt,
                 reel.UpdatedAt,
-                IsOwnReel: false,
+                IsOwnReel: reel.AuthorId == currentUserId,
                 IsLikedByCurrentUser: hasUserReaction);
         }
     }

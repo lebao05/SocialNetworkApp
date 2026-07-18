@@ -52,6 +52,7 @@ namespace Presentation.Controllers
         [HttpGet("recommended")]
         public async Task<IActionResult> GetRecommendedReels(
             [FromQuery] int pageSize = 12,
+            [FromQuery] long? lastReelId = null,
             CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -61,7 +62,7 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var query = new GetRecommendedReelsQuery(userId, pageSize);
+            var query = new GetRecommendedReelsQuery(userId, pageSize, lastReelId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -72,7 +73,8 @@ namespace Presentation.Controllers
             [FromQuery] int pageSize = 6,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetTopReelsQuery(pageSize);
+            var userId = ClaimsPrincipalExtensions.GetUserId(User);
+            var query = new GetTopReelsQuery(userId, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
@@ -229,6 +231,22 @@ namespace Presentation.Controllers
         }
 
         [HttpDelete("{reelId:long}")]
+        public async Task<IActionResult> DeleteReel(long reelId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new DeleteReelCommand(userId, reelId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess
+                ? Ok(new { id = reelId })
+                : HandleFailure(result);
+        }
 
         [HttpPost("{storyId:long}/seen")]
         public async Task<IActionResult> MarkStoryAsSeen(long storyId, CancellationToken cancellationToken = default)

@@ -4,53 +4,99 @@ import { Camera, Play } from "lucide-react";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
+// ── Avatar + ring sizing ─────────────────────────────────────────────────────
+// Three properties per size:
+//   - avatarPx: outer colored disc diameter (= avatar diameter + 2*ringW)
+//   - ringW:    thickness of the colorful ring around the avatar
+//   - innerPx:  diameter of the avatar circle inside the ring
+const RING_SIZE = {
+  xl: { avatarPx: 168, ringW: 8,  innerPx: 152 },
+  md: { avatarPx: 168, ringW: 6,  innerPx: 156 },
+  lg: { avatarPx: 72,  ringW: 5,  innerPx: 62  },
+  sm: { avatarPx: 44,  ringW: 3,  innerPx: 38  },
+};
+
+// ── Animated colorful ring ───────────────────────────────────────────────────
+// A conic-gradient on a square div, rotated around its center — looks like a
+// spinning ring of color surrounding the avatar. Two speeds:
+//   - "unseen" stories: full rainbow, ~6s per revolution (eye-catching)
+//   - "seen" stories:    cool greens-blues, ~12s per revolution (calmer)
+const RING_GRADIENT_UNSEEN =
+  "conic-gradient(from 0deg, #f9ca24, #f0932b, #eb4d4b, #a55eea, #686de0, #1877f2, #25d366, #f9ca24)";
+const RING_GRADIENT_SEEN =
+  "conic-gradient(from 0deg, #25d366, #2dd4bf, #0ea5e9, #6366f1, #2dd4bf, #25d366)";
+
+const keyframes = `
+  @keyframes story-ring-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes story-ring-spin-reverse {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .story-ring-anim { animation: none !important; }
+  }
+`;
+
+if (typeof document !== "undefined" && !document.getElementById("story-ring-keyframes")) {
+  const styleEl = document.createElement("style");
+  styleEl.id = "story-ring-keyframes";
+  styleEl.textContent = keyframes;
+  document.head.appendChild(styleEl);
+}
+
 // ─── Story Ring ──────────────────────────────────────────────────────────────
 function StoryRing({ children, hasActiveStories, hasUnseenStories = true, size = "md" }) {
-  const sizeClasses = {
-    xl: "w-[168px] h-[168px] p-[4px]",
-    sm: "w-[44px] h-[44px] p-[2px]",
-    md: "w-[168px] h-[168px] p-[3px]",
-    lg: "w-[72px] h-[72px] p-[3px]",
-  };
+  const { avatarPx, ringW, innerPx } = RING_SIZE[size];
 
-  const innerSizes = {
-    xl: "w-[160px] h-[160px]",
-    sm: "w-[40px] h-[40px]",
-    md: "w-[162px] h-[162px]",
-    lg: "w-[66px] h-[66px]",
-  };
-
-  // If no stories exist, show a standard neutral border matching the card background (white/dark card bg)
+  // If no stories exist, show a standard neutral ring matching the card.
   if (!hasActiveStories) {
     return (
-      <div className={`${sizeClasses[size]} rounded-full bg-white dark:bg-[#242526] shrink-0`}>
-        <div className="w-full h-full rounded-full bg-white p-[3px] dark:bg-[#242526]">
-          <div className={`w-full h-full rounded-full overflow-hidden ${innerSizes[size]}`}>
-            {children}
-          </div>
+      <div
+        className="rounded-full bg-white dark:bg-[#242526] shrink-0"
+        style={{ width: avatarPx, height: avatarPx }}
+      >
+        <div
+          className="rounded-full overflow-hidden bg-white dark:bg-[#242526]"
+          style={{ width: innerPx, height: innerPx, margin: ringW }}
+        >
+          {children}
         </div>
       </div>
     );
   }
 
-  // If active stories exist but they have all been seen, the ring is gray
-  if (!hasUnseenStories) {
-    return (
-      <div className={`${sizeClasses[size]} rounded-full bg-[#e4e6eb] dark:bg-[#3e4042] shrink-0 cursor-pointer`}>
-        <div className="w-full h-full rounded-full bg-white p-[3px] dark:bg-[#18191a]">
-          <div className={`w-full h-full rounded-full overflow-hidden ${innerSizes[size]}`}>
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Pick gradient + animation based on seen/unseen.
+  const isUnseen = hasUnseenStories;
+  const gradient = isUnseen ? RING_GRADIENT_UNSEEN : RING_GRADIENT_SEEN;
+  const animation = isUnseen
+    ? "story-ring-spin 6s linear infinite"
+    : "story-ring-spin-reverse 12s linear infinite";
 
-  // Active unseen stories get the vibrant gradient ring
+  // Wrapper = the full colored disc. The colorful ring lives BETWEEN this
+  // outer circle and the inset avatar circle. Rotating the wrapper animates
+  // the ring like a spinning color wheel.
   return (
-    <div className={`${sizeClasses[size]} rounded-full p-[3px] bg-gradient-to-tr from-[#f9ca24] via-[#f0932b] via-30% via-[#eb4d4b] via-60% via-[#a55eea] to-[#686de0] shrink-0 cursor-pointer`}>
-      <div className="w-full h-full rounded-full bg-white p-[3px] dark:bg-[#18191a]">
-        <div className={`w-full h-full rounded-full overflow-hidden ${innerSizes[size]}`}>
+    <div
+      className="story-ring-anim rounded-full shrink-0 cursor-pointer relative"
+      style={{
+        width: avatarPx,
+        height: avatarPx,
+        background: gradient,
+        animation,
+        transformOrigin: "50% 50%",
+      }}
+    >
+      {/* White inset that masks the gradient into a ring, then clips the avatar. */}
+      <div
+        className="rounded-full bg-white dark:bg-[#18191a]"
+        style={{ position: "absolute", inset: ringW }}
+      >
+        <div
+          className="rounded-full overflow-hidden w-full h-full"
+        >
           {children}
         </div>
       </div>

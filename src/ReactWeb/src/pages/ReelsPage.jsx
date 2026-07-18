@@ -14,7 +14,9 @@ export default function ReelsPage() {
     reelsList,
     isLoading,
     isLoadingMore,
+    hasMore,
     fetchRecommended,
+    fetchMore,
     fetchRecommendedWithReel,
     updateReel,
     removeReel,
@@ -39,7 +41,7 @@ export default function ReelsPage() {
 
   // Track reelId changes → set slide animation
   const prevIndexRef = useRef(-1);
-
+  console.log(reelsList);
   useEffect(() => {
     if (!reelIdParam) return;
     const direction = prevIndexRef.current < chosenIndex ? "down" : "up";
@@ -94,6 +96,9 @@ export default function ReelsPage() {
       if (e.deltaY > 0) {
         if (chosenIndex < reelsList.length - 1) {
           navigateToReel(reelsList[chosenIndex + 1].id, "down");
+        } else if (hasMore && !isLoadingMore) {
+          // Hit the bottom of the list — load more
+          fetchMore();
         }
       } else {
         if (chosenIndex > 0) {
@@ -105,7 +110,7 @@ export default function ReelsPage() {
     // Capture phase so no child element can stopPropagation on the event
     document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
     return () => document.removeEventListener("wheel", handleWheel, { capture: true });
-  }, [chosenIndex, reelsList, navigateToReel]);
+  }, [chosenIndex, reelsList, hasMore, isLoadingMore, navigateToReel, fetchMore]);
 
   // Handle like
   const handleLike = useCallback(async (reelId) => {
@@ -129,13 +134,25 @@ export default function ReelsPage() {
 
   // Handle delete
   const handleDelete = useCallback(async (reelId) => {
+    const idx = reelsList.findIndex((r) => r.id === reelId);
+    if (idx === -1) return;
+
+    // Pick a neighbor BEFORE mutating the list.
+    // Default: move down to the next reel. Fall back to the previous one if there's no next.
+    const hasNext = idx + 1 < reelsList.length;
+    const targetReel = hasNext ? reelsList[idx + 1] : reelsList[idx - 1];
+
     await deleteReelApi(reelId);
     removeReel(reelId);
 
-    const updatedList = reelsList.filter((r) => r.id !== reelId);
-    if (updatedList.length > 0) {
-      const next = reelsList.find((r) => r.id === reelId) ?? reelsList[0];
-      navigate(`/watch?reelId=${next.id}`, { replace: true });
+    if (targetReel) {
+      // Use the same direction convention as navigateToReel:
+      //   moving down (toward a higher index) → 'down'
+      //   moving up (toward a lower index) → 'up'
+      const direction = hasNext ? "down" : "up";
+      prevIndexRef.current = idx;
+      setSlideAnim({ direction, reelId: String(targetReel.id) });
+      navigate(`/watch?reelId=${targetReel.id}`, { replace: true });
     } else {
       navigate("/watch", { replace: true });
     }
@@ -209,7 +226,6 @@ export default function ReelsPage() {
               onClose={goClose}
               onLike={handleLike}
               onDelete={handleDelete}
-              canDelete={reelChosen.isOwnReel}
               direction={slideAnim?.direction ?? null}
             />
           </div>
@@ -220,6 +236,31 @@ export default function ReelsPage() {
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-white backdrop-blur-sm">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             <span className="text-sm font-medium">Loading more...</span>
+          </div>
+        )}
+
+        {/* Manual "Load more" button — only visible on the last reel when more are available */}
+        {!isLoadingMore && hasMore && chosenIndex === reelsList.length - 1 && reelsList.length > 0 && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
+            <button
+              type="button"
+              onClick={() => fetchMore()}
+              className="flex items-center gap-2 rounded-full bg-white/95 px-5 py-2 text-sm font-medium text-[#1877f2] shadow-lg ring-1 ring-[#1877f2]/20 transition hover:bg-white hover:ring-[#1877f2]/40 active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+              Load more reels
+            </button>
+          </div>
+        )}
+
+        {/* End-of-feed message — when there is nothing more to load */}
+        {!hasMore && reelsList.length > 0 && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
+            <span className="rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white backdrop-blur-sm">
+              You're all caught up
+            </span>
           </div>
         )}
       </div>

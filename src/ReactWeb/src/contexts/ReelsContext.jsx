@@ -116,7 +116,7 @@ export function ReelsProvider({ children }) {
   const fetchRecommended = useCallback(async () => {
     dispatch({ type: "SET_LOADING", value: true });
     try {
-      const data = await getRecommendedReelsApi();
+      const data = await getRecommendedReelsApi({ pageSize: 12 });
       const items = data.items ?? [];
       const normalized = items.map(normalizeReel);
       dispatch({
@@ -131,6 +131,29 @@ export function ReelsProvider({ children }) {
       return null;
     }
   }, []);
+
+  const fetchMore = useCallback(async () => {
+    if (!state.hasMore || state.isLoadingMore || state.isLoading || state.reelsList.length === 0) {
+      return null;
+    }
+    const lastReelId = state.reelsList[state.reelsList.length - 1].id;
+    dispatch({ type: "SET_LOADING_MORE", value: true });
+    try {
+      const data = await getRecommendedReelsApi({ pageSize: 12, lastReelId });
+      const items = data.items ?? [];
+      const normalized = items.map(normalizeReel);
+      dispatch({
+        type: "APPEND_REELS",
+        reels: normalized,
+        hasMore: Boolean(data.hasNextPage),
+      });
+      return normalized;
+    } catch (err) {
+      console.error("[ReelsContext] fetchMore failed:", err);
+      dispatch({ type: "SET_LOADING_MORE", value: false });
+      return null;
+    }
+  }, [state.hasMore, state.isLoadingMore, state.isLoading, state.reelsList]);
 
   const fetchRecommendedWithReel = useCallback(async (targetReelId) => {
     dispatch({ type: "SET_LOADING", value: true });
@@ -178,6 +201,7 @@ export function ReelsProvider({ children }) {
     isLoadingMore: state.isLoadingMore,
     error: state.error,
     fetchRecommended,
+    fetchMore,
     fetchRecommendedWithReel,
     setReels,
     updateReel,

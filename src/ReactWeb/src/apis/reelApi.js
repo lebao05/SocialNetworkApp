@@ -7,9 +7,9 @@ export async function getUserReelsApi(userId, page = 1, pageSize = 12) {
   return response.data;
 }
 
-export async function getRecommendedReelsApi(pageSize = 12) {
+export async function getRecommendedReelsApi({ pageSize = 12, lastReelId = null } = {}) {
   const response = await axios.get("/reels/recommended", {
-    params: { pageSize },
+    params: { pageSize, lastReelId },
   });
   return response.data;
 }

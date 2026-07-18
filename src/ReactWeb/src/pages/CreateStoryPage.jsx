@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  X, Camera, Image, Type, Palette, Shuffle, Sparkles, LayoutPanelLeft, Play
+  X, Camera, Image, Type, Palette, Shuffle, Sparkles, LayoutPanelLeft, Play, Loader2
 } from "lucide-react";
 import { useAuth } from "../contexts/authContext";
 import { useStories } from "../contexts/StoriesContext";
@@ -545,13 +545,24 @@ export default function CreateStoryPage() {
                 type="button"
                 onClick={handleShareStory}
                 disabled={!canShare || isCreatingStory}
-                className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition ${
+                aria-busy={isCreatingStory}
+                aria-label={isCreatingStory ? "Sharing your story" : "Share story"}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
                   canShare && !isCreatingStory
-                    ? "cursor-pointer bg-[#0866ff] text-white hover:bg-[#0757d8]"
-                    : "cursor-not-allowed bg-[#e4e6eb] text-[#bcc0c4]"
+                    ? "cursor-pointer bg-[#0866ff] text-white hover:bg-[#0757d8] active:scale-[0.99]"
+                    : isCreatingStory
+                      ? "cursor-wait bg-[#0866ff]/85 text-white"
+                      : "cursor-not-allowed bg-[#e4e6eb] text-[#bcc0c4]"
                 }`}
               >
-                {isCreatingStory ? "Sharing..." : "Share story"}
+                {isCreatingStory ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin shrink-0" aria-hidden="true" />
+                    <span>Sharing…</span>
+                  </>
+                ) : (
+                  <span>Share story</span>
+                )}
               </button>
             </div>
           </div>

@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Send, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, MessageCircle, Send, X, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createConversationApi, getConversationByUserIdApi } from "../../apis/conversationApi";
 import { sendMessageApi } from "../../apis/messageApi";
 import { markStoryAsSeenApi, toggleStoryLikeApi } from "../../apis/storyApi";
 
 const TEXT_IMAGE_DURATION = 10000;
+
+function formatCount(n) {
+  const num = Number(n) || 0;
+  if (num < 1000) return String(num);
+  if (num < 1_000_000) {
+    const v = (num / 1000).toFixed(num % 1000 < 100 ? 1 : 0);
+    return `${v.replace(/\.0$/, "")}K`;
+  }
+  const v = (num / 1_000_000).toFixed(num % 1_000_000 < 100_000 ? 1 : 0);
+  return `${v.replace(/\.0$/, "")}M`;
+}
 
 function ProgressBar({ filled, width }) {
   return (
@@ -183,13 +194,11 @@ function UserStoryStage({
             className="h-9 w-9 rounded-full border-2 border-white object-cover"
           />
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold leading-tight text-white">
-                {group?.user}
-              </span>
-            </div>
+            <span className="text-[13px] font-semibold leading-tight text-white">
+              {group?.user}
+            </span>
             <span className="text-[11px] leading-tight text-white/60">
-              {story.timestamp || "Just now"} · {viewCount} views · {likeCount} likes
+              {story.timestamp || "Just now"}
             </span>
           </div>
         </Link>
@@ -258,6 +267,29 @@ function UserStoryStage({
           >
             <ChevronRight size={22} />
           </button>
+        </div>
+
+        {/* Views + likes — prominent row above the reply input */}
+        <div className="mb-3 flex items-center justify-center gap-6 rounded-2xl bg-black/40 px-4 py-2.5 backdrop-blur-md">
+          <div className="flex items-center gap-2 text-white">
+            <Eye size={20} strokeWidth={2.5} className="text-white/85" />
+            <span className="text-xl font-bold leading-none tabular-nums">
+              {formatCount(viewCount)}
+            </span>
+            <span className="text-[13px] font-medium text-white/80">views</span>
+          </div>
+          <span className="h-6 w-px bg-white/25" />
+          <div className="flex items-center gap-2 text-white">
+            <Heart
+              size={20}
+              strokeWidth={2.5}
+              className={isLiked ? "fill-red-500 text-red-500" : "text-white/85"}
+            />
+            <span className="text-xl font-bold leading-none tabular-nums">
+              {formatCount(likeCount)}
+            </span>
+            <span className="text-[13px] font-medium text-white/80">likes</span>
+          </div>
         </div>
 
         {/* Reply input + actions */}
@@ -491,8 +523,6 @@ export default function UserStoryViewer({ group, onClose }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
       <div
         className="relative flex h-full w-full max-w-[500px] overflow-hidden lg:h-[calc(100vh-48px)] lg:max-h-[unset] lg:rounded-3xl"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
         onTouchStart={(e) => {
           touchStartX.current = e.touches[0].clientX;
         }}

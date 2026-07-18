@@ -6,6 +6,7 @@ namespace Application.Reels.Queries.GetRecommendedReels
 {
     public sealed record GetRecommendedReelsQuery(
         Guid UserId,
-        int PageSize = 12
+        int PageSize = 12,
+        long? LastReelId = null
     ) : IQuery<PagedList<ReelDto>>;
 }

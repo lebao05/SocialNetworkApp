@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowLocalhost", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5125",   // Backend or Swagger UI
+                "https://localhost:765",   // Backend or Swagger UI
                  ClientUrl!    // Vite frontend
             )
             .AllowAnyHeader()
@@ -141,6 +141,16 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
+
+// Swashbuckle 10 can't reflect [FromForm] IFormFile parameters by default.
+    // MapType tells the schema generator how to render the type, and an
+    // OperationFilter attaches a multipart/form-data request body. Both are required.
+    options.MapType<Microsoft.AspNetCore.Http.IFormFile>(() => new Microsoft.OpenApi.OpenApiSchema
+    {
+        Type = Microsoft.OpenApi.JsonSchemaType.String,
+        Format = "binary"
+    });
+    options.OperationFilter<Web.FileUploadOperationFilter>();
 });
 
 // Configure Serilog

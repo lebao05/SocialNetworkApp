@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useReelComments } from "../../hooks/useReelComments";
 import { recordReelViewApi } from "../../apis/reelApi";
+import { useAuth } from "../../contexts/authContext";
 import ReelCommentModal from "./ReelCommentModal";
 
 function formatCount(value) {
@@ -37,8 +38,17 @@ export default function ReelView({
   const [directionVisible, setDirectionVisible] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [newComment, setNewComment] = useState("");
+  const [deleteState, setDeleteState] = useState("idle"); // 'idle' | 'asking' | 'submitting'
   const directionHintRef = useRef(null);
   const viewedRef = useRef(false);
+
+  // Resolve ownership from authContext + reel.authorId rather than trusting the backend flag.
+  // Comparison is stringly because reel.authorId may arrive as a Guid object or string depending on the endpoint.
+  const { user } = useAuth();
+  const currentUserId = user?.id ? String(user.id).toLowerCase() : null;
+  const reelAuthorId = reel?.authorId ? String(reel.authorId).toLowerCase() : null;
+  const isAuthor = !!(currentUserId && reelAuthorId && currentUserId === reelAuthorId);
+  const canShowDelete = canDelete || isAuthor;
 
   const {
     comments,
@@ -128,9 +138,28 @@ export default function ReelView({
   }, [reel, isLiking, onLike]);
 
   const handleDelete = useCallback(() => {
-    if (!reel || !canDelete) return;
-    onDelete(reel.id);
-  }, [reel, canDelete, onDelete]);
+    if (!reel || !canShowDelete || deleteState !== "idle") return;
+    setDeleteState("asking");
+  }, [reel, canShowDelete, deleteState]);
+
+  const handleCancelDelete = useCallback(() => {
+    if (deleteState === "submitting") return;
+    setDeleteState("idle");
+  }, [deleteState]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!reel || !canShowDelete) return;
+    setDeleteState("submitting");
+    try {
+      await onDelete(reel.id);
+      // Parent is responsible for unmounting / navigating away.
+      // Reset state defensively in case the parent keeps this mounted for any reason.
+      setDeleteState("idle");
+    } catch (err) {
+      console.error("[ReelView] delete failed:", err);
+      setDeleteState("idle");
+    }
+  }, [reel, canShowDelete, onDelete]);
 
   const handleOpenComments = useCallback(() => {
     setIsCommentModalOpen(true);
@@ -313,14 +342,14 @@ export default function ReelView({
         </button>
 
         {/* Bookmark */}
-        <button type="button" className="flex flex-col items-center gap-0.5 text-white">
+        {/* <button type="button" className="flex flex-col items-center gap-0.5 text-white">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 hover:scale-110">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
           </span>
           <span className="text-[11px] font-semibold">Save</span>
-        </button>
+        </button> */}
 
         {/* Share */}
         <button
@@ -344,14 +373,14 @@ export default function ReelView({
         </button>
 
         {/* More */}
-        <button type="button" className="flex flex-col items-center gap-0.5 text-white">
+        {/* <button type="button" className="flex flex-col items-center gap-0.5 text-white">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 hover:scale-110">
             <MoreHorizontal size={20} />
           </span>
-        </button>
+        </button> */}
 
         {/* Delete */}
-        {canDelete && (
+        {canShowDelete && (
           <button type="button" onClick={handleDelete} className="flex flex-col items-center gap-0.5 text-white">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-red-400 hover:scale-110 hover:bg-red-500/20">
               <Trash2 size={20} />
@@ -391,6 +420,56 @@ export default function ReelView({
         onCancelReply={cancelReply}
         onReactComment={() => {}}
       />
+
+      {/* Delete confirmation modal */}
+      {deleteState !== "idle" && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={handleCancelDelete}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reel-delete-title"
+        >
+          <div
+            className="mx-4 w-full max-w-sm rounded-2xl bg-zinc-900 p-6 text-white shadow-2xl ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center gap-3 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+                <Trash2 size={22} />
+              </span>
+              <h3 id="reel-delete-title" className="text-base font-semibold">
+                Delete this reel?
+              </h3>
+              <p className="text-[13px] leading-snug text-white/70">
+                This reel will be permanently removed. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={deleteState === "submitting"}
+                className="rounded-full px-4 py-1.5 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteState === "submitting"}
+                className="flex items-center gap-2 rounded-full bg-red-500 px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-60"
+              >
+                {deleteState === "submitting" && (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                )}
+                {deleteState === "submitting" ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

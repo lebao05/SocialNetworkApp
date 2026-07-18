@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/authContext";
 import { useStories } from "../../contexts/StoriesContext";
-import ProfileStoryRing from "../Story/ProfileStoryRing";
+import StoryBarRing from "./StoryBarRing";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+const CREATE_STORY_LOADING_MIN_MS = 700; // keep spinner visible briefly so it reads as "loading", not a flick
 
 function PlusIcon() {
   return (
@@ -14,25 +15,40 @@ function PlusIcon() {
   );
 }
 
+function SpinnerIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 22 22"
+      fill="none"
+      className="animate-spin"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="9" stroke="white" strokeOpacity="0.35" strokeWidth="2.5" />
+      <path
+        d="M11 2a9 9 0 0 1 9 9"
+        stroke="white"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function StoryCard({ group, onClick }) {
   return (
-    <button
-      type="button"
-      onClick={() => onClick(group.userId)}
-      className="flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0 w-20 focus:outline-none"
-    >
+    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 w-20 group cursor-pointer">
       <div className="relative">
-        <ProfileStoryRing
-          userId={group.userId}
+        <StoryBarRing
           avatarUrl={group.avatar}
           name={group.user}
           hasActiveStories={group.stories.length > 0}
           hasUnseenStories={group.hasUnseenStories}
-          size="lg"
-          onStoryClick={onClick}
+          onClick={() => onClick(group.userId)}
         />
         {group.stories.length > 1 && group.hasUnseenStories && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[8px] font-bold flex items-center justify-center">
+          <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-[#0866ff] text-white text-[8px] font-bold flex items-center justify-center border-2 border-white pointer-events-none">
             {group.stories.length}
           </span>
         )}
@@ -40,7 +56,7 @@ function StoryCard({ group, onClick }) {
       <span className="text-[11px] text-[#65676b] font-medium truncate w-full text-center leading-tight group-hover:underline">
         {group.user}
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -48,13 +64,28 @@ export default function StoryBar() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { timelineGroups: groups, timelineLoading: isLoading } = useStories();
+  const [isCreatingStory, setIsCreatingStory] = useState(false);
 
   const displayUser = useMemo(() => ({
     avatar: currentUser?.avatarUrl || DEFAULT_AVATAR,
   }), [currentUser]);
 
   const handleOpenCreateStory = () => {
-    navigate("/stories/create");
+    if (isCreatingStory) return;
+    setIsCreatingStory(true);
+
+    // Minimum visible spinner time so the state reads as "loading" instead of
+    // a quick click → page swap flicker. Real navigation kicks off after the
+    // minimum so the user sees the spinner briefly.
+    setTimeout(() => {
+      navigate("/stories/create");
+    }, CREATE_STORY_LOADING_MIN_MS);
+
+    // Failsafe: if navigation never resolves (e.g. user blocks navigation),
+    // reset the button after 3s so it isn't stuck disabled.
+    setTimeout(() => {
+      setIsCreatingStory(false);
+    }, 3000);
   };
 
   const handleOpenUserStory = (userId) => {
@@ -68,25 +99,46 @@ export default function StoryBar() {
         <button
           type="button"
           onClick={handleOpenCreateStory}
-          className="flex flex-col items-center gap-1.5 flex-shrink-0 w-20 group cursor-pointer focus:outline-none"
+          disabled={isCreatingStory}
+          aria-busy={isCreatingStory}
+          aria-label={isCreatingStory ? "Loading create story page" : "Create story"}
+          className="flex flex-col items-center gap-1.5 flex-shrink-0 w-20 group cursor-pointer focus:outline-none disabled:cursor-wait"
         >
           <div className="relative w-[72px] h-[72px]">
-            <div className="absolute inset-0 rounded-full border border-[#dbdbdb] p-[2px]">
-              <div className="w-full h-full rounded-full overflow-hidden">
-                <img
-                  src={displayUser.avatar}
-                  alt="me"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+            {/* Avatar — same outer dimensions as StoryBarRing (72px) so friend
+                cards and this card align vertically. */}
+            <div
+              className={`absolute inset-0 rounded-full overflow-hidden transition-opacity duration-200 ${
+                isCreatingStory ? "opacity-60" : "opacity-100"
+              }`}
+            >
+              <img
+                src={displayUser.avatar}
+                alt="me"
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-[#0866ff] flex items-center justify-center border-[3px] border-white">
+            {/* Spinner overlay — shown only while navigation is in flight. */}
+            {isCreatingStory && (
+              <div
+                className="absolute inset-0 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-[1px]"
+                role="status"
+                aria-live="polite"
+              >
+                <SpinnerIcon />
+              </div>
+            )}
+            {/* Plus badge — centered horizontally on the 72px wrapper, with a
+                white ring so it sits "on top of" the avatar edge. */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full bg-[#0866ff] flex items-center justify-center border-[3px] border-white shadow-sm">
                 <PlusIcon />
               </div>
             </div>
           </div>
-          <span className="text-[11px] text-[#65676b] font-medium text-center leading-tight">Create story</span>
+          <span className="text-[11px] text-[#65676b] font-medium text-center leading-tight">
+            {isCreatingStory ? "Loading…" : "Create story"}
+          </span>
         </button>
 
         <div className="w-px h-10 bg-[#dddfe2] shrink-0 mx-1" />

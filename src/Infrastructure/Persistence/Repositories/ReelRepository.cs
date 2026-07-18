@@ -5,7 +5,6 @@ using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using NpgsqlTypes;
-using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Repositories
 {
@@ -40,28 +39,31 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Reel>> GetRecentReelsAsync(DateTime since, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Reel>> GetRecentReelsAsync(Guid userId, DateTime since, CancellationToken cancellationToken = default)
         {
-            return await _context.Reels
+            var query = _context.Reels
                 .AsNoTracking()
                 .Include(reel => reel.Author)
                 .Include(reel => reel.Comments)
                 .Include(reel => reel.Reactions)
-                .Where(reel => reel.CreatedAt >= since)
+                .Where(reel => reel.CreatedAt >= since);
+            query = ApplyReelVisibility(query, userId);
+            return await query
                 .OrderByDescending(reel => reel.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Reel>> GetTopReelsAsync(DateTime since, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Reel>> GetTopReelsAsync(Guid userId, DateTime since, int pageSize, CancellationToken cancellationToken = default)
         {
-            return await _context.Reels
+            var query = _context.Reels
                 .AsNoTracking()
                 .Include(reel => reel.Author)
                 .Include(reel => reel.Comments)
                 .Include(reel => reel.Reactions)
                 .Where(reel => reel.CreatedAt >= since
-                    && reel.DeletedAt == null
-                    && reel.Visibility != ReelVisibility.Private)
+                    && reel.DeletedAt == null);
+            query = ApplyReelVisibility(query, userId);
+            return await query
                 .OrderByDescending(reel => reel.ViewCount)
                 .ThenByDescending(reel => reel.CreatedAt)
                 .Take(pageSize)

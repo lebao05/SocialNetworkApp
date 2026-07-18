@@ -21,10 +21,10 @@ internal sealed class GetTopReelsQueryHandler : IQueryHandler<GetTopReelsQuery, 
 
     public async Task<Result<PagedList<ReelDto>>> Handle(GetTopReelsQuery request, CancellationToken cancellationToken)
     {
-        var since = DateTime.UtcNow - TimeSpan.FromDays(7);
+        var since = DateTime.UtcNow - TimeSpan.FromDays(100);
         var pageSize = Math.Clamp(request.PageSize, 1, 50);
 
-        var reels = await _reelRepository.GetTopReelsAsync(since, pageSize, cancellationToken);
+        var reels = await _reelRepository.GetTopReelsAsync(request.UserId, since, pageSize, cancellationToken);
 
         var items = reels.Select(r => Map(r)).ToList();
         var totalCount = items.Count;
