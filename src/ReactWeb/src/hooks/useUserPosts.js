@@ -19,7 +19,7 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
       const data = await getUserPostsApi(profileUserId, p, pageSize);
       // support both array or { items, totalCount }
       const items = Array.isArray(data) ? data : (data.items || []);
-
+      console.log("items", items);
       if (p === 1) setPosts(items);
       else setPosts((prev) => [...prev, ...items]);
 

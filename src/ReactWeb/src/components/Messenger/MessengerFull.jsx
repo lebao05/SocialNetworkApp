@@ -298,51 +298,34 @@ function RepliedMessagePreview({ repliedMessage, theme, isMe, onJumpTo, currentU
     }
   };
 
+  const accentColor = theme.bubbleSelf || "#0084FF";
+
   return (
     <button
       onClick={handleClick}
-      className="w-full text-left mb-1 flex items-start gap-2 group cursor-pointer"
-      style={{ background: "none", border: "none", padding: "2px 4px", borderRadius: "6px" }}
+      className="w-full text-left flex items-start gap-2 group cursor-pointer mt-1 mb-0.5"
+      style={{ background: "none", border: "none", padding: "0" }}
       title="Jump to original message"
     >
-      {/* Accent bar — 2px vertical line */}
+      {/* Accent bar */}
       <div
-        className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5 mb-0.5"
-        style={{ backgroundColor: theme.bubbleSelf || "#0084FF" }}
+        className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5 min-h-[16px]"
+        style={{ backgroundColor: accentColor }}
       />
       <div className="flex-1 min-w-0">
-        {/* "You replied to [Name]" pill with avatar */}
-        <span
-          className="inline-flex items-center gap-1 text-[10px] font-semibold leading-tight mb-0.5 px-1.5 py-0.5 rounded-full"
-          style={{
-            backgroundColor: `${theme.bubbleSelf || "#0084FF"}18`,
-            color: theme.bubbleSelf || "#0084FF",
-          }}
+        {/* Sender name */}
+        <p
+          className="text-[11px] font-semibold leading-tight truncate"
+          style={{ color: accentColor }}
         >
-          <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-          </svg>
-          {repliedIsMine ? "You replied to" : `Replied to`}
-          {repliedMessage.senderAvatarUrl ? (
-            <img
-              src={repliedMessage.senderAvatarUrl}
-              alt={repliedMessage.senderName}
-              className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0"
-            />
-          ) : (
-            <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 flex items-center justify-center text-[8px] font-bold"
-              style={{ backgroundColor: `${theme.bubbleSelf || "#0084FF"}30` }}>
-              {(repliedMessage.senderName || "U").charAt(0).toUpperCase()}
-            </span>
-          )}
-          <span className="truncate max-w-[80px]">{repliedMessage.senderName || "Unknown"}</span>
-        </span>
+          {repliedIsMine ? "You" : (repliedMessage.senderName || "Unknown")}
+        </p>
         {/* Content */}
         <p
-          className="text-xs leading-tight truncate"
+          className="text-[11px] leading-tight truncate"
           style={{
             color: isRevoked ? "#9CA3AF" : (theme.bubbleSelfText || "#FFFFFF"),
-            opacity: isRevoked ? 0.7 : 0.8,
+            opacity: isRevoked ? 0.7 : 0.75,
             fontStyle: isRevoked ? "italic" : "normal",
           }}
         >
@@ -1612,19 +1595,14 @@ function MessageInput({ theme, isMidnight, conv, replyTo, editingMsg, onReplySen
 
       {/* Reply / Edit preview bar */}
       {(replyTo || editingMsg) && (
-        <div className="flex items-center gap-2 px-4 pt-2 pb-1.5" style={{ borderBottom: "1px solid #E4E6EB" }}>
-          <div className="w-0.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: theme.bubbleSelf || "#0084FF" }} />
+        <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: "1px solid #E4E6EB" }}>
+          <div className="w-0.5 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: theme.bubbleSelf || "#0084FF" }} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ color: theme.bubbleSelf || "#0084FF" }}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-              </svg>
-              <span className="text-xs font-semibold truncate" style={{ color: theme.bubbleSelf || "#0084FF" }}>
-                {editingMsg ? "Editing message" : `Replying to ${replyTo?.senderName || "message"}`}
-              </span>
-            </div>
-            <p className="text-xs truncate mt-0.5 ml-[18px]" style={{ color: theme.bubbleOtherText || "#65676B", opacity: 0.7 }}>
-              {replyTo?.content || (replyTo?.attachment ? "📎 Attachment" : "")}
+            <p className="text-[11px] font-semibold truncate" style={{ color: theme.bubbleSelf || "#0084FF" }}>
+              {editingMsg ? "Editing" : `Replying to ${replyTo?.senderName || "message"}`}
+            </p>
+            <p className="text-[11px] truncate" style={{ color: theme.bubbleOtherText || "#65676B", opacity: 0.7 }}>
+              {editingMsg ? editingMsg.content : (replyTo?.content || (replyTo?.attachment ? "📎 Attachment" : ""))}
             </p>
           </div>
           <button

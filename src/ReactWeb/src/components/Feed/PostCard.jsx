@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GrLike } from "react-icons/gr";
 import { FaRegComment } from "react-icons/fa6";
 import { PiShareFatLight } from "react-icons/pi";
@@ -184,6 +185,8 @@ const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave 
 
 // ─── Main PostCard ───
 export default function PostCard({ post }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const initialLikes = (post.reactionCounts || []).reduce(
     (sum, item) => sum + (item?.count || 0),
@@ -685,6 +688,54 @@ export default function PostCard({ post }) {
           )}
         </div>
       </div>
+
+      {/* Shared Post Preview */}
+      {post.sharePost && (
+        <div className="mx-3 mb-1">
+          <div
+            className="border border-gray-200 rounded-xl overflow-hidden bg-[#F8FAFC] cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => navigate(`/post/${post.sharePost.id}`, {
+              state: { backgroundLocation: location },
+            })}
+          >
+            {/* Original post author */}
+            <div className="flex items-center gap-2 p-3 border-b border-gray-100">
+              <img
+                src={post.sharePost.authorAvatarUrl || post.sharePost.avatar || DEFAULT_AVATAR}
+                alt={post.sharePost.authorName || post.sharePost.user || "User"}
+                className="w-8 h-8 rounded-full object-cover border"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-gray-800 truncate">
+                  {post.sharePost.authorName || post.sharePost.user || "Unknown"}
+                </p>
+              </div>
+            </div>
+            {/* Original post content */}
+            <div className="px-3 py-2">
+              {post.sharePost.content && (
+                <p className="text-[13px] text-gray-700 leading-relaxed line-clamp-3">
+                  {post.sharePost.content}
+                </p>
+              )}
+              {post.sharePost.media?.length > 0 && (
+                <div className="mt-2">
+                  <MediaGallery media={post.sharePost.media} compact={true} disableInteraction={true} />
+                </div>
+              )}
+              {!post.sharePost.media?.length && post.sharePost.image && (
+                <div className="mt-2 rounded-lg overflow-hidden">
+                  <img
+                    src={post.sharePost.image}
+                    alt="shared"
+                    className="w-full object-cover max-h-[200px]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       {post.content && <p className="px-4 pb-2 text-[15px] text-gray-800">{post.content}</p>}

@@ -7,6 +7,7 @@ import { useUserPosts } from "../hooks/useUserPosts";
 import { useUserMedias } from "../hooks/useUserMedias";
 import { useSchools } from "../hooks/useSchools";
 import { updateUserInfoApi, uploadAvatarApi, uploadCoverPhotoApi } from "../apis/userApi";
+import { Loader2 } from "lucide-react";
 import AboutTab from "../components/Profile/AboutTab";
 import FriendsTab from "../components/Profile/FriendsTab";
 import FollowingTab from "../components/Profile/FollowingTab";
@@ -398,8 +399,13 @@ export default function ProfilePage() {
             <img
               src={displayUser.coverPhoto}
               alt="Cover"
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-opacity duration-300 ${coverUploading ? "opacity-40" : "opacity-100"}`}
             />
+            {coverUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-b-xl">
+                <Loader2 className="w-10 h-10 text-white animate-spin" />
+              </div>
+            )}
             <input
               ref={coverInputRef}
               type="file"
@@ -439,6 +445,11 @@ export default function ProfilePage() {
                   onSeeStories={() => navigate(`/profile/${viewUserId}/stories`)}
                   darkMode={darkMode}
                 />
+                {avatarUploading && (
+                  <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center z-20">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
                 {/* Hidden file input for avatar upload */}
                 <input
                   ref={avatarInputRef}
@@ -510,9 +521,9 @@ export default function ProfilePage() {
                   <Edit2 size={16} />
                   Edit Profile
                 </button>
-                <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
+                {/* <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${theme.btnGray}`}>
                   <ChevronDown size={18} />
-                </button>
+                </button> */}
               </div>
             ) : (
               <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
@@ -781,35 +792,6 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Post Filters & Settings Box */}
-                <div className={`${theme.card} rounded-xl shadow p-4 flex flex-col gap-3 transition-colors duration-200`}>
-                  <div className="flex items-center justify-between">
-                    <h3 className={`text-lg font-bold ${theme.text}`}>Posts</h3>
-                    <div className="flex items-center gap-2">
-                      <button className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${theme.btnGray}`}>
-                        <Search size={14} />
-                        Filters
-                      </button>
-                      <button className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${theme.btnGray}`}>
-                        <Edit2 size={14} />
-                        Manage posts
-                      </button>
-                    </div>
-                  </div>
-
-                  <hr className={theme.sidebarHr} />
-
-                  <div className="flex items-center justify-between">
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2 border-b-2 border-[#1877f2] text-[#1877f2] font-semibold text-sm">
-                      <ListIcon size={16} />
-                      List view
-                    </button>
-                    <button className={`flex-1 flex items-center justify-center gap-2 py-2 font-semibold text-sm ${theme.textSub} ${theme.tabHover} rounded-lg`}>
-                      <Grid size={16} />
-                      Grid view
-                    </button>
-                  </div>
-                </div>
 
                 {/* Feed Section (Shows empty state or dynamically created posts) */}
                 {postsList.length === 0 ? (

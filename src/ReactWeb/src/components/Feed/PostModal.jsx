@@ -5,6 +5,8 @@ import PostComment from "./PostComment";
 import MediaGallery from "./MediaGallery";
 import ShareModal from "./ShareModal";
 
+const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
 const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave }) => (
   <button
     onClick={onClick}
@@ -104,6 +106,45 @@ export default function PostModal({
                 </p>
               </div>
             </div>
+
+            {/* Shared Post Preview */}
+            {post.sharePost && (
+              <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden bg-[#F8FAFC]">
+                <div className="flex items-center gap-2 p-3 border-b border-gray-100">
+                  <img
+                    src={post.sharePost.authorAvatarUrl || post.sharePost.avatar || DEFAULT_AVATAR}
+                    alt={post.sharePost.authorName || post.sharePost.user || "User"}
+                    className="w-8 h-8 rounded-full object-cover border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-800 truncate">
+                      {post.sharePost.authorName || post.sharePost.user || "Unknown"}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {post.sharePost.content && (
+                    <p className="text-[13px] text-gray-700 leading-relaxed line-clamp-3">
+                      {post.sharePost.content}
+                    </p>
+                  )}
+                  {post.sharePost.media?.length > 0 && (
+                    <div className="mt-2">
+                      <MediaGallery media={post.sharePost.media} compact={true} disableInteraction={true} />
+                    </div>
+                  )}
+                  {!post.sharePost.media?.length && post.sharePost.image && (
+                    <div className="mt-2 rounded-lg overflow-hidden">
+                      <img
+                        src={post.sharePost.image}
+                        alt="shared"
+                        className="w-full object-cover max-h-[200px]"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {post.content && (
               <p className="mt-4 text-[15px] leading-relaxed text-gray-800">{post.content}</p>
