@@ -19,6 +19,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(60);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".SocialAdmin.Session";
+});
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
@@ -98,7 +106,7 @@ builder.Services.AddIdentityCore<User>(options =>
 
 // Add controllers (including external assembly)
 builder.Services
-    .AddControllers()
+    .AddControllersWithViews()
     .AddApplicationPart(typeof(Presentation.Controllers.AuthController).Assembly)
     .AddJsonOptions(options =>
     {
@@ -186,6 +194,7 @@ app.UseCors("AllowLocalhost");
 
 app.UseSerilogRequestLogging();
 app.UseStaticFiles(); // <-- place here
+app.UseSession();
 
 // Middleware
 

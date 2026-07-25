@@ -17,6 +17,7 @@ import PostComment from "./PostComment";
 import MediaGallery from "./MediaGallery";
 import PostModal from "./PostModal";
 import ShareModal from "./ShareModal";
+import UpdatingPostModal from "./UpdatingPostModal";
 import { Bookmark, Flag, MoreHorizontal, X, Check, AlertTriangle } from "lucide-react";
 
 // ─── Feeling map (matches Domain.Enums.Feeling) ───
@@ -230,6 +231,7 @@ export default function PostCard({ post }) {
   const [reportDetail, setReportDetail] = useState("");
   const [isReporting, setIsReporting] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [openUpdateModal, setOpenUpdateModal] = useState(false);
   const dropdownRef = useRef(null);
 
   const REACTION_VALUE_FROM_NAME = Object.fromEntries(
@@ -667,6 +669,19 @@ export default function PostCard({ post }) {
 
           {showOptions && (
             <div className="absolute right-0 top-full mt-1 z-30 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+              {(post.authorId === user?.id || post.AuthorId === user?.id) && (
+                <button
+                  type="button"
+                  onClick={() => { setShowOptions(false); setOpenUpdateModal(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-600">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Edit post
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSaveToggle}
@@ -854,6 +869,17 @@ export default function PostCard({ post }) {
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
         currentUserAvatar={currentUserAvatar}
+      />
+
+      {/* Edit post modal */}
+      <UpdatingPostModal
+        isOpen={openUpdateModal}
+        onClose={() => setOpenUpdateModal(false)}
+        post={post}
+        displayUser={{
+          name: authorName,
+          avatar: authorAvatar || DEFAULT_AVATAR,
+        }}
       />
 
       {/* Report to Admin Modal */}

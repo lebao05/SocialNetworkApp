@@ -20,6 +20,7 @@ namespace Application.Abstractions.Repositories
         void Update(Post post);
         void Delete(Post post);
         void AddMedia(PostMedia media);
+        void RemoveMedia(PostMedia media);
         void AddTag(PostTag tag);
         Task<PostReaction?> GetPostReactionAsync(long postId, Guid userId, CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<PostReaction>> GetPostReactionsAsync(IEnumerable<long> postIds, Guid userId, CancellationToken cancellationToken = default);

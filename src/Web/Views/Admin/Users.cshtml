@@ -1,0 +1,464 @@
+@*
+    Admin User Management — list, search, filter, and manage platform users.
+*@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Users";
+    ViewData["CurrentPage"] = "Users";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">User Management</h1>
+        <p class="page-subtitle">Search, filter, and manage all users on the platform</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary btn-sm">
+            <i class="ri-download-cloud-2-line"></i>
+            Export CSV
+        </button>
+        <button class="btn btn-primary btn-sm">
+            <i class="ri-user-add-line"></i>
+            Add User
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon blue"><i class="ri-user-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" style="font-size:1.4rem;">48,231</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon green"><i class="ri-checkbox-circle-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Active</div>
+            <div class="stat-value" style="font-size:1.4rem;">41,203</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon amber"><i class="ri-time-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Inactive</div>
+            <div class="stat-value" style="font-size:1.4rem;">6,842</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon red"><i class="ri-user-forbid-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Banned</div>
+            <div class="stat-value" style="font-size:1.4rem;">186</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="get" action="@Url.Action("Users", "Admin")">
+    <div class="filter-bar">
+        <div class="search-input-wrap">
+            <i class="ri-search-line"></i>
+            <input type="text"
+                   name="q"
+                   class="form-control"
+                   placeholder="Search by name, email, or ID..."
+                   value="@Context.Request.Query["q"]" />
+        </div>
+        <select name="status" class="form-control form-select" style="width:150px;">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="banned">Banned</option>
+        </select>
+        <select name="role" class="form-control form-select" style="width:150px;">
+            <option value="">All Roles</option>
+            <option value="user">User</option>
+            <option value="moderator">Moderator</option>
+            <option value="admin">Admin</option>
+        </select>
+        <div class="filter-bar-right">
+            <a href="@Url.Action("Users", "Admin")" class="btn btn-secondary btn-sm">
+                <i class="ri-reset-right-line"></i>
+                Reset
+            </a>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="ri-filter-3-line"></i>
+                Apply
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist">
+    <button class="tab active" data-tab-group="users" data-tab="all">
+        All <span class="tab-badge">48,231</span>
+    </button>
+    <button class="tab" data-tab-group="users" data-tab="active">
+        Active <span class="tab-badge">41,203</span>
+    </button>
+    <button class="tab" data-tab-group="users" data-tab="inactive">
+        Inactive <span class="tab-badge">6,842</span>
+    </button>
+    <button class="tab" data-tab-group="users" data-tab="banned">
+        Banned <span class="tab-badge">186</span>
+    </button>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body" style="padding:0;">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" />
+                        </th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Posts</th>
+                        <th>Joined</th>
+                        <th>Last Active</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var fakeUsers = new[] {
+                            new {
+                                Id = "U-001",
+                                Name = "Nguyen Van A",
+                                Email = "nguyenvana@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Active",
+                                Posts = 342,
+                                Joined = "Jan 12, 2024",
+                                LastActive = "2 min ago"
+                            },
+                            new {
+                                Id = "U-002",
+                                Name = "Tran Thi B",
+                                Email = "tranthib@example.com",
+                                Avatar = "",
+                                Role = "Moderator",
+                                Status = "Active",
+                                Posts = 89,
+                                Joined = "Mar 3, 2024",
+                                LastActive = "15 min ago"
+                            },
+                            new {
+                                Id = "U-003",
+                                Name = "Le Van C",
+                                Email = "levanc@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Banned",
+                                Posts = 1_204,
+                                Joined = "Nov 8, 2023",
+                                LastActive = "3 days ago"
+                            },
+                            new {
+                                Id = "U-004",
+                                Name = "Pham Thi D",
+                                Email = "phamthid@example.com",
+                                Avatar = "",
+                                Role = "Admin",
+                                Status = "Active",
+                                Posts = 56,
+                                Joined = "Jan 1, 2024",
+                                LastActive = "1 hr ago"
+                            },
+                            new {
+                                Id = "U-005",
+                                Name = "Hoang Van E",
+                                Email = "hoangvane@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Active",
+                                Posts = 78,
+                                Joined = "Feb 19, 2024",
+                                LastActive = "Just now"
+                            },
+                            new {
+                                Id = "U-006",
+                                Name = "Dao Thi F",
+                                Email = "daothif@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Inactive",
+                                Posts = 12,
+                                Joined = "Apr 5, 2024",
+                                LastActive = "30 days ago"
+                            },
+                            new {
+                                Id = "U-007",
+                                Name = "Bui Van G",
+                                Email = "buivang@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Active",
+                                Posts = 567,
+                                Joined = "Dec 11, 2023",
+                                LastActive = "4 min ago"
+                            },
+                            new {
+                                Id = "U-008",
+                                Name = "Do Thi H",
+                                Email = "dothih@example.com",
+                                Avatar = "",
+                                Role = "User",
+                                Status = "Banned",
+                                Posts = 892,
+                                Joined = "Oct 2, 2023",
+                                LastActive = "5 days ago"
+                            },
+                        };
+                    }
+
+                    @foreach (var user in fakeUsers)
+                    {
+                        var initials = string.Join("", user.Name.Split(' ').Take(2).Select(w => w[0]));
+                        var statusBadgeClass = user.Status switch {
+                            "Active"   => "badge-active",
+                            "Inactive" => "badge-inactive",
+                            "Banned"  => "badge-banned",
+                            _          => "badge-inactive"
+                        };
+                        var roleBadgeClass = user.Role switch {
+                            "Admin"      => "badge-info",
+                            "Moderator"  => "badge-pending",
+                            _            => ""
+                        };
+
+                        <tr>
+                            <td><input type="checkbox" /></td>
+                            <td>
+                                <div class="cell-user">
+                                    <div class="cell-user-avatar">@initials</div>
+                                    <div class="cell-user-info">
+                                        <div class="cell-user-name">@user.Name</div>
+                                        <div class="cell-user-email">@user.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @(roleBadgeClass)">@user.Role</span>
+                            </td>
+                            <td>
+                                <span class="badge @statusBadgeClass"><span class="badge-dot"></span>@user.Status</span>
+                            </td>
+                            <td class="cell-muted">@user.Posts.ToString("N0")</td>
+                            <td class="cell-muted">@user.Joined</td>
+                            <td class="cell-muted">@user.LastActive</td>
+                            <td>
+                                <div class="cell-actions" style="justify-content:flex-end;">
+                                    <button class="action-btn primary"
+                                            title="View profile"
+                                            data-modal="userDetailModal">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                    <button class="action-btn"
+                                            title="Edit user"
+                                            data-modal="editUserModal">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                    @if (user.Status != "Banned")
+                                    {
+                                        <button class="action-btn danger"
+                                                title="Ban user"
+                                                data-modal="banUserModal">
+                                            <i class="ri-forbid-line"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="action-btn success"
+                                                title="Unban user">
+                                            <i class="ri-checkbox-circle-line"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <span class="pagination-info">Showing 1–8 of 48,231 users</span>
+            <div class="pagination-controls">
+                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <span class="page-ellipsis">...</span>
+                <button class="page-btn">5,029</button>
+                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Action Bar (hidden by default) -->
+<div class="bulk-action-bar hidden"
+     style="position:sticky;bottom:20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:400px;margin:0 auto;">
+    <span class="text-sm fw-600"><span class="bulk-count">0</span> selected</span>
+    <div style="flex:1;"></div>
+    <button class="btn btn-secondary btn-sm">Ban selected</button>
+    <button class="btn btn-primary btn-sm">Export selected</button>
+</div>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay hidden" id="userDetailModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">User Profile</h2>
+            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div class="cell-user-avatar" style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 10px;">NV A</div>
+                <h3 style="font-size:1.1rem;font-weight:700;">Nguyen Van A</h3>
+                <p style="color:#64748b;font-size:.85rem;">nguyenvana@example.com</p>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Role</div>
+                    <div class="fw-600">User</div>
+                </div>
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Status</div>
+                    <div class="fw-600 text-success">Active</div>
+                </div>
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Posts</div>
+                    <div class="fw-600">342</div>
+                </div>
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Friends</div>
+                    <div class="fw-600">127</div>
+                </div>
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Joined</div>
+                    <div class="fw-600">Jan 12, 2024</div>
+                </div>
+                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                    <div class="text-muted text-sm">Reports</div>
+                    <div class="fw-600 text-danger">3</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close>Close</button>
+            <button class="btn btn-danger btn-sm"><i class="ri-forbid-line"></i> Ban</button>
+            <button class="btn btn-primary btn-sm"><i class="ri-edit-line"></i> Edit</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ban User Modal -->
+<div class="modal-overlay hidden" id="banUserModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Ban User</h2>
+            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning" style="margin-bottom:16px;">
+                <i class="ri-error-warning-line"></i>
+                This action will immediately revoke the user's access to the platform.
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="banReason">Ban Reason <span>*</span></label>
+                <select id="banReason" class="form-control form-select">
+                    <option value="">Select a reason</option>
+                    <option>Spam or misleading content</option>
+                    <option>Hate speech or harassment</option>
+                    <option>Inappropriate content</option>
+                    <option>Fake account</option>
+                    <option>Terms of service violation</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="banNote">Admin Note</label>
+                <textarea id="banNote"
+                          class="form-control"
+                          rows="3"
+                          placeholder="Optional internal note..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ban Duration</label>
+                <div style="display:flex;gap:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
+                        <input type="radio" name="banDuration" value="permanent" checked style="accent-color:var(--c-primary);" />
+                        Permanent
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
+                        <input type="radio" name="banDuration" value="7days" style="accent-color:var(--c-primary);" />
+                        7 days
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
+                        <input type="radio" name="banDuration" value="30days" style="accent-color:var(--c-primary);" />
+                        30 days
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close>Cancel</button>
+            <button class="btn btn-danger"><i class="ri-forbid-line"></i> Confirm Ban</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay hidden" id="editUserModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit User</h2>
+            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" class="form-control" value="Nguyen Van A" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" value="nguyenvana@example.com" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-control form-select">
+                        <option selected>User</option>
+                        <option>Moderator</option>
+                        <option>Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-control form-select">
+                        <option selected>Active</option>
+                        <option>Inactive</option>
+                        <option>Banned</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close>Cancel</button>
+            <button class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+        </div>
+    </div>
+</div>

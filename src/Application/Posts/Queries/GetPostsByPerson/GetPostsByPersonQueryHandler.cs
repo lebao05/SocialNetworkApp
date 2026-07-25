@@ -67,6 +67,7 @@ namespace Application.Posts.Queries.GetPostsByPerson
                 post.Comments.Count,
                 MapGroup(post.Group),
                 post.SharePost is null ? null : MapSharedPost(post.SharePost),
+                post.Tags.Select(t => new TagDto(t.Id, t.TagName)).ToList(),
                 userReaction,
                 post.IsHiddenFromGroup,
                 post.HiddenAt,
@@ -103,8 +104,9 @@ namespace Application.Posts.Queries.GetPostsByPerson
                 MapReactionCounts(post),
                 post.Comments.Count,
                 MapGroup(post.Group),
-                null,
-                null,
+                null,                                    // SharePost
+                Array.Empty<TagDto>(),                    // Tags
+                null,                                    // UserReaction
                 post.IsHiddenFromGroup,
                 post.HiddenAt,
                 post.HideReason,

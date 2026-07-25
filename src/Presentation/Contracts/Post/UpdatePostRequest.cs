@@ -4,8 +4,9 @@ namespace Presentation.Contracts.Post
 {
     public sealed record UpdatePostRequest(
         string? Content,
-        PostVisibility Visibility,
+        PostVisibility? Visibility,
         string? LocationTag = null,
-        Feeling? FeelingActivity = null
+        Feeling? FeelingActivity = null,
+        List<long>? RetainMediaIds = null
     );
 }

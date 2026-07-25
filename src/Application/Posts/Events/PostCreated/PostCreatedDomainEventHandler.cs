@@ -1,6 +1,7 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
+using Application.DTOs.Notifications;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Events;
@@ -12,15 +13,18 @@ internal sealed class PostCreatedDomainEventHandler
     : IDomainEventHandler<PostCreatedDomainEvent>
 {
     private readonly INotificationRepository _notificationRepository;
+    private readonly IUserRepository _userRepository;
     private readonly INotificationHubNotifier _notificationHubNotifier;
     private readonly ILogger<PostCreatedDomainEventHandler> _logger;
 
     public PostCreatedDomainEventHandler(
         INotificationRepository notificationRepository,
+        IUserRepository userRepository,
         INotificationHubNotifier notificationHubNotifier,
         ILogger<PostCreatedDomainEventHandler> logger)
     {
         _notificationRepository = notificationRepository;
+        _userRepository = userRepository;
         _notificationHubNotifier = notificationHubNotifier;
         _logger = logger;
     }
@@ -39,9 +43,10 @@ internal sealed class PostCreatedDomainEventHandler
             return;
         }
 
+        var author = await _userRepository.GetByIdAsync(notification.AuthorId, cancellationToken);
+
         foreach (var taggedUserId in notification.TaggedUserIds)
         {
-            // Don't notify the author if they tagged themselves
             if (taggedUserId == notification.AuthorId)
             {
                 continue;
@@ -60,11 +65,27 @@ internal sealed class PostCreatedDomainEventHandler
 
             await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
 
-            await _notificationHubNotifier.NotifyPostTaggedAsync(
-                taggedUserId,
-                notificationEntity.Id,
-                notification.PostId,
-                cancellationToken);
+            var dto = new NotificationDto(
+                Id: notificationEntity.Id,
+                RecipientUserId: taggedUserId,
+                ActorUserId: notification.AuthorId,
+                ActorFirstName: author?.FirstName,
+                ActorLastName: author?.LastName,
+                ActorAvatarUrl: author?.AvatarUrl,
+                NotificationType: NotificationType.Tag,
+                EntityType: NotificationEntityType.PostTagged,
+                FriendRequestId: null,
+                FriendRequestStatus: null,
+                GroupJoinRequestId: null,
+                GroupId: null,
+                GroupName: null,
+                PostId: notification.PostId,
+                CommentId: null,
+                Metadata: null,
+                IsSeen: false,
+                CreatedAt: notificationEntity.CreatedAt);
+
+            await _notificationHubNotifier.NotifyAsync(dto, cancellationToken);
 
             _logger.LogInformation(
                 "Notification created and SignalR notification sent for post {PostId} to tagged user {UserId}",

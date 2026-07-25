@@ -1,0 +1,486 @@
+@*
+    Admin Audit Logs — track all admin actions and security events.
+*@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Audit Logs";
+    ViewData["CurrentPage"] = "AuditLogs";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Audit Logs</h1>
+        <p class="page-subtitle">Track all admin actions and security events</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary btn-sm">
+            <i class="ri-filter-3-line"></i>
+            Filter
+        </button>
+        <button class="btn btn-primary btn-sm">
+            <i class="ri-download-cloud-2-line"></i>
+            Export Logs
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon blue"><i class="ri-file-list-3-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Total Logs</div>
+            <div class="stat-value" style="font-size:1.4rem;">12,847</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon amber"><i class="ri-alert-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Critical Events</div>
+            <div class="stat-value" style="font-size:1.4rem;">23</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon green"><i class="ri-user-shield-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Admin Actions</div>
+            <div class="stat-value" style="font-size:1.4rem;">1,284</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon cyan"><i class="ri-time-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Today</div>
+            <div class="stat-value" style="font-size:1.4rem;">142</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="search-input-wrap">
+        <i class="ri-search-line"></i>
+        <input type="text"
+               class="form-control"
+               placeholder="Search by action, admin, or target..."
+               style="min-width:280px;" />
+    </div>
+    <select class="form-control form-select" style="width:160px;">
+        <option value="">All Categories</option>
+        <option>Admin Actions</option>
+        <option>Security Events</option>
+        <option>Data Changes</option>
+        <option>System Events</option>
+    </select>
+    <select class="form-control form-select" style="width:150px;">
+        <option value="">All Severity</option>
+        <option>Critical</option>
+        <option>High</option>
+        <option>Medium</option>
+        <option>Low</option>
+    </select>
+    <input type="date"
+           class="form-control"
+           style="width:160px;"
+           title="From date" />
+    <span class="text-muted text-sm">to</span>
+    <input type="date"
+           class="form-control"
+           style="width:160px;"
+           title="To date" />
+    <div class="filter-bar-right">
+        <button class="btn btn-secondary btn-sm">
+            <i class="ri-reset-right-line"></i>
+            Reset
+        </button>
+        <button class="btn btn-primary btn-sm">
+            <i class="ri-filter-3-line"></i>
+            Apply
+        </button>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist">
+    <button class="tab active" data-tab-group="audit" data-tab="all">
+        All Logs <span class="tab-badge">12,847</span>
+    </button>
+    <button class="tab" data-tab-group="audit" data-tab="admin">
+        Admin Actions <span class="tab-badge">1,284</span>
+    </button>
+    <button class="tab" data-tab-group="audit" data-tab="security">
+        Security Events <span class="tab-badge" style="background:#fee2e2;color:#991b1b;">47</span>
+    </button>
+    <button class="tab" data-tab-group="audit" data-tab="data">
+        Data Changes <span class="tab-badge">892</span>
+    </button>
+    <button class="tab" data-tab-group="audit" data-tab="system">
+        System Events <span class="tab-badge">342</span>
+    </button>
+</div>
+
+<!-- Logs Table -->
+<div class="card">
+    <div class="card-body" style="padding:0;">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" />
+                        </th>
+                        <th>ID</th>
+                        <th>Action</th>
+                        <th>Admin</th>
+                        <th>Target</th>
+                        <th>IP Address</th>
+                        <th>Severity</th>
+                        <th>Date</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var logs = new[] {
+                            new {
+                                Id = "LOG-12847",
+                                Action = "Banned user account",
+                                ActionIcon = "ri-user-forbid-line",
+                                ActionColor = "red",
+                                Category = "Admin",
+                                Admin = "John Smith",
+                                AdminEmail = "john@admin.com",
+                                Target = "User: Le Van C (U-003)",
+                                Ip = "192.168.1.45",
+                                Severity = "High",
+                                SevBadge = "badge-danger",
+                                Date = "2 min ago"
+                            },
+                            new {
+                                Id = "LOG-12846",
+                                Action = "Removed post for hate speech",
+                                ActionIcon = "ri-delete-bin-line",
+                                ActionColor = "red",
+                                Category = "Moderation",
+                                Admin = "Sarah Lee",
+                                AdminEmail = "sarah@admin.com",
+                                Target = "Post: #89234",
+                                Ip = "192.168.1.78",
+                                Severity = "Medium",
+                                SevBadge = "badge-warning",
+                                Date = "15 min ago"
+                            },
+                            new {
+                                Id = "LOG-12845",
+                                Action = "Failed login attempt",
+                                ActionIcon = "ri-shield-cross-line",
+                                ActionColor = "red",
+                                Category = "Security",
+                                Admin = "Unknown",
+                                AdminEmail = "—",
+                                Target = "admin@socialhub.com",
+                                Ip = "45.227.253.109",
+                                Severity = "Critical",
+                                SevBadge = "badge-danger",
+                                Date = "28 min ago"
+                            },
+                            new {
+                                Id = "LOG-12844",
+                                Action = "Updated user role to Admin",
+                                ActionIcon = "ri-user-settings-line",
+                                ActionColor = "amber",
+                                Category = "Admin",
+                                Admin = "Mike Chen",
+                                AdminEmail = "mike@admin.com",
+                                Target = "User: Pham Thi D (U-004)",
+                                Ip = "192.168.1.92",
+                                Severity = "High",
+                                SevBadge = "badge-danger",
+                                Date = "1 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12843",
+                                Action = "Approved group join request",
+                                ActionIcon = "ri-checkbox-circle-line",
+                                ActionColor = "green",
+                                Category = "Moderation",
+                                Admin = "Anna Wong",
+                                AdminEmail = "anna@admin.com",
+                                Target = "Group: Tech Talk #G-021",
+                                Ip = "192.168.1.31",
+                                Severity = "Low",
+                                SevBadge = "badge-inactive",
+                                Date = "1 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12842",
+                                Action = "Database backup completed",
+                                ActionIcon = "ri-database-2-line",
+                                ActionColor = "blue",
+                                Category = "System",
+                                Admin = "System",
+                                AdminEmail = "—",
+                                Target = "PostgreSQL Primary",
+                                Ip = "127.0.0.1",
+                                Severity = "Low",
+                                SevBadge = "badge-inactive",
+                                Date = "2 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12841",
+                                Action = "Exported user data (CSV)",
+                                ActionIcon = "ri-download-cloud-2-line",
+                                ActionColor = "blue",
+                                Category = "Data",
+                                Admin = "John Smith",
+                                AdminEmail = "john@admin.com",
+                                Target = "Users (48,231 records)",
+                                Ip = "192.168.1.45",
+                                Severity = "Medium",
+                                SevBadge = "badge-warning",
+                                Date = "3 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12840",
+                                Action = "Configuration changed",
+                                ActionIcon = "ri-settings-3-line",
+                                ActionColor = "cyan",
+                                Category = "System",
+                                Admin = "Mike Chen",
+                                AdminEmail = "mike@admin.com",
+                                Target = "auth.jwt.expiration",
+                                Ip = "192.168.1.92",
+                                Severity = "Medium",
+                                SevBadge = "badge-warning",
+                                Date = "4 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12839",
+                                Action = "Suspended group for spam",
+                                ActionIcon = "ri-forbid-line",
+                                ActionColor = "red",
+                                Category = "Admin",
+                                Admin = "Sarah Lee",
+                                AdminEmail = "sarah@admin.com",
+                                Target = "Group: NSFW Content #G-088",
+                                Ip = "192.168.1.78",
+                                Severity = "High",
+                                SevBadge = "badge-danger",
+                                Date = "5 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12838",
+                                Action = "API key regenerated",
+                                ActionIcon = "ri-key-2-line",
+                                ActionColor = "amber",
+                                Category = "Security",
+                                Admin = "John Smith",
+                                AdminEmail = "john@admin.com",
+                                Target = "Service: Mobile App",
+                                Ip = "192.168.1.45",
+                                Severity = "High",
+                                SevBadge = "badge-danger",
+                                Date = "6 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12837",
+                                Action = "Resolved user report",
+                                ActionIcon = "ri-shield-check-line",
+                                ActionColor = "green",
+                                Category = "Moderation",
+                                Admin = "Anna Wong",
+                                AdminEmail = "anna@admin.com",
+                                Target = "Report: R-007",
+                                Ip = "192.168.1.31",
+                                Severity = "Low",
+                                SevBadge = "badge-inactive",
+                                Date = "8 hr ago"
+                            },
+                            new {
+                                Id = "LOG-12836",
+                                Action = "User password reset",
+                                ActionIcon = "ri-lock-password-line",
+                                ActionColor = "blue",
+                                Category = "Data",
+                                Admin = "Mike Chen",
+                                AdminEmail = "mike@admin.com",
+                                Target = "User: Tran Thi B (U-002)",
+                                Ip = "192.168.1.92",
+                                Severity = "Medium",
+                                SevBadge = "badge-warning",
+                                Date = "10 hr ago"
+                            },
+                        };
+                    }
+
+                    @foreach (var log in logs)
+                    {
+                        var iconBg = log.ActionColor switch {
+                            "red"   => "background:#fee2e2;color:#ef4444;",
+                            "green" => "background:#d1fae5;color:#10b981;",
+                            "amber" => "background:#fef3c7;color:#f59e0b;",
+                            "blue"  => "background:#eef2ff;color:#4f46e5;",
+                            "cyan"  => "background:#cffafe;color:#06b6d4;",
+                            _       => "background:#f1f5f9;color:#64748b;"
+                        };
+                        var initials = log.Admin == "System" || log.Admin == "Unknown"
+                            ? (log.Admin[0].ToString())
+                            : string.Join("", log.Admin.Split(' ').Take(2).Select(w => w[0]));
+
+                        <tr>
+                            <td><input type="checkbox" /></td>
+                            <td class="cell-mono text-sm">@log.Id</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.9rem;@iconBg">
+                                        <i class="@log.ActionIcon"></i>
+                                    </div>
+                                    <span class="fw-600">@log.Action</span>
+                                </div>
+                            </td>
+                            <td>
+                                @if (log.AdminEmail == "—")
+                                {
+                                    <span class="text-muted text-sm">@log.Admin</span>
+                                }
+                                else
+                                {
+                                    <div class="cell-user">
+                                        <div class="cell-user-avatar">@initials</div>
+                                        <div class="cell-user-info">
+                                            <div class="cell-user-name">@log.Admin</div>
+                                            <div class="cell-user-email">@log.AdminEmail</div>
+                                        </div>
+                                    </div>
+                                }
+                            </td>
+                            <td class="cell-muted">@log.Target</td>
+                            <td class="cell-mono text-sm">@log.Ip</td>
+                            <td>
+                                <span class="badge @log.SevBadge">@log.Severity</span>
+                            </td>
+                            <td class="cell-muted">@log.Date</td>
+                            <td>
+                                <div class="cell-actions" style="justify-content:flex-end;">
+                                    <button class="action-btn primary"
+                                            title="View details"
+                                            data-modal="logDetailModal">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <span class="pagination-info">Showing 1–12 of 12,847 logs</span>
+            <div class="pagination-controls">
+                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <span class="page-ellipsis">...</span>
+                <button class="page-btn">1,071</button>
+                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Action Bar -->
+<div class="bulk-action-bar hidden"
+     style="position:sticky;bottom:20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:380px;margin:0 auto;">
+    <span class="text-sm fw-600"><span class="bulk-count">0</span> selected</span>
+    <div style="flex:1;"></div>
+    <button class="btn btn-secondary btn-sm"><i class="ri-download-line"></i> Export</button>
+    <button class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i> Archive</button>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal-overlay hidden" id="logDetailModal">
+    <div class="modal" style="max-width:620px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Log Detail — LOG-12847</h2>
+            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:18px;">
+                <!-- Header -->
+                <div style="display:flex;align-items:center;gap:12px;padding:14px;background:#fef2f2;border-radius:10px;border:1px solid #fecaca;">
+                    <div style="width:42px;height:42px;border-radius:10px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                        <i class="ri-user-forbid-line"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="fw-700">Banned user account</div>
+                        <div class="text-sm text-muted">High severity &middot; 2 min ago</div>
+                    </div>
+                    <span class="badge badge-danger">High</span>
+                </div>
+
+                <!-- Properties grid -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">Admin</div>
+                        <div class="fw-600">John Smith</div>
+                        <div class="text-xs text-muted">john@admin.com</div>
+                    </div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">Target</div>
+                        <div class="fw-600">User: Le Van C</div>
+                        <div class="text-xs text-muted font-mono">U-003</div>
+                    </div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">IP Address</div>
+                        <div class="fw-600 font-mono text-sm">192.168.1.45</div>
+                    </div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">User Agent</div>
+                        <div class="fw-600 text-sm">Chrome 126 / Windows</div>
+                    </div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">Category</div>
+                        <div class="fw-600">Admin Actions</div>
+                    </div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px;">
+                        <div class="text-sm text-muted">Timestamp</div>
+                        <div class="fw-600">Jul 25, 2026 — 6:13:42 PM</div>
+                    </div>
+                </div>
+
+                <!-- Changes diff -->
+                <div>
+                    <div class="text-sm text-muted fw-600 mb-4" style="margin-bottom:6px;">Change Details</div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-family:'Fira Code',monospace;font-size:.8rem;">
+                        <div style="color:#64748b;">
+                            <span style="color:#94a3b8;">user.status</span>:
+                            <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:3px;">"Active"</span>
+                            <span style="margin:0 6px;">→</span>
+                            <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px;">"Banned"</span>
+                        </div>
+                        <div style="color:#64748b;margin-top:6px;">
+                            <span style="color:#94a3b8;">ban.reason</span>:
+                            <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px;">"Spam — repeated policy violations"</span>
+                        </div>
+                        <div style="color:#64748b;margin-top:6px;">
+                            <span style="color:#94a3b8;">ban.duration</span>:
+                            <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px;">"Permanent"</span>
+                        </div>
+                        <div style="color:#64748b;margin-top:6px;">
+                            <span style="color:#94a3b8;">ban.note</span>:
+                            <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px;">"Multiple reports filed by community; clear pattern of abuse"</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close>Close</button>
+            <button class="btn btn-primary btn-sm"><i class="ri-download-line"></i> Export Entry</button>
+        </div>
+    </div>
+</div>

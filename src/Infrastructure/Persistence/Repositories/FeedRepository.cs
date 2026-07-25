@@ -120,86 +120,94 @@ namespace Infrastructure.Persistence.Repositories
 
                     feed.Post.Comments.Count(c => c.DeletedAt == null),
 
-                    feed.Post.Group == null
-                        ? null
-                        : new GroupDto(
-                            feed.Post.Group.Id,
-                            feed.Post.Group.OwnerUserId,
-                            feed.Post.Group.Name,
-                            feed.Post.Group.Description,
-                            feed.Post.Group.PrivacyType,
-                            feed.Post.Group.CoverPhotoUrl),
-
-                    (feed.Post.SharePost == null ||
-                     !(feed.Post.SharePost.Visibility == PostVisibility.Public
-                       || (feed.Post.SharePost.Visibility == PostVisibility.Private
-                           && feed.Post.SharePost.AuthorId == userId)
-                       || (feed.Post.SharePost.Visibility == PostVisibility.Friends
-                           && (feed.Post.SharePost.AuthorId == userId
-                               || _context.Friendships.Any(fr => (fr.User1Id == userId && fr.User2Id == feed.Post.SharePost.AuthorId) || (fr.User2Id == userId && fr.User1Id == feed.Post.SharePost.AuthorId))))
-                       || (feed.Post.SharePost.Visibility == PostVisibility.Group
-                           && feed.Post.SharePost.GroupId != null
-                           && ((feed.Post.SharePost.Group != null && feed.Post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
-                               || _context.GroupMembers.Any(gm => gm.GroupId == feed.Post.SharePost.GroupId && gm.UserId == userId)))))
-                        ? null // Returns null if SharePost doesn't exist OR visibility checks fail
-                        : new PostDto(
-                            feed.Post.SharePost.Id,
-                            feed.Post.SharePost.AuthorId,
-                            feed.Post.SharePost.Author.FirstName + " " + feed.Post.SharePost.Author.LastName,
-                            feed.Post.SharePost.Author.AvatarUrl,
-                            feed.Post.SharePost.GroupId,
-                            feed.Post.SharePost.Content,
-                            feed.Post.SharePost.Visibility,
-                            feed.Post.SharePost.SharePostId,
-                            feed.Post.SharePost.LocationTag,
-                            feed.Post.SharePost.FeelingActivity,
-                            feed.Post.SharePost.CreatedAt,
-                            feed.Post.SharePost.UpdatedAt,
-                            feed.Post.SharePost.DeletedAt,
-
-                            feed.Post.SharePost.Media
-                                .Select(m => new PostMediaDto(
-                                    m.Id,
-                                    m.MediaType,
-                                    m.MediaUrl,
-                                    m.ThumbnailUrl,
-                                    m.Metadata,
-                                    m.UploadedAt))
-                                .ToList(),
-
-                            feed.Post.SharePost.Reactions
-                                .GroupBy(r => r.ReactionType)
-                                .Select(g => new ReactionCountDto(g.Key, g.Count()))
-                                .ToList(),
-
-                            feed.Post.SharePost.Comments.Count(c => c.DeletedAt == null),
-
-                            feed.Post.SharePost.Group == null
+                            feed.Post.Group == null
                                 ? null
                                 : new GroupDto(
-                                    feed.Post.SharePost.Group.Id,
-                                    feed.Post.SharePost.Group.OwnerUserId,
-                                    feed.Post.SharePost.Group.Name,
-                                    feed.Post.SharePost.Group.Description,
-                                    feed.Post.SharePost.Group.PrivacyType,
-                                    feed.Post.SharePost.Group.CoverPhotoUrl),
+                                    feed.Post.Group.Id,
+                                    feed.Post.Group.OwnerUserId,
+                                    feed.Post.Group.Name,
+                                    feed.Post.Group.Description,
+                                    feed.Post.Group.PrivacyType,
+                                    feed.Post.Group.CoverPhotoUrl),
 
-                            null, // Stop recursive mapping
+                            (feed.Post.SharePost == null ||
+                             !(feed.Post.SharePost.Visibility == PostVisibility.Public
+                               || (feed.Post.SharePost.Visibility == PostVisibility.Private
+                                   && feed.Post.SharePost.AuthorId == userId)
+                               || (feed.Post.SharePost.Visibility == PostVisibility.Friends
+                                   && (feed.Post.SharePost.AuthorId == userId
+                                       || _context.Friendships.Any(fr => (fr.User1Id == userId && fr.User2Id == feed.Post.SharePost.AuthorId) || (fr.User2Id == userId && fr.User1Id == feed.Post.SharePost.AuthorId))))
+                               || (feed.Post.SharePost.Visibility == PostVisibility.Group
+                                   && feed.Post.SharePost.GroupId != null
+                                   && ((feed.Post.SharePost.Group != null && feed.Post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
+                                       || _context.GroupMembers.Any(gm => gm.GroupId == feed.Post.SharePost.GroupId && gm.UserId == userId)))))
+                                ? null // Returns null if SharePost doesn't exist OR visibility checks fail
+                                : new PostDto(
+                                    feed.Post.SharePost.Id,
+                                    feed.Post.SharePost.AuthorId,
+                                    feed.Post.SharePost.Author.FirstName + " " + feed.Post.SharePost.Author.LastName,
+                                    feed.Post.SharePost.Author.AvatarUrl,
+                                    feed.Post.SharePost.GroupId,
+                                    feed.Post.SharePost.Content,
+                                    feed.Post.SharePost.Visibility,
+                                    feed.Post.SharePost.SharePostId,
+                                    feed.Post.SharePost.LocationTag,
+                                    feed.Post.SharePost.FeelingActivity,
+                                    feed.Post.SharePost.CreatedAt,
+                                    feed.Post.SharePost.UpdatedAt,
+                                    feed.Post.SharePost.DeletedAt,
 
-                            feed.Post.SharePost.Reactions
-                                .Where(r => r.UserId == userId)
-                                .Select(r => (ReactionType?)r.ReactionType)
-                                .FirstOrDefault(),
+                                    feed.Post.SharePost.Media
+                                        .Select(m => new PostMediaDto(
+                                            m.Id,
+                                            m.MediaType,
+                                            m.MediaUrl,
+                                            m.ThumbnailUrl,
+                                            m.Metadata,
+                                            m.UploadedAt))
+                                        .ToList(),
 
-                            feed.Post.SharePost.IsHiddenFromGroup,
-                            feed.Post.SharePost.HiddenAt,
-                            feed.Post.SharePost.HideReason,
-                            feed.Post.SharePost.ApprovalStatus,
-                            feed.Post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
-                            feed.Post.SharePost.IsAnonymous
-                        ),
+                                    feed.Post.SharePost.Reactions
+                                        .GroupBy(r => r.ReactionType)
+                                        .Select(g => new ReactionCountDto(g.Key, g.Count()))
+                                        .ToList(),
 
-                    feed.Post.Reactions
+                                    feed.Post.SharePost.Comments.Count(c => c.DeletedAt == null),
+
+                                    feed.Post.SharePost.Group == null
+                                        ? null
+                                        : new GroupDto(
+                                            feed.Post.SharePost.Group.Id,
+                                            feed.Post.SharePost.Group.OwnerUserId,
+                                            feed.Post.SharePost.Group.Name,
+                                            feed.Post.SharePost.Group.Description,
+                                            feed.Post.SharePost.Group.PrivacyType,
+                                            feed.Post.SharePost.Group.CoverPhotoUrl),
+
+                                    null, // Stop recursive mapping (no nested SharePost)
+
+                                    feed.Post.SharePost.Tags
+                                        .Select(t => new TagDto(t.Id, t.TagName))
+                                        .ToList(),
+
+                                    feed.Post.SharePost.Reactions
+                                        .Where(r => r.UserId == userId)
+                                        .Select(r => (ReactionType?)r.ReactionType)
+                                        .FirstOrDefault(),
+
+                                    feed.Post.SharePost.IsHiddenFromGroup,
+                                    feed.Post.SharePost.HiddenAt,
+                                    feed.Post.SharePost.HideReason,
+                                    feed.Post.SharePost.ApprovalStatus,
+                                    feed.Post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
+                                    feed.Post.SharePost.IsAnonymous
+                                ),
+
+                            feed.Post.Tags
+                                .Select(t => new TagDto(t.Id, t.TagName))
+                                .ToList(),
+
+                            feed.Post.Reactions
                         .Where(r => r.UserId == userId)
                         .Select(r => (ReactionType?)r.ReactionType)
                         .FirstOrDefault(),

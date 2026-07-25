@@ -38,6 +38,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
+                .Include(post => post.Tags)
                 .FirstOrDefaultAsync(post => post.Id == id, cancellationToken);
         }
 
@@ -81,6 +82,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
+                .Include(post => post.Tags)
                 .Where(post => post.GroupId == groupId && !post.IsHiddenFromGroup);
 
             if (authorId.HasValue)
@@ -112,6 +114,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
+                .Include(post => post.Tags)
                 .Where(post => post.GroupId == groupId && !post.IsHiddenFromGroup && post.ApprovalStatus == PostApprovalStatus.Approved);
 
             if (authorId.HasValue)
@@ -169,6 +172,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
+                .Include(post => post.Tags)
                 .Where(post => post.AuthorId == authorId)
                 .OrderByDescending(post => post.CreatedAt)
                 .ToListAsync(cancellationToken);
@@ -193,6 +197,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Media)
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
+                .Include(post => post.Tags)
                 .Where(post => post.AuthorId == authorId)
                 .OrderByDescending(post => post.CreatedAt);
 
@@ -251,6 +256,11 @@ namespace Infrastructure.Persistence.Repositories
         public void AddMedia(PostMedia media)
         {
             _context.PostMedias.Add(media);
+        }
+
+        public void RemoveMedia(PostMedia media)
+        {
+            _context.PostMedias.Remove(media);
         }
 
         public void AddTag(PostTag tag)
@@ -316,6 +326,8 @@ namespace Infrastructure.Persistence.Repositories
                     .ThenInclude(post => post.Reactions)
                 .Include(saved => saved.Post)
                     .ThenInclude(post => post.Comments)
+                .Include(saved => saved.Post)
+                    .ThenInclude(post => post.Tags)
                 .Where(saved => saved.UserId == userId)
                 .OrderByDescending(saved => saved.CreatedAt);
 
@@ -523,14 +535,14 @@ namespace Infrastructure.Persistence.Repositories
             (post.SharePost == null ||
             !(post.SharePost.Visibility == PostVisibility.Public
             || (viewerId != null && (
-                (post.SharePost.Visibility == PostVisibility.Private 
+                (post.SharePost.Visibility == PostVisibility.Private
                     && post.SharePost.AuthorId == viewerId)
-                || (post.SharePost.Visibility == PostVisibility.Friends 
-                    && (post.SharePost.AuthorId == viewerId 
+                || (post.SharePost.Visibility == PostVisibility.Friends
+                    && (post.SharePost.AuthorId == viewerId
                         || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == post.SharePost.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == post.SharePost.AuthorId))))
-                || (post.SharePost.Visibility == PostVisibility.Group 
-                    && post.SharePost.GroupId != null 
-                    && ((post.SharePost.Group != null && post.SharePost.Group.PrivacyType == GroupPrivacyType.Public) 
+                || (post.SharePost.Visibility == PostVisibility.Group
+                    && post.SharePost.GroupId != null
+                    && ((post.SharePost.Group != null && post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
                         || _context.GroupMembers.Any(gm => gm.GroupId == post.SharePost.GroupId && gm.UserId == viewerId)))
             ))))
                 ? null // If nested validation fails or entity is absent, shared block is explicitly hidden
@@ -576,10 +588,12 @@ namespace Infrastructure.Persistence.Repositories
                             post.SharePost.Group.PrivacyType,
                             post.SharePost.Group.CoverPhotoUrl),
 
-                    null, // Terminate nested lookups here
+                    null, // Terminate nested lookups here (no nested SharePost)
 
-                    viewerId == null 
-                        ? null 
+                    Array.Empty<TagDto>(), // Tags
+
+                    viewerId == null
+                        ? null
                         : post.SharePost.Reactions
                             .Where(r => r.UserId == viewerId)
                             .Select(r => (ReactionType?)r.ReactionType)
@@ -593,8 +607,12 @@ namespace Infrastructure.Persistence.Repositories
                     post.SharePost.IsAnonymous
                 ),
 
-            viewerId == null 
-                ? null 
+            post.Tags
+                .Select(t => new TagDto(t.Id, t.TagName))
+                .ToList(),
+
+            viewerId == null
+                ? null
                 : post.Reactions
                     .Where(r => r.UserId == viewerId)
                     .Select(r => (ReactionType?)r.ReactionType)

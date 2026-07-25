@@ -1,4 +1,5 @@
 using Application.Abstractions.SignalR;
+using Application.DTOs.Notifications;
 using Domain.Enums;
 using Microsoft.AspNetCore.SignalR;
 
@@ -15,6 +16,22 @@ public class NotificationHubNotifier : INotificationHubNotifier
     {
         _hubContext = hubContext;
         _presenceTracker = presenceTracker;
+    }
+
+    public async Task NotifyAsync(
+        NotificationDto notification,
+        CancellationToken cancellationToken = default)
+    {
+        var connectionIds = _presenceTracker.GetConnections(notification.RecipientUserId.ToString());
+        foreach (var connectionId in connectionIds)
+        {
+            await _hubContext.Clients
+                .Client(connectionId)
+                .SendAsync(
+                    "ReceiveNotification",
+                    notification,
+                    cancellationToken);
+        }
     }
 
     public async Task NotifyFriendRequestReceivedAsync(

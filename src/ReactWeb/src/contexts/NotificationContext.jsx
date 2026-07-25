@@ -29,10 +29,9 @@ const normalizeResponse = (data) => {
   return { items: [], totalCount: 0 };
 };
 
-// Server-side events emitted by NotificationHubNotifier. The payload from each
-// event is intentionally ignored here — we refetch the first page so the new
-// notification arrives with full DTO data (sender, target entity, etc.) instead
-// of a synthetic shell.
+// Old typed event names kept for backward compat (backend may still emit them).
+// "ReceiveNotification" carries the full NotificationDto so we can inject it
+// directly into local state without an extra API call.
 const REALTIME_EVENTS = [
   "FriendRequestReceived",
   "GroupJoinRequestAccepted",
@@ -40,6 +39,7 @@ const REALTIME_EVENTS = [
   "CommentCreated",
   "CommentReply",
 ];
+const REALTIME_DTO_EVENT = "ReceiveNotification";
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
@@ -162,7 +162,23 @@ export function NotificationProvider({ children }) {
       loadPage(1);
     };
 
+    // Inject the full NotificationDto directly into local state — no API call needed.
+    const onReceiveNotification = (notification) => {
+      if (!notification?.id) return;
+
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === notification.id);
+        if (exists) return prev;
+        return [notification, ...prev];
+      });
+
+      if (!notification.isSeen) {
+        setUnseenCount((prev) => prev + 1);
+      }
+    };
+
     REALTIME_EVENTS.forEach((evt) => connection.on(evt, refreshFirstPage));
+    connection.on(REALTIME_DTO_EVENT, onReceiveNotification);
 
     connection
       .start()
@@ -177,6 +193,7 @@ export function NotificationProvider({ children }) {
 
     return () => {
       REALTIME_EVENTS.forEach((evt) => connection.off(evt, refreshFirstPage));
+      connection.off(REALTIME_DTO_EVENT, onReceiveNotification);
       if (connectionRef.current) {
         connectionRef.current.stop().catch(() => {});
         connectionRef.current = null;

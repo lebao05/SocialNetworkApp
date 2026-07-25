@@ -23,6 +23,7 @@ namespace Application.DTOs.Posts
         int CommentCount,
         GroupDto? Group,
         PostDto? SharePost,
+        IReadOnlyCollection<TagDto> Tags,
         ReactionType? UserReaction,
         bool IsHiddenFromGroup,
         DateTime? HiddenAt,

@@ -1,6 +1,7 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
+using Application.DTOs.Notifications;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Events;
@@ -13,17 +14,20 @@ internal sealed class CommentCreatedDomainEventHandler
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IUserRepository _userRepository;
     private readonly INotificationHubNotifier _notificationHubNotifier;
     private readonly ILogger<CommentCreatedDomainEventHandler> _logger;
 
     public CommentCreatedDomainEventHandler(
         INotificationRepository notificationRepository,
         IPostRepository postRepository,
+        IUserRepository userRepository,
         INotificationHubNotifier notificationHubNotifier,
         ILogger<CommentCreatedDomainEventHandler> logger)
     {
         _notificationRepository = notificationRepository;
         _postRepository = postRepository;
+        _userRepository = userRepository;
         _notificationHubNotifier = notificationHubNotifier;
         _logger = logger;
     }
@@ -36,8 +40,9 @@ internal sealed class CommentCreatedDomainEventHandler
             "Processing CommentCreatedDomainEvent for comment {CommentId} on post {PostId}",
             notification.CommentId, notification.PostId);
 
-        // Notify post owner
         var post = await _postRepository.GetByIdAsync(notification.PostId, cancellationToken);
+
+        // Notify post owner
         if (post != null && post.AuthorId != notification.CommenterId)
         {
             await NotifyUserAsync(
@@ -53,7 +58,6 @@ internal sealed class CommentCreatedDomainEventHandler
         // Notify replied user (if this is a reply)
         if (notification.RepliedUserId.HasValue && notification.RepliedUserId.Value != notification.CommenterId)
         {
-            // Don't notify if replied user is the post owner (already notified above)
             if (post == null || notification.RepliedUserId.Value != post.AuthorId)
             {
                 await NotifyUserAsync(
@@ -91,13 +95,28 @@ internal sealed class CommentCreatedDomainEventHandler
 
         await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
 
-        await _notificationHubNotifier.NotifyCommentCreatedAsync(
-            recipientUserId,
-            notificationEntity.Id,
-            postId,
-            commentId,
-            notificationType,
-            cancellationToken);
+        var actor = await _userRepository.GetByIdAsync(actorUserId, cancellationToken);
+        var dto = new NotificationDto(
+            Id: notificationEntity.Id,
+            RecipientUserId: recipientUserId,
+            ActorUserId: actorUserId,
+            ActorFirstName: actor?.FirstName,
+            ActorLastName: actor?.LastName,
+            ActorAvatarUrl: actor?.AvatarUrl,
+            NotificationType: notificationType,
+            EntityType: entityType,
+            FriendRequestId: null,
+            FriendRequestStatus: null,
+            GroupJoinRequestId: null,
+            GroupId: null,
+            GroupName: null,
+            PostId: postId,
+            CommentId: commentId,
+            Metadata: null,
+            IsSeen: false,
+            CreatedAt: notificationEntity.CreatedAt);
+
+        await _notificationHubNotifier.NotifyAsync(dto, cancellationToken);
 
         _logger.LogInformation(
             "Notification created and SignalR notification sent for comment {CommentId} to user {UserId}",

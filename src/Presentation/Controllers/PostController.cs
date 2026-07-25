@@ -213,12 +213,61 @@ namespace Presentation.Controllers
                 request.Content,
                 request.Visibility,
                 request.LocationTag,
-                request.FeelingActivity
+                request.FeelingActivity,
+                request.RetainMediaIds
             );
 
             var result = await _sender.Send(command, cancellationToken);
 
             return result.IsSuccess ? NoContent() : HandleFailure(result);
+        }
+
+        [HttpPut("{id:long}/attachments")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdatePostWithAttachments(
+            long id,
+            [FromForm] UpdatePostWithAttachmentsRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var attachments = request.NewAttachments
+                .Where(file => file.Length > 0)
+                .Select(file => new PostAttachment(
+                    file.OpenReadStream(),
+                    file.FileName,
+                    file.ContentType,
+                    file.Length))
+                .ToList();
+
+            try
+            {
+                var command = new UpdatePostCommand(
+                    id,
+                    userId,
+                    request.Content,
+                    request.Visibility,
+                    request.LocationTag,
+                    request.FeelingActivity,
+                    request.RetainMediaIds,
+                    attachments);
+
+                var result = await _sender.Send(command, cancellationToken);
+
+                return result.IsSuccess ? NoContent() : HandleFailure(result);
+            }
+            finally
+            {
+                foreach (var attachment in attachments)
+                {
+                    await attachment.Stream.DisposeAsync();
+                }
+            }
         }
 
         [HttpPost("{id:long}/react")]
