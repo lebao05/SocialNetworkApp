@@ -397,7 +397,6 @@ export default function GroupAdminInsights({ view, groupId }) {
         onDateRangeChange={handleDateRangeChange}
         onExport={handleExport}
       />
-      {view === "engagement" && <EngagementView insights={insights} />}
       {(view === "admins" || view === "members") && <PeopleMetricView type={view} insights={insights} />}
       {(view === "growth" || view === undefined) && <GrowthView insights={insights} />}
     </>

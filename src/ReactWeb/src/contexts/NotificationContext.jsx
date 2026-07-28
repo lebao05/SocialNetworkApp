@@ -29,16 +29,10 @@ const normalizeResponse = (data) => {
   return { items: [], totalCount: 0 };
 };
 
-// Old typed event names kept for backward compat (backend may still emit them).
 // "ReceiveNotification" carries the full NotificationDto so we can inject it
-// directly into local state without an extra API call.
-const REALTIME_EVENTS = [
-  "FriendRequestReceived",
-  "GroupJoinRequestAccepted",
-  "PostTagged",
-  "CommentCreated",
-  "CommentReply",
-];
+// directly into local state without an extra API call. The backend always
+// emits this single event for every notification, so we no longer need to
+// listen for typed fan-out events (e.g. "CommentCreated", "FriendRequestReceived").
 const REALTIME_DTO_EVENT = "ReceiveNotification";
 
 export function NotificationProvider({ children }) {
@@ -134,9 +128,10 @@ export function NotificationProvider({ children }) {
     setUnseenCount(0);
   }, []);
 
-  // SignalR connection — only when authenticated. Listens for the events
-  // emitted by NotificationHub and triggers a first-page refresh so the new
-  // notification appears in correct order with full data.
+  // SignalR connection — only when authenticated. The backend emits a single
+  // "ReceiveNotification" event with the full NotificationDto for every new
+  // notification, so we inject it directly into local state without any extra
+  // round-trip to the API.
   useEffect(() => {
     if (!user) return;
 
@@ -158,11 +153,6 @@ export function NotificationProvider({ children }) {
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
-    const refreshFirstPage = () => {
-      loadPage(1);
-    };
-
-    // Inject the full NotificationDto directly into local state — no API call needed.
     const onReceiveNotification = (notification) => {
       if (!notification?.id) return;
 
@@ -177,7 +167,6 @@ export function NotificationProvider({ children }) {
       }
     };
 
-    REALTIME_EVENTS.forEach((evt) => connection.on(evt, refreshFirstPage));
     connection.on(REALTIME_DTO_EVENT, onReceiveNotification);
 
     connection
@@ -192,7 +181,6 @@ export function NotificationProvider({ children }) {
     connectionRef.current = connection;
 
     return () => {
-      REALTIME_EVENTS.forEach((evt) => connection.off(evt, refreshFirstPage));
       connection.off(REALTIME_DTO_EVENT, onReceiveNotification);
       if (connectionRef.current) {
         connectionRef.current.stop().catch(() => {});

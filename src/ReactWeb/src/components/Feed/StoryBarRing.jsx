@@ -37,7 +37,6 @@ if (typeof document !== "undefined" && !document.getElementById("story-bar-ring-
 // Story bar uses a single 72px wrapper. Ring thickness scales with wrapper.
 const AVATAR_PX = 72;
 const RING_W = 5;
-const INNER_PX = AVATAR_PX - 2 * RING_W; // 62
 
 // ── StoryBarRing ─────────────────────────────────────────────────────────────
 // Lightweight ring used ONLY in the feed's StoryBar. No menus, no nav, no
@@ -58,7 +57,7 @@ export default function StoryBarRing({
     return (
       <div
         className="rounded-full bg-white shrink-0 cursor-pointer"
-        style={{ width: AVATAR_PX, height: AVATAR_PX }}
+        style={{ width: AVATAR_PX, height: AVATAR_PX, padding: RING_W }}
         onClick={handleClick}
         role="button"
         tabIndex={0}
@@ -69,10 +68,7 @@ export default function StoryBarRing({
           }
         }}
       >
-        <div
-          className="rounded-full overflow-hidden bg-white"
-          style={{ width: INNER_PX, height: INNER_PX, margin: RING_W }}
-        >
+        <div className="rounded-full overflow-hidden bg-white w-full h-full">
           <img
             src={avatarUrl || DEFAULT_AVATAR}
             alt={name || ""}
@@ -91,12 +87,16 @@ export default function StoryBarRing({
     ? "story-bar-ring-spin 6s linear infinite"
     : "story-bar-ring-spin-reverse 12s linear infinite";
 
+  // Use `padding` on the gradient wrapper (instead of `inset` on an absolute
+  // child) so the inner avatar stays perfectly centered at every animation
+  // frame — no sub-pixel gaps that would let the gradient leak through.
   return (
     <div
-      className="story-bar-ring-anim rounded-full shrink-0 cursor-pointer relative"
+      className="story-bar-ring-anim rounded-full shrink-0 cursor-pointer"
       style={{
         width: AVATAR_PX,
         height: AVATAR_PX,
+        padding: RING_W,
         background: gradient,
         animation,
         transformOrigin: "50% 50%",
@@ -112,19 +112,13 @@ export default function StoryBarRing({
       }}
       aria-label={`${name || "User"} story`}
     >
-      {/* White inset that masks the gradient into a ring, then clips the avatar. */}
-      <div
-        className="rounded-full bg-white"
-        style={{ position: "absolute", inset: RING_W }}
-      >
-        <div className="rounded-full overflow-hidden w-full h-full">
-          <img
-            src={avatarUrl || DEFAULT_AVATAR}
-            alt={name || ""}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
-        </div>
+      <div className="rounded-full bg-white overflow-hidden w-full h-full">
+        <img
+          src={avatarUrl || DEFAULT_AVATAR}
+          alt={name || ""}
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
       </div>
     </div>
   );

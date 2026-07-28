@@ -1,6 +1,5 @@
 using Application.Abstractions.SignalR;
 using Application.DTOs.Notifications;
-using Domain.Enums;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Infrastructure.SignalR;
@@ -8,127 +7,24 @@ namespace Infrastructure.SignalR;
 public class NotificationHubNotifier : INotificationHubNotifier
 {
     private readonly IHubContext<NotificationHub> _hubContext;
-    private readonly INotificationPresenceTracker _presenceTracker;
 
-    public NotificationHubNotifier(
-        IHubContext<NotificationHub> hubContext,
-        INotificationPresenceTracker presenceTracker)
+    public NotificationHubNotifier(IHubContext<NotificationHub> hubContext)
     {
         _hubContext = hubContext;
-        _presenceTracker = presenceTracker;
     }
 
+    /// <summary>
+    /// Delivers the full <see cref="NotificationDto"/> to the recipient user via
+    /// the SignalR <c>ReceiveNotification</c> event. Relies on SignalR's default
+    /// per-user routing (driven by the <c>ClaimTypes.NameIdentifier</c> claim),
+    /// which fans the message out to every active connection of that user.
+    /// </summary>
     public async Task NotifyAsync(
         NotificationDto notification,
         CancellationToken cancellationToken = default)
     {
-        var connectionIds = _presenceTracker.GetConnections(notification.RecipientUserId.ToString());
-        foreach (var connectionId in connectionIds)
-        {
-            await _hubContext.Clients
-                .Client(connectionId)
-                .SendAsync(
-                    "ReceiveNotification",
-                    notification,
-                    cancellationToken);
-        }
-    }
-
-    public async Task NotifyFriendRequestReceivedAsync(
-        Guid recipientUserId,
-        long notificationId,
-        long friendRequestId,
-        CancellationToken cancellationToken = default)
-    {
-        var connectionIds = _presenceTracker.GetConnections(recipientUserId.ToString());
-        foreach (var connectionId in connectionIds)
-        {
-            await _hubContext.Clients
-                .Client(connectionId)
-                .SendAsync(
-                    "FriendRequestReceived",
-                    new
-                    {
-                        notificationId,
-                        friendRequestId
-                    },
-                    cancellationToken);
-        }
-    }
-
-    public async Task NotifyGroupJoinRequestAcceptedAsync(
-        Guid recipientUserId,
-        long notificationId,
-        long groupJoinRequestId,
-        long groupId,
-        CancellationToken cancellationToken = default)
-    {
-        var connectionIds = _presenceTracker.GetConnections(recipientUserId.ToString());
-        foreach (var connectionId in connectionIds)
-        {
-            await _hubContext.Clients
-                .Client(connectionId)
-                .SendAsync(
-                    "GroupJoinRequestAccepted",
-                    new
-                    {
-                        notificationId,
-                        groupJoinRequestId,
-                        groupId
-                    },
-                    cancellationToken);
-        }
-    }
-
-    public async Task NotifyPostTaggedAsync(
-        Guid recipientUserId,
-        long notificationId,
-        long postId,
-        CancellationToken cancellationToken = default)
-    {
-        var connectionIds = _presenceTracker.GetConnections(recipientUserId.ToString());
-        foreach (var connectionId in connectionIds)
-        {
-            await _hubContext.Clients
-                .Client(connectionId)
-                .SendAsync(
-                    "PostTagged",
-                    new
-                    {
-                        notificationId,
-                        postId
-                    },
-                    cancellationToken);
-        }
-    }
-
-    public async Task NotifyCommentCreatedAsync(
-        Guid recipientUserId,
-        long notificationId,
-        long postId,
-        long commentId,
-        NotificationType notificationType,
-        CancellationToken cancellationToken = default)
-    {
-        var connectionIds = _presenceTracker.GetConnections(recipientUserId.ToString());
-        foreach (var connectionId in connectionIds)
-        {
-            var eventName = notificationType == NotificationType.CommentReply
-                ? "CommentReply"
-                : "CommentCreated";
-
-            await _hubContext.Clients
-                .Client(connectionId)
-                .SendAsync(
-                    eventName,
-                    new
-                    {
-                        notificationId,
-                        postId,
-                        commentId,
-                        notificationType
-                    },
-                    cancellationToken);
-        }
+        await _hubContext.Clients
+            .User(notification.RecipientUserId.ToString())
+            .SendAsync("ReceiveNotification", notification, cancellationToken);
     }
 }

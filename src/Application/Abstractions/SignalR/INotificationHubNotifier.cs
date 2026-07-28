@@ -2,11 +2,14 @@ using Application.DTOs.Notifications;
 
 namespace Application.Abstractions.SignalR;
 
+/// <summary>
+/// Pushes notifications to a connected user. The single
+/// <c>NotifyAsync</c> entry point always delivers the full
+/// <see cref="NotificationDto"/> under the SignalR event
+/// <c>ReceiveNotification</c>, so the client can render the
+/// notification without any additional API round-trip.
+/// </summary>
 public interface INotificationHubNotifier
 {
     Task NotifyAsync(NotificationDto notification, CancellationToken cancellationToken = default);
-    Task NotifyFriendRequestReceivedAsync(Guid recipientUserId, long notificationId, long friendRequestId, CancellationToken cancellationToken = default);
-    Task NotifyGroupJoinRequestAcceptedAsync(Guid recipientUserId, long notificationId, long groupJoinRequestId, long groupId, CancellationToken cancellationToken = default);
-    Task NotifyPostTaggedAsync(Guid recipientUserId, long notificationId, long postId, CancellationToken cancellationToken = default);
-    Task NotifyCommentCreatedAsync(Guid recipientUserId, long notificationId, long postId, long commentId, Domain.Enums.NotificationType notificationType, CancellationToken cancellationToken = default);
 }

@@ -98,7 +98,6 @@ export const adminSidebarSections = [
     title: "Insights",
     items: [
       { label: "Growth", view: "growth", icon: "ChartNoAxesCombined" },
-      { label: "Engagement", view: "engagement", icon: "ThumbsUp" },
       { label: "Members", view: "members", icon: "Users" },
     ],
   },

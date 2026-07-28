@@ -4,14 +4,16 @@ import {
   Bookmark,
   Clapperboard,
   Clock3,
-  FileText,
   Gift,
   MessageCircle,
-  Sparkles,
+  Pencil,
   Users,
 } from "lucide-react";
 import { MdGroups } from "react-icons/md";
 import { currentUser } from "../../data/mockData";
+import { groupShortcuts } from "../../data/mockData";
+import { useYourGroups } from "../../hooks/useYourGroups";
+import { useAuth } from "../../contexts/authContext";
 
 const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, to, isActive = false }) => {
   const content = (
@@ -43,26 +45,64 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, to, isActive = false }) =
   return <div className={className}>{content}</div>;
 };
 
+const ShortcutItem = ({ shortcut }) => {
+  const { id, name, avatar, coverPhotoUrl, newPosts } = shortcut;
+  const src = avatar || coverPhotoUrl;
+  const showBadge = Number.isFinite(newPosts) && newPosts > 0;
+
+  return (
+    <Link
+      to={`/groups/${id}`}
+      className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]"
+    >
+      <img
+        src={src}
+        alt={name}
+        className="h-9 w-9 shrink-0 rounded-lg object-cover"
+      />
+      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-[#050505]">{name}</span>
+      {showBadge && (
+        <span className="shrink-0 rounded-full bg-[#e41e3f] px-2 py-0.5 text-[11px] font-semibold text-white">
+          +{newPosts}
+        </span>
+      )}
+    </Link>
+  );
+};
 
 export default function LeftSidebar() {
   const location = useLocation();
+  const { user } = useAuth();
+  const { groups: joinedGroups } = useYourGroups({
+    page: 1,
+    pageSize: 8,
+    autoFetch: !!user,
+  });
 
   const primaryMenu = [
     { id: "friends", label: "Friends", icon: Users, iconBg: "bg-gradient-to-r from-blue-400 to-blue-600", to: "/friends" },
-    { id: "memories", label: "Memories", icon: Clock3, iconBg: "bg-gradient-to-r from-cyan-400 to-blue-500", to: "/memories" },
     { id: "saved", label: "Saved", icon: Bookmark, iconBg: "bg-gradient-to-r from-purple-500 to-indigo-600", to: "/saved" },
     { id: "groups", label: "Groups", icon: MdGroups, iconBg: "bg-gradient-to-r from-teal-400 to-emerald-500", to: "/groups" },
     { id: "reels", label: "Reels", icon: Clapperboard, iconBg: "bg-gradient-to-r from-pink-500 to-rose-500", to: "/watch" },
-    { id: "feeds", label: "Feed", icon: FileText, iconBg: "bg-gradient-to-r from-blue-600 to-indigo-600", to: "/feeds" },
   ];
 
   const extendedMenu = [
-    { id: "chat-ai", label: "Chat with AI", icon: Sparkles, iconBg: "bg-gradient-to-r from-sky-400 to-blue-500", to: "/chat-ai" },
     { id: "messenger", label: "Messenger", icon: MessageCircle, iconBg: "bg-gradient-to-tr from-blue-500 via-pink-500 to-purple-500", to: "/messenger" },
     { id: "birthdays", label: "Birthdays", icon: Gift, iconBg: "bg-gradient-to-r from-pink-400 to-purple-500", to: "/birthdays" },
   ];
 
-  const userShortcuts = [];
+  // Prefer live joined groups; fall back to mock shortcuts so the section is
+  // never empty while the API is loading or the user hasn't joined anything yet.
+  const shortcuts =
+    joinedGroups.length > 0
+      ? joinedGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          coverPhotoUrl: g.coverPhotoUrl,
+          avatar: g.avatar,
+          newPosts: g.newPosts ?? 0,
+        }))
+      : groupShortcuts;
 
   return (
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
@@ -83,7 +123,31 @@ export default function LeftSidebar() {
         <MenuItem key={item.id} icon={item.icon} iconBg={item.iconBg} label={item.label} to={item.to} />
       ))}
 
-      <hr className="my-2 border-[#ced0d4]" />
+      {shortcuts.length > 0 && (
+        <>
+          <hr className="my-2 border-[#ced0d4]" />
+
+          <div className="flex items-center justify-between px-2 py-1">
+            <h2 className="truncate text-[15px] font-semibold text-[#65676b]">Your shortcuts</h2>
+          </div>
+
+          <div className="space-y-0.5">
+            {shortcuts.map((shortcut) => (
+              <ShortcutItem key={shortcut.id} shortcut={shortcut} />
+            ))}
+          </div>
+
+          <Link
+            to="/groups"
+            className="mt-1 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4e6eb]">
+              <Pencil size={16} className="text-[#050505]" />
+            </div>
+            <span className="truncate text-[15px] font-medium text-[#050505]">Edit</span>
+          </Link>
+        </>
+      )}
     </aside>
   );
 }

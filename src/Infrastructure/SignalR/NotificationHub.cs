@@ -1,4 +1,3 @@
-using Application.Abstractions.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
@@ -8,13 +7,6 @@ namespace Infrastructure.SignalR;
 [Authorize]
 public class NotificationHub : Hub
 {
-    private readonly INotificationPresenceTracker _presenceTracker;
-
-    public NotificationHub(INotificationPresenceTracker presenceTracker)
-    {
-        _presenceTracker = presenceTracker;
-    }
-
     private Guid GetUserId()
     {
         var userIdStr = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -23,23 +15,19 @@ public class NotificationHub : Hub
             : throw new Exception("UserId not found");
     }
 
-    public override async Task OnConnectedAsync()
+    public override Task OnConnectedAsync()
     {
-        var userId = GetUserId();
-        var connectionId = Context.ConnectionId;
-
-        _presenceTracker.UserConnected(userId.ToString(), connectionId);
-
-        await base.OnConnectedAsync();
+        // Connection → user mapping is managed automatically by SignalR via the
+        // authenticated NameIdentifier claim, so Clients.User(...) in the
+        // notifier can reach every active connection for that user.
+        _ = GetUserId();
+        return base.OnConnectedAsync();
     }
 
-    public override async Task OnDisconnectedAsync(Exception? exception)
+    public override Task OnDisconnectedAsync(Exception? exception)
     {
-        var userId = GetUserId();
-        var connectionId = Context.ConnectionId;
-
-        _presenceTracker.UserDisconnected(userId.ToString(), connectionId);
-
-        await base.OnDisconnectedAsync(exception);
+        // No explicit cleanup needed — SignalR clears the mapping when the
+        // connection drops.
+        return base.OnDisconnectedAsync(exception);
     }
 }

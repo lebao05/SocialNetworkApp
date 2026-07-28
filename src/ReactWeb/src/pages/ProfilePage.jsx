@@ -46,6 +46,7 @@ import { useProfileReels } from "../hooks/useProfileReels";
 import ProfileRelationshipActions from "../components/Profile/ProfileRelationshipActions";
 import ProfileStoryRing from "../components/Story/ProfileStoryRing";
 import { useProfileStories } from "../hooks/useProfileStories";
+import ImageLightbox from "../components/Common/ImageLightbox";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -75,6 +76,8 @@ export default function ProfilePage() {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [lightboxAlt, setLightboxAlt] = useState("");
 
   // Theme state: defaults to white theme (light mode) as requested!
   const [darkMode, setDarkMode] = useState(false);
@@ -395,14 +398,27 @@ export default function ProfilePage() {
         <div className={`${theme.card} rounded-b-xl shadow-md relative transition-colors duration-200`}>
 
           {/* Cover Photo */}
-          <div className="relative h-[250px] md:h-[350px] bg-[#2d3139] overflow-hidden rounded-b-xl">
-            <img
-              src={displayUser.coverPhoto}
-              alt="Cover"
-              className={`w-full h-full object-cover transition-opacity duration-300 ${coverUploading ? "opacity-40" : "opacity-100"}`}
-            />
+          <div className="relative h-[250px] md:h-[350px] bg-[#2d3139] overflow-hidden rounded-b-xl group">
+            <button
+              type="button"
+              onClick={() => {
+                if (displayUser.coverPhoto) {
+                  setLightboxSrc(displayUser.coverPhoto);
+                  setLightboxAlt(`${displayUser.name || "User"} cover photo`);
+                }
+              }}
+              disabled={!displayUser.coverPhoto}
+              aria-label="View cover photo"
+              className="absolute inset-0 w-full h-full cursor-zoom-in disabled:cursor-default focus:outline-none"
+            >
+              <img
+                src={displayUser.coverPhoto}
+                alt="Cover"
+                className={`w-full h-full object-cover transition duration-300 ${coverUploading ? "opacity-40" : "opacity-100"} group-hover:brightness-90`}
+              />
+            </button>
             {coverUploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-b-xl">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-b-xl pointer-events-none">
                 <Loader2 className="w-10 h-10 text-white animate-spin" />
               </div>
             )}
@@ -418,7 +434,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => coverInputRef.current?.click()}
-                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
+                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all z-10"
               >
                 <Camera size={16} />
                 <span className="hidden sm:inline">{coverUploading ? "Uploading..." : "Upload cover image"}</span>
@@ -443,6 +459,12 @@ export default function ProfilePage() {
                   isOwnProfile={isOwnProfile}
                   onUploadAvatar={() => avatarInputRef.current?.click()}
                   onSeeStories={() => navigate(`/profile/${viewUserId}/stories`)}
+                  onAvatarClick={() => {
+                    if (displayUser.avatar) {
+                      setLightboxSrc(displayUser.avatar);
+                      setLightboxAlt(`${displayUser.name || "User"} profile photo`);
+                    }
+                  }}
                   darkMode={darkMode}
                 />
                 {avatarUploading && (
@@ -887,7 +909,11 @@ export default function ProfilePage() {
               onSubmit={handleCreateReel}
             />
 
-
+            <ImageLightbox
+              src={lightboxSrc}
+              alt={lightboxAlt}
+              onClose={() => setLightboxSrc(null)}
+            />
 
           </div>
         </div>

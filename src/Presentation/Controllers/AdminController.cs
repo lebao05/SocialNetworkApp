@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,9 +10,8 @@ namespace Presentation.Controllers
     {
         // ── MVC View Actions ──────────────────────────────
 
-        [HttpGet("login")]
-        [HttpGet("")]
-        [HttpGet("/admin")]
+        [HttpGet("login", Name = "AdminLogin")]
+        [HttpGet("/admin", Name = "AdminRoot")]
         public IActionResult Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated == true

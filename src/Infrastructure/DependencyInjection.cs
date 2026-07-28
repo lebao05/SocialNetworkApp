@@ -17,7 +17,6 @@ namespace Infrastructure
         {
             services.AddScoped<ITokenService, Authentication.TokenService>();
             services.AddSingleton<IPresenceTracker, PresenceTracker>();
-            services.AddSingleton<INotificationPresenceTracker, NotificationPresenceTracker>();
             services.AddScoped<IFeedGenerator, FeedGenerator>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();

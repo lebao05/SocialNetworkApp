@@ -8,12 +8,11 @@ const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 // Three properties per size:
 //   - avatarPx: outer colored disc diameter (= avatar diameter + 2*ringW)
 //   - ringW:    thickness of the colorful ring around the avatar
-//   - innerPx:  diameter of the avatar circle inside the ring
 const RING_SIZE = {
-  xl: { avatarPx: 168, ringW: 8,  innerPx: 152 },
-  md: { avatarPx: 168, ringW: 6,  innerPx: 156 },
-  lg: { avatarPx: 72,  ringW: 5,  innerPx: 62  },
-  sm: { avatarPx: 44,  ringW: 3,  innerPx: 38  },
+  xl: { avatarPx: 168, ringW: 8 },
+  md: { avatarPx: 168, ringW: 6 },
+  lg: { avatarPx: 72,  ringW: 5 },
+  sm: { avatarPx: 44,  ringW: 3 },
 };
 
 // ── Animated colorful ring ───────────────────────────────────────────────────
@@ -49,19 +48,16 @@ if (typeof document !== "undefined" && !document.getElementById("story-ring-keyf
 
 // ─── Story Ring ──────────────────────────────────────────────────────────────
 function StoryRing({ children, hasActiveStories, hasUnseenStories = true, size = "md" }) {
-  const { avatarPx, ringW, innerPx } = RING_SIZE[size];
+  const { avatarPx, ringW } = RING_SIZE[size];
 
   // If no stories exist, show a standard neutral ring matching the card.
   if (!hasActiveStories) {
     return (
       <div
         className="rounded-full bg-white dark:bg-[#242526] shrink-0"
-        style={{ width: avatarPx, height: avatarPx }}
+        style={{ width: avatarPx, height: avatarPx, padding: ringW }}
       >
-        <div
-          className="rounded-full overflow-hidden bg-white dark:bg-[#242526]"
-          style={{ width: innerPx, height: innerPx, margin: ringW }}
-        >
+        <div className="rounded-full overflow-hidden bg-white dark:bg-[#242526] w-full h-full">
           {children}
         </div>
       </div>
@@ -77,28 +73,25 @@ function StoryRing({ children, hasActiveStories, hasUnseenStories = true, size =
 
   // Wrapper = the full colored disc. The colorful ring lives BETWEEN this
   // outer circle and the inset avatar circle. Rotating the wrapper animates
-  // the ring like a spinning color wheel.
+  // the ring like a spinning color wheel. We use `padding` on the outer disc
+  // (instead of `inset` on an absolutely-positioned child) so the inner avatar
+  // is always perfectly centered at every animation frame — no sub-pixel
+  // gaps that would let the gradient leak through.
   return (
     <div
-      className="story-ring-anim rounded-full shrink-0 cursor-pointer relative"
+      className="story-ring-anim rounded-full shrink-0 cursor-pointer"
       style={{
         width: avatarPx,
         height: avatarPx,
+        padding: ringW,
         background: gradient,
         animation,
         transformOrigin: "50% 50%",
       }}
     >
       {/* White inset that masks the gradient into a ring, then clips the avatar. */}
-      <div
-        className="rounded-full bg-white dark:bg-[#18191a]"
-        style={{ position: "absolute", inset: ringW }}
-      >
-        <div
-          className="rounded-full overflow-hidden w-full h-full"
-        >
-          {children}
-        </div>
+      <div className="rounded-full bg-white dark:bg-[#18191a] overflow-hidden w-full h-full">
+        {children}
       </div>
     </div>
   );
@@ -116,6 +109,7 @@ export default function ProfileStoryRing({
   onUploadAvatar,
   onSeeStories,
   onStoryClick,
+  onAvatarClick,
   darkMode = false,
   className,
 }) {
@@ -124,7 +118,11 @@ export default function ProfileStoryRing({
   const containerRef = useRef(null);
 
   const isXl = size === "xl";
-  const interactive = hasActiveStories || onStoryClick || (isXl && (isOwnProfile || hasActiveStories));
+  const interactive =
+    hasActiveStories ||
+    onStoryClick ||
+    onAvatarClick ||
+    (isXl && (isOwnProfile || hasActiveStories));
 
   const handleStoryClick = () => {
     if (onStoryClick) {
@@ -139,9 +137,20 @@ export default function ProfileStoryRing({
   const handleAvatarClick = (e) => {
     e.stopPropagation();
     if (isXl) {
-      if (isOwnProfile || hasActiveStories) {
+      // On the profile page the avatar has richer UX (menu + upload / see
+      // stories), so prefer that when applicable.
+      if (hasActiveStories || isOwnProfile) {
         setMenuOpen((prev) => !prev);
+        return;
       }
+      // No menu, no stories: if the caller supplied onAvatarClick (e.g. open
+      // a lightbox to view the full-size avatar), run it; otherwise fall
+      // through to opening the story if one exists.
+      if (onAvatarClick) {
+        onAvatarClick();
+        return;
+      }
+      handleStoryClick();
     } else {
       handleStoryClick();
     }
