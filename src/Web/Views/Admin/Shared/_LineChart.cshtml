@@ -1,0 +1,171 @@
+@model dynamic
+@*
+    Renders a self-contained inline-SVG line chart.
+
+    No external dependencies (no Chart.js / D3 / canvas). All visual rules are
+    inlined as SVG attributes or local <style> so the chart renders correctly
+    even if admin.min.css is rebuilt and unrelated selectors change.
+
+    Model (anonymous):
+      - Id           string   DOM id (required if you have >1 on a page)
+      - Days         string[] x-axis labels (length must equal Values.Length)
+      - Values       int[]    data series
+      - StrokeColor  string   line color (#rrggbb)
+      - FillColor    string   fill under line (rgba / hex)
+      - YAxisLabel   string   label shown top-left of the chart
+*@
+@{
+    var values = (Model?.Values as IEnumerable<int>) ?? Enumerable.Empty<int>();
+    var days   = (Model?.Days   as IEnumerable<string>) ?? Enumerable.Empty<string>();
+
+    // Materialize to lists so .Count / indexing are cheap.
+    var valueList = values.ToList();
+    var dayList   = days.ToList();
+
+    // SVG geometry
+    const int W = 720;        // viewBox width
+    const int H = 220;        // viewBox height
+    const int padL = 44;
+    const int padR = 16;
+    const int padT = 24;
+    const int padB = 32;
+
+    double plotW = W - padL - padR;
+    double plotH = H - padT - padB;
+
+    int maxVal = valueList.Count > 0 ? valueList.Max() : 1;
+    if (maxVal <= 0) maxVal = 1;
+
+    // Round the max up to a nice tick value so the chart isn't flush against the top.
+    int niceMax = (int)Math.Ceiling(maxVal / 50.0) * 50;
+    if (niceMax < maxVal) niceMax = maxVal;
+    if (niceMax <= 0) niceMax = 1;
+
+    var stroke = (string)(Model?.StrokeColor ?? "#3b82f6");
+    var fill   = (string)(Model?.FillColor   ?? "rgba(59, 130, 246, .18)");
+    var yLabel = (string)(Model?.YAxisLabel  ?? "");
+    var id     = (string)(Model?.Id          ?? "lineChart");
+
+    // Build the polyline points
+    var pts = new List<string>();
+    if (valueList.Count > 0)
+    {
+        for (int i = 0; i < valueList.Count; i++)
+        {
+            double x = padL + (plotW * i) / Math.Max(1, valueList.Count - 1);
+            double y = padT + plotH - ((double)valueList[i] / niceMax) * plotH;
+            pts.Add($"{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+    }
+    var linePoints = string.Join(" ", pts);
+
+    // For the area fill we close the path along the bottom.
+    string areaPoints;
+    if (pts.Count > 0)
+    {
+        var firstX = padL;
+        var lastX  = padL + plotW;
+        var baseY  = padT + plotH;
+        areaPoints = $"{firstX},{baseY} " + linePoints + $" {lastX},{baseY}";
+    }
+    else
+    {
+        areaPoints = "";
+    }
+
+    // Y-axis ticks (4 lines + labels)
+    var ticks = new int[] { 0, niceMax / 3, (2 * niceMax) / 3, niceMax };
+}
+
+<div class="line-chart-wrap" id="@id">
+    <style>
+        .line-chart-wrap svg { width: 100%; height: 220px; display: block; }
+        @@media (max-width: 768px) {
+            .line-chart-wrap svg { height: 180px !important; }
+        }
+        .line-chart-point { cursor: pointer; }
+        .line-chart-tip { opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+        .line-chart-point:hover .line-chart-tip,
+        .line-chart-point:focus .line-chart-tip { opacity: 1 !important; }
+    </style>
+
+    @if (valueList.Count == 0)
+    {
+        <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">
+            No data available
+        </div>
+    }
+    else
+    {
+        <div style="position:relative;">
+            <span style="position:absolute;top:0;left:0;font-size:.7rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+                @yLabel
+            </span>
+            <span style="position:absolute;top:0;right:0;font-size:.7rem;color:#94a3b8;">
+                Peak: <strong style="color:#0f172a;">@maxVal</strong>
+            </span>
+
+            <svg viewBox="0 0 @W @H" preserveAspectRatio="none">
+                <!-- Gridlines -->
+                @for (int t = 0; t < ticks.Length; t++)
+                {
+                    var ratio = (double)ticks[t] / niceMax;
+                    var y = padT + plotH - ratio * plotH;
+                    <line x1="@padL" x2="@(padL + plotW)" y1="@y" y2="@y"
+                          stroke="#e2e8f0" stroke-width="1" stroke-dasharray="@(t == 0 ? "0" : "3 4")" />
+                    <text x="@(padL - 8)" y="@(y + 4)" text-anchor="end"
+                          font-size="10" fill="#94a3b8" font-family="Inter, sans-serif">
+                        @ticks[t]
+                    </text>
+                }
+
+                <!-- Area fill -->
+                @if (!string.IsNullOrEmpty(areaPoints))
+                {
+                    <polygon points="@areaPoints" fill="@fill" stroke="none" />
+                }
+
+                <!-- Line -->
+                <polyline points="@linePoints"
+                          fill="none"
+                          stroke="@stroke"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round" />
+
+                <!-- Point markers + tooltips -->
+                @for (int i = 0; i < valueList.Count; i++)
+                {
+                    var raw = pts[i].Split(',');
+                    var x  = raw[0];
+                    var y  = raw[1];
+                    var px = double.Parse(x, System.Globalization.CultureInfo.InvariantCulture);
+                    var py = double.Parse(y, System.Globalization.CultureInfo.InvariantCulture);
+                    <g class="line-chart-point">
+                        <circle cx="@x" cy="@y" r="9" fill="transparent" />
+                        <circle cx="@x" cy="@y" r="4" fill="#fff"
+                                stroke="@stroke" stroke-width="2.5" />
+                        <g class="line-chart-tip">
+                            <rect x="@(px - 24)" y="@(py - 32)" width="48" height="20" rx="4" fill="#0f172a" />
+                            <text x="@x" y="@(py - 18)" text-anchor="middle"
+                                  font-size="11" fill="#fff"
+                                  font-family="Inter, sans-serif" font-weight="600">
+                                @valueList[i]
+                            </text>
+                        </g>
+                    </g>
+                }
+
+                <!-- X-axis labels -->
+                @for (int i = 0; i < dayList.Count; i++)
+                {
+                    var x = padL + (plotW * i) / Math.Max(1, dayList.Count - 1);
+                    <text x="@x" y="@(padT + plotH + 18)" text-anchor="middle"
+                          font-size="10" fill="#94a3b8" font-family="Inter, sans-serif">
+                        @dayList[i]
+                    </text>
+                }
+            </svg>
+        </div>
+    }
+</div>

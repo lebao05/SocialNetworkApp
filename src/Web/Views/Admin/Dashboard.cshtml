@@ -1,10 +1,20 @@
 @*
-    Admin Dashboard — overview with stats, activity, and system health.
+    Admin Dashboard — overview with stats, growth charts, and activity.
+    Line charts are rendered as inline SVG so they require no JS library
+    or external CSS — they look identical regardless of admin.min.css state.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Dashboard";
     ViewData["CurrentPage"] = "Dashboard";
+
+    // Shared 7-day window — used by all three line charts.
+    var days = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+
+    // Sample data series (replace with real aggregates later).
+    var userGrowth = new[] { 412, 438, 461, 489, 510, 548, 587 };      // new users / day
+    var postVolume = new[] { 68, 82, 75, 91, 110, 134, 120 };          // posts / day
+    var commentVolume = new[] { 220, 261, 247, 298, 342, 401, 378 };   // comments / day
 }
 
 <!-- Stats Row -->
@@ -96,18 +106,18 @@
 
 </div>
 
-<!-- Main content + sidebar -->
+<!-- Charts Row -->
 <div class="grid-sidebar">
 
     <!-- Left column -->
-    <div>
+    <div style="display:flex;flex-direction:column;gap:24px;">
 
-        <!-- Posts Activity Chart -->
+        <!-- User Growth (line) -->
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Posts &amp; Comments — Last 7 Days</div>
-                    <div class="card-subtitle">Daily volume across the platform</div>
+                    <div class="card-title">User Growth — Last 7 Days</div>
+                    <div class="card-subtitle">New registrations per day</div>
                 </div>
                 <select class="form-control form-select" style="width:140px;">
                     <option>Last 7 days</option>
@@ -116,40 +126,59 @@
                 </select>
             </div>
             <div class="card-body">
-                <div class="chart-container">
-                    @* Simple CSS bar chart *@
-                    <div style="display:flex;align-items:flex-end;gap:8px;height:200px;padding-bottom:24px;border-bottom:2px solid #e2e8f0;position:relative;">
-                        @{
-                            var chartBars = new[] {
-                                ("Mon", 68),
-                                ("Tue", 82),
-                                ("Wed", 75),
-                                ("Thu", 91),
-                                ("Fri", 110),
-                                ("Sat", 134),
-                                ("Sun", 120),
-                            };
-                        }
-                        @foreach (var (day, height) in chartBars)
-                        {
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-                                <span style="font-size:.7rem;font-weight:600;color:#64748b;">@height</span>
-                                <div style="width:100%;height:@(height)px;background:#818cf8;border-radius:4px 4px 0 0;transition:height .4s ease;opacity:.85;" title="@day: @height posts"></div>
-                                <span style="font-size:.7rem;color:#94a3b8;">@day</span>
-                            </div>
-                        }
-                    </div>
+                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+                {
+                    Id          = "userGrowthChart",
+                    Days        = days,
+                    Values      = userGrowth,
+                    StrokeColor = "#3b82f6",
+                    FillColor   = "rgba(59, 130, 246, .18)",
+                    YAxisLabel  = "Users"
+                })
+            </div>
+        </div>
+
+        <!-- Posts (line) -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Posts — Last 7 Days</div>
+                    <div class="card-subtitle">Daily post volume</div>
                 </div>
-                <div style="display:flex;gap:20px;margin-top:16px;">
-                    <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:#64748b;">
-                        <div style="width:12px;height:12px;background:#818cf8;border-radius:2px;"></div>
-                        Posts
-                    </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:#64748b;">
-                        <div style="width:12px;height:12px;background:#34d399;border-radius:2px;"></div>
-                        Comments
-                    </div>
+                <span class="badge badge-active"><span class="badge-dot"></span>+18.3%</span>
+            </div>
+            <div class="card-body">
+                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+                {
+                    Id          = "postsChart",
+                    Days        = days,
+                    Values      = postVolume,
+                    StrokeColor = "#10b981",
+                    FillColor   = "rgba(16, 185, 129, .18)",
+                    YAxisLabel  = "Posts"
+                })
+            </div>
+        </div>
+
+        <!-- Comments (line) -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Comments — Last 7 Days</div>
+                    <div class="card-subtitle">Daily comment volume</div>
                 </div>
+                <span class="badge badge-active"><span class="badge-dot"></span>+5.2%</span>
+            </div>
+            <div class="card-body">
+                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+                {
+                    Id          = "commentsChart",
+                    Days        = days,
+                    Values      = commentVolume,
+                    StrokeColor = "#f59e0b",
+                    FillColor   = "rgba(245, 158, 11, .18)",
+                    YAxisLabel  = "Comments"
+                })
             </div>
         </div>
 
@@ -223,136 +252,8 @@
 
     </div>
 
-    <!-- Right column -->
-    <div>
-
-        <!-- System Health -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">System Health</div>
-                    <div class="card-subtitle">Live monitoring</div>
-                </div>
-                <div class="badge badge-active"><span class="badge-dot"></span>All systems up</div>
-            </div>
-            <div class="card-body" style="padding:14px 18px;">
-                <div class="health-grid">
-                    <div class="health-item">
-                        <span class="health-label">API Latency</span>
-                        <span class="health-value text-success">42ms</span>
-                    </div>
-                    <div class="health-item">
-                        <span class="health-label">Database</span>
-                        <span class="health-value text-success">Healthy</span>
-                    </div>
-                    <div class="health-item">
-                        <span class="health-label">Memory</span>
-                        <span class="health-value text-warning">78%</span>
-                    </div>
-                    <div class="health-item">
-                        <span class="health-label">CPU</span>
-                        <span class="health-value text-success">34%</span>
-                    </div>
-                    <div class="health-item">
-                        <span class="health-label">SignalR</span>
-                        <span class="health-value text-success">Online</span>
-                    </div>
-                    <div class="health-item">
-                        <span class="health-label">CDN</span>
-                        <span class="health-value text-success">OK</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Recent Activity</div>
-                    <div class="card-subtitle">Platform events in real-time</div>
-                </div>
-            </div>
-            <div class="card-body" style="padding:8px 18px;">
-                <ul class="activity-list">
-                    <li class="activity-item">
-                        <div class="activity-dot green"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">New user <strong>Nguyen Van A</strong> registered</div>
-                            <div class="activity-time">2 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot blue"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Group <strong>"HCMUT Students"</strong> was created</div>
-                            <div class="activity-time">7 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot amber"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Content report filed on post #89230</div>
-                            <div class="activity-time">14 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot cyan"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Admin <strong>john&#64;admin.com</strong> banned user #4421</div>
-                            <div class="activity-time">22 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot green"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Friend request between user #332 and #881 accepted</div>
-                            <div class="activity-time">31 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot red"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Spam campaign detected — 12 accounts flagged</div>
-                            <div class="activity-time">48 min ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot blue"></div>
-                        <div class="activity-content">
-                            <div class="activity-text">Post #89012 hit 1,000 reactions milestone</div>
-                            <div class="activity-time">1 hr ago</div>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Quick Actions</div>
-            </div>
-            <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
-                <a href="@Url.Action("Users", "Admin")" class="btn btn-secondary" style="justify-content:flex-start;">
-                    <i class="ri-user-search-line"></i>
-                    Search users
-                </a>
-                <a href="@Url.Action("Moderation", "Admin")" class="btn btn-secondary" style="justify-content:flex-start;">
-                    <i class="ri-shield-flash-line"></i>
-                    Review reports
-                    <span class="badge badge-danger" style="margin-left:auto;">8</span>
-                </a>
-                <a href="#" class="btn btn-secondary" style="justify-content:flex-start;">
-                    <i class="ri-mail-send-line"></i>
-                    Send platform announcement
-                </a>
-                <a href="#" class="btn btn-secondary" style="justify-content:flex-start;">
-                    <i class="ri-file-chart-line"></i>
-                    Export analytics CSV
-                </a>
-            </div>
-        </div>
-
-    </div>
+    <!-- Right column intentionally left empty — Dashboard now uses full width
+         to give the three line charts enough room. Future widgets (e.g.
+         "Top Groups", "Top Posters") can be added here. -->
+    <div></div>
 </div>

@@ -48,6 +48,11 @@
                 <i class="ri-user-line"></i>
                 <span>Users</span>
             </a>
+            <a class="nav-item @(currentPage == "Groups" ? "active" : "")"
+               href="@Url.Action("Groups", "Admin")">
+                <i class="ri-group-line"></i>
+                <span>Groups</span>
+            </a>
             <a class="nav-item @(currentPage == "Moderation" ? "active" : "")"
                href="@Url.Action("Moderation", "Admin")">
                 <i class="ri-shield-check-line"></i>
@@ -66,11 +71,6 @@
                href="@Url.Action("AuditLogs", "Admin")">
                 <i class="ri-file-list-3-line"></i>
                 <span>Audit Logs</span>
-            </a>
-            <a class="nav-item @(currentPage == "Settings" ? "active" : "")"
-               href="@Url.Action("Settings", "Admin")">
-                <i class="ri-settings-line"></i>
-                <span>Settings</span>
             </a>
         </nav>
 

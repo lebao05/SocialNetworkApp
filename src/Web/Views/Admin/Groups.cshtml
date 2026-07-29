@@ -1,0 +1,315 @@
+@*
+    Admin Group Management — list, search, filter, and manage platform groups.
+    Mirrors the structure of the Users page so admins have a consistent UI.
+*@
+@{
+    Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Groups";
+    ViewData["CurrentPage"] = "Groups";
+
+    var currentQuery   = ViewData["Query"]?.ToString()   ?? "";
+    var currentPrivacy = ViewData["Privacy"]?.ToString() ?? "";
+    var currentStatus  = ViewData["Status"]?.ToString()  ?? "";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Group Management</h1>
+        <p class="page-subtitle">Search, filter, and manage all groups on the platform</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary btn-sm">
+            <i class="ri-download-cloud-2-line"></i>
+            Export CSV
+        </button>
+        <button class="btn btn-primary btn-sm">
+            <i class="ri-add-circle-line"></i>
+            Create Group
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon blue"><i class="ri-group-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Total Groups</div>
+            <div class="stat-value" style="font-size:1.4rem;">892</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon green"><i class="ri-checkbox-circle-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Active</div>
+            <div class="stat-value" style="font-size:1.4rem;">821</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon amber"><i class="ri-time-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value" style="font-size:1.4rem;">47</div>
+        </div>
+    </div>
+    <div class="stat-card animate-in" style="padding:16px 18px;">
+        <div class="stat-icon red"><i class="ri-forbid-2-line"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Suspended</div>
+            <div class="stat-value" style="font-size:1.4rem;">24</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="get" action="@Url.Action("Groups", "Admin")">
+    <div class="filter-bar">
+        <div class="search-input-wrap">
+            <i class="ri-search-line"></i>
+            <input type="text"
+                   name="q"
+                   class="form-control"
+                   placeholder="Search by group name, owner, or ID..."
+                   value="@currentQuery" />
+        </div>
+        <select name="privacy" class="form-control form-select" style="width:150px;">
+            <option value=""         @(string.IsNullOrEmpty(currentPrivacy) ? "selected" : "")>All Privacy</option>
+            <option value="public"   @(currentPrivacy == "public"  ? "selected" : "")>Public</option>
+            <option value="private"  @(currentPrivacy == "private" ? "selected" : "")>Private</option>
+            <option value="secret"   @(currentPrivacy == "secret"  ? "selected" : "")>Secret</option>
+        </select>
+        <select name="status" class="form-control form-select" style="width:150px;">
+            <option value=""          @(string.IsNullOrEmpty(currentStatus) ? "selected" : "")>All Status</option>
+            <option value="active"    @(currentStatus == "active"    ? "selected" : "")>Active</option>
+            <option value="pending"   @(currentStatus == "pending"   ? "selected" : "")>Pending</option>
+            <option value="suspended" @(currentStatus == "suspended" ? "selected" : "")>Suspended</option>
+        </select>
+        <div class="filter-bar-right">
+            <a href="@Url.Action("Groups", "Admin")" class="btn btn-secondary btn-sm">
+                <i class="ri-reset-right-line"></i>
+                Reset
+            </a>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="ri-filter-3-line"></i>
+                Apply
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist">
+    <button class="tab active" data-tab-group="groups" data-tab="all">
+        All <span class="tab-badge">892</span>
+    </button>
+    <button class="tab" data-tab-group="groups" data-tab="active">
+        Active <span class="tab-badge">821</span>
+    </button>
+    <button class="tab" data-tab-group="groups" data-tab="pending">
+        Pending <span class="tab-badge">47</span>
+    </button>
+    <button class="tab" data-tab-group="groups" data-tab="suspended">
+        Suspended <span class="tab-badge">24</span>
+    </button>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body" style="padding:0;">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" />
+                        </th>
+                        <th>Group</th>
+                        <th>Privacy</th>
+                        <th>Members</th>
+                        <th>Posts</th>
+                        <th>Owner</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var fakeGroups = new[] {
+                            new {
+                                Id       = "G-001",
+                                Name     = "HCMUT Students",
+                                Cover    = "",
+                                Privacy  = "Public",
+                                Members  = 4218,
+                                Posts    = 1284,
+                                Owner    = "Nguyen Van A",
+                                Created  = "Jan 12, 2024",
+                                Status   = "Active"
+                            },
+                            new {
+                                Id       = "G-002",
+                                Name     = "Tech Talk Vietnam",
+                                Cover    = "",
+                                Privacy  = "Public",
+                                Members  = 1892,
+                                Posts    = 547,
+                                Owner    = "Tran Thi B",
+                                Created  = "Feb 03, 2024",
+                                Status   = "Active"
+                            },
+                            new {
+                                Id       = "G-003",
+                                Name     = "Hanoi Photography Club",
+                                Cover    = "",
+                                Privacy  = "Private",
+                                Members  = 612,
+                                Posts    = 320,
+                                Owner    = "Le Van C",
+                                Created  = "Mar 18, 2024",
+                                Status   = "Suspended"
+                            },
+                            new {
+                                Id       = "G-004",
+                                Name     = "Data Science Hub",
+                                Cover    = "",
+                                Privacy  = "Public",
+                                Members  = 3041,
+                                Posts    = 902,
+                                Owner    = "Pham Thi D",
+                                Created  = "Apr 22, 2024",
+                                Status   = "Active"
+                            },
+                            new {
+                                Id       = "G-005",
+                                Name     = "Internal Engineering",
+                                Cover    = "",
+                                Privacy  = "Secret",
+                                Members  = 47,
+                                Posts    = 132,
+                                Owner    = "Hoang Van E",
+                                Created  = "May 09, 2024",
+                                Status   = "Pending"
+                            },
+                            new {
+                                Id       = "G-006",
+                                Name     = "Cooking & Sharing",
+                                Cover    = "",
+                                Privacy  = "Public",
+                                Members  = 2204,
+                                Posts    = 678,
+                                Owner    = "Dao Thi F",
+                                Created  = "Jun 14, 2024",
+                                Status   = "Active"
+                            },
+                            new {
+                                Id       = "G-007",
+                                Name     = "Gaming VN",
+                                Cover    = "",
+                                Privacy  = "Public",
+                                Members  = 5712,
+                                Posts    = 1893,
+                                Owner    = "Bui Van G",
+                                Created  = "Jul 02, 2024",
+                                Status   = "Active"
+                            },
+                            new {
+                                Id       = "G-008",
+                                Name     = "Bookworms Anonymous",
+                                Cover    = "",
+                                Privacy  = "Private",
+                                Members  = 318,
+                                Posts    = 96,
+                                Owner    = "Do Thi H",
+                                Created  = "Aug 27, 2024",
+                                Status   = "Pending"
+                            },
+                        };
+                    }
+
+                    @foreach (var group in fakeGroups)
+                    {
+                        var initials = string.Join("", group.Name.Split(' ').Take(2).Select(w => w[0]));
+
+                        var statusBadgeClass = group.Status switch {
+                            "Active"    => "badge-active",
+                            "Pending"   => "badge-pending",
+                            "Suspended" => "badge-banned",
+                            _           => "badge-inactive"
+                        };
+
+                        var privacyBadgeClass = group.Privacy switch {
+                            "Public"  => "badge-info",
+                            "Private" => "badge-pending",
+                            "Secret"  => "badge-banned",
+                            _         => ""
+                        };
+
+                        <tr>
+                            <td><input type="checkbox" /></td>
+                            <td>
+                                <div class="cell-user">
+                                    <div class="cell-user-avatar">@initials</div>
+                                    <div class="cell-user-info">
+                                        <div class="cell-user-name">@group.Name</div>
+                                        <div class="cell-user-email">@group.Id</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @privacyBadgeClass"><span class="badge-dot"></span>@group.Privacy</span>
+                            </td>
+                            <td class="cell-muted">@group.Members.ToString("N0")</td>
+                            <td class="cell-muted">@group.Posts.ToString("N0")</td>
+                            <td>@group.Owner</td>
+                            <td class="cell-muted">@group.Created</td>
+                            <td>
+                                <span class="badge @statusBadgeClass"><span class="badge-dot"></span>@group.Status</span>
+                            </td>
+                            <td style="text-align:right;">
+                                <div class="cell-actions" style="justify-content:flex-end;">
+                                    <button class="action-btn" title="View" aria-label="View group">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                    <button class="action-btn" title="Edit" aria-label="Edit group">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                    @if (group.Status != "Suspended")
+                                    {
+                                        <button class="action-btn danger" title="Suspend" aria-label="Suspend group">
+                                            <i class="ri-forbid-2-line"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="action-btn success" title="Unsuspend" aria-label="Unsuspend group">
+                                            <i class="ri-checkbox-circle-line"></i>
+                                        </button>
+                                    }
+                                    <button class="action-btn danger" title="Delete" aria-label="Delete group">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <span class="pagination-info">Showing 1–8 of 892 groups</span>
+            <div class="pagination-controls">
+                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <span class="page-ellipsis">...</span>
+                <button class="page-btn">112</button>
+                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+            </div>
+        </div>
+    </div>
+</div>

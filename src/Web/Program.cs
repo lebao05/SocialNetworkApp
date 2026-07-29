@@ -5,6 +5,7 @@ using Infrastructure;
 using Infrastructure.Persistence.Contexts;
 using Infrastructure.SignalR;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -49,16 +50,19 @@ builder.Services.AddCors(options =>
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
-// Add JWT auth
-// Force JWT as the only auth scheme
+// Add JWT auth for the API + a Cookie scheme for MVC (admin) pages.
+// JWT stays the default for Authenticate/Challenge/Forbid so existing API
+// controllers continue to work with bearer tokens. The cookie scheme is the
+// default for SignIn/SignOut so HttpContext.SignInAsync(...) works and the
+// MVC admin area can be guarded with [Authorize(Roles = "ADMIN")].
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme =
-    options.DefaultChallengeScheme =
-    options.DefaultForbidScheme =
-    options.DefaultScheme =
-    options.DefaultSignInScheme =
-    options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultForbidScheme      = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme            = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme      = "AdminCookie";
+    options.DefaultSignOutScheme     = "AdminCookie";
 })
 .AddJwtBearer(options =>
 {
@@ -86,6 +90,27 @@ builder.Services.AddAuthentication(options =>
             context.Response.StatusCode = 401;
             return Task.CompletedTask;
         }
+    };
+})
+.AddCookie("AdminCookie", options =>
+{
+    options.Cookie.Name = ".SocialAdmin.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+
+    // Don't redirect on 401 — MVC actions return the login view instead.
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
     };
 });
 
