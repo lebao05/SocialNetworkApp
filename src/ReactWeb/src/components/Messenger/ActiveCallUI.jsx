@@ -13,6 +13,7 @@ export default function ActiveCallUI() {
     isVideoCall,
     callDuration,
     formatDuration,
+    requestVideoUpgrade,
     toggleMute,
     toggleVideo,
     endCall,
@@ -250,6 +251,21 @@ export default function ActiveCallUI() {
               <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.24.32-.67.11-.98s-.61-.38-.98-.11L7.75 8.3c-1.41.97-2.78 2.29-4.04 3.79C2.02 14.02 1.3 16.32 1.06 18.1c-.05.37.07.74.32.98.26.25.61.3.91.15 1.25-.61 2.64-1.16 4.12-1.61.36-.11.78.01.93.28l.98 1.64c.19.32.59.43.9.24 1.18-.71 2.58-.9 3.99-.53 1.19.31 2.29 1 3.25 2 .25.25.62.25.87.01.25-.25.25-.63.01-.88z" />
             </svg>
           </button>
+
+          {/* Upgrade to video — visible when the call started as audio-only
+              and we don't yet have a local video track. Reuses the existing
+              peer connection via renegotiation. */}
+          {callState === "active" && !hasLocalVideo && (
+            <button
+              onClick={requestVideoUpgrade}
+              className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+              title="Turn camera on"
+            >
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
+              </svg>
+            </button>
+          )}
 
           {/* Video toggle — only show when local video track exists */}
           {hasLocalVideo && (

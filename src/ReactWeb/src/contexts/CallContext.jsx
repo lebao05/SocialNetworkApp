@@ -35,6 +35,7 @@ export function CallProvider({ children }) {
     const localStreamRef = useRef(null);
     const durationTimerRef = useRef(null);
     const pendingOfferRef = useRef(null);
+    const pendingVideoUpgradeOfferRef = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
 
     const ICE_SERVERS = [
@@ -44,6 +45,19 @@ export function CallProvider({ children }) {
 
     const getAudioTrack = () => localStreamRef.current?.getAudioTracks()[0];
     const getVideoTrack = () => localStreamRef.current?.getVideoTracks()[0];
+
+    const acquireVideoTrack = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: 640, height: 480 }
+            });
+            const track = stream.getVideoTracks()[0];
+            return track;
+        } catch (err) {
+            console.error("Failed to acquire video track:", err);
+            return null;
+        }
+    };
 
     const stopDurationTimer = () => {
         if (durationTimerRef.current) {
@@ -68,6 +82,7 @@ export function CallProvider({ children }) {
         }
 
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        pc._targetUserId = targetUserId;
 
         if (localStreamRef.current) {
             localStreamRef.current.getAudioTracks().forEach((track) => {
@@ -110,11 +125,14 @@ export function CallProvider({ children }) {
         }
 
         try {
+            const wasActive = callStateRef.current === "active";
             await pc.setRemoteDescription(new RTCSessionDescription(offerData));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            setCallState("active");
-            startDurationTimer();
+            if (!wasActive) {
+                setCallState("active");
+                startDurationTimer();
+            }
             const calleeId = callTargetRef.current?.id;
             if (calleeId && connectionRef.current) {
                 await connectionRef.current.invoke("SendSignal", calleeId, "answer", JSON.stringify(answer));
@@ -130,9 +148,12 @@ export function CallProvider({ children }) {
         const pc = peerConnectionRef.current;
         if (!pc) return;
         try {
+            const wasActive = callStateRef.current === "active";
             await pc.setRemoteDescription(new RTCSessionDescription(answerData));
-            setCallState("active");
-            startDurationTimer();
+            if (!wasActive) {
+                setCallState("active");
+                startDurationTimer();
+            }
         } catch (err) {
             console.error("Failed to process answer:", err);
         }
@@ -205,6 +226,96 @@ export function CallProvider({ children }) {
         setIsVideoCall(false);
     };
 
+    // ─── Upgrade an in-progress audio call to a video call ─────────────────
+    // Reuses the existing RTCPeerConnection. Adds a new video track to the
+    // PC, then performs a renegotiation (offer/answer) to inform the remote.
+    const requestVideoUpgrade = useCallback(async () => {
+        const pc = peerConnectionRef.current;
+        const target = callTargetRef.current;
+        if (!pc || !target?.id) return false;
+        if (callStateRef.current !== "active") return false;
+
+        const videoTrack = await acquireVideoTrack();
+        if (!videoTrack) return false;
+
+        // Make sure the local stream we hand to UI reflects the new track.
+        const stream = localStreamRef.current ?? new MediaStream();
+        // Avoid duplicates
+        if (!stream.getVideoTracks().includes(videoTrack)) {
+            stream.addTrack(videoTrack);
+        }
+        if (!localStreamRef.current) localStreamRef.current = stream;
+        setLocalStream(stream);
+        setIsVideoOff(false);
+
+        // Add the new track to the existing peer connection (does NOT
+        // create a new PC — this is the whole point of the upgrade).
+        try {
+            pc.addTrack(videoTrack, stream);
+        } catch (err) {
+            console.error("addTrack failed during video upgrade:", err);
+            return false;
+        }
+
+        // Create a renegotiation offer that includes the new video sender.
+        try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await connectionRef.current.invoke(
+                "SendSignal",
+                target.id,
+                "upgrade-video",
+                JSON.stringify(offer)
+            );
+            setIsVideoCall(true);
+            return true;
+        } catch (err) {
+            console.error("Failed to send video-upgrade offer:", err);
+            return false;
+        }
+    }, []);
+
+    // ─── Accept an incoming video upgrade ──────────────────────────────────
+    // Called when the remote side sent us an `upgrade-video` signal. We
+    // acquire our own camera, add it to the PC, then send back our answer
+    // (which is implicitly requested by their offer).
+    const acceptVideoUpgrade = useCallback(async (offerData) => {
+        const pc = peerConnectionRef.current;
+        const target = callTargetRef.current;
+        if (!pc || !target?.id) return;
+
+        const videoTrack = await acquireVideoTrack();
+        if (!videoTrack) return;
+
+        const stream = localStreamRef.current ?? new MediaStream();
+        if (!stream.getVideoTracks().includes(videoTrack)) {
+            stream.addTrack(videoTrack);
+        }
+        if (!localStreamRef.current) localStreamRef.current = stream;
+        setLocalStream(stream);
+        setIsVideoOff(false);
+
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+            try {
+                pc.addTrack(videoTrack, stream);
+            } catch (err) {
+                console.warn("addTrack during upgrade-after-answer failed (likely already added):", err);
+            }
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await connectionRef.current.invoke(
+                "SendSignal",
+                target.id,
+                "answer",
+                JSON.stringify(answer)
+            );
+            setIsVideoCall(true);
+        } catch (err) {
+            console.error("Failed to accept video upgrade:", err);
+        }
+    }, []);
+
     // ─── SignalR connection setup ────────────────────────────────────────────
     useEffect(() => {
         if (!token) return;
@@ -263,6 +374,11 @@ export function CallProvider({ children }) {
                     if (pc) {
                         await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(signalData)));
                     }
+                } else if (signalType === "upgrade-video") {
+                    // Remote side wants to upgrade the in-progress audio call
+                    // to a video call. Accept it: acquire our camera, add the
+                    // track to the existing PC, send back an answer.
+                    await acceptVideoUpgrade(JSON.parse(signalData));
                 } else if (signalType === "hangup") {
                     cleanupCall();
                     setCallState("idle");
@@ -291,7 +407,7 @@ export function CallProvider({ children }) {
             connection.stop().catch(() => {});
             connectionRef.current = null;
         };
-    }, [token, processOffer, processAnswer]);
+    }, [token, processOffer, processAnswer, acceptVideoUpgrade]);
 
     // Re-flush pending offer when processOffer updates
     useEffect(() => {
@@ -430,6 +546,7 @@ export function CallProvider({ children }) {
             endCall,
             toggleMute,
             toggleVideo,
+            requestVideoUpgrade,
             formatDuration,
         }}>
             {children}
