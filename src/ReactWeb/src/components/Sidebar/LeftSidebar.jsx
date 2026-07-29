@@ -10,11 +10,9 @@ import {
   Users,
 } from "lucide-react";
 import { MdGroups } from "react-icons/md";
-import { currentUser } from "../../data/mockData";
 import { groupShortcuts } from "../../data/mockData";
 import { useYourGroups } from "../../hooks/useYourGroups";
 import { useAuth } from "../../contexts/authContext";
-
 const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, to, isActive = false }) => {
   const content = (
     <>
@@ -73,6 +71,13 @@ const ShortcutItem = ({ shortcut }) => {
 export default function LeftSidebar() {
   const location = useLocation();
   const { user } = useAuth();
+
+  const fullName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+    user?.email ||
+    "User";
+  const avatarSrc = user?.avatarUrl || import.meta.env.VITE_DEFAULT_AVATAR;
+
   const { groups: joinedGroups } = useYourGroups({
     page: 1,
     pageSize: 8,
@@ -108,11 +113,11 @@ export default function LeftSidebar() {
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
       <Link to="/profile" className="mb-1 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]">
         <img
-          src={currentUser?.avatar || import.meta.env.VITE_DEFAULT_AVATAR}
+          src={avatarSrc}
           alt="avatar"
           className="h-9 w-9 rounded-full border border-black/10 object-cover shadow-sm"
         />
-        <span className="truncate text-[15px] font-semibold text-[#050505]">{currentUser?.name || "User"}</span>
+        <span className="truncate text-[15px] font-semibold text-[#050505]">{fullName}</span>
       </Link>
 
       {primaryMenu.map((item) => (

@@ -74,7 +74,6 @@ export default function FriendsPage() {
       });
     }
   };
-
   const handleReject = async (item) => {
     setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
     try {

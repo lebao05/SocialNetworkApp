@@ -25,25 +25,63 @@ export default function ActiveCallUI() {
   const audioRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const targetAvatar = callTarget?.avatar || DEFAULT_AVATAR;
 
-  // Attach remote stream to audio/video elements
-  useEffect(() => {
-    if (audioRef.current && remoteStream) {
-      audioRef.current.srcObject = remoteStream;
-      audioRef.current.play().catch(() => {});
+  // Keep latest stream values in refs so callback refs (below) always
+  // attach the freshest MediaStream to the <video>/<audio> element,
+  // even if the stream was set BEFORE the element first mounted.
+  useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
+  useEffect(() => { remoteStreamRef.current = remoteStream; }, [remoteStream]);
+
+  // Attach streams via callback refs so srcObject is reapplied every time
+  // the element mounts. Plain useEffect-based wiring races with the
+  // conditional render of the <video> element (it's only mounted once
+  // callState === "active"), causing the local camera (and occasionally
+  // the remote stream) to stay black. Callbacks also call .play() to
+  // satisfy Safari/iOS autoplay policies.
+  const attachLocalVideo = (node) => {
+    localVideoRef.current = node;
+    if (node && node.srcObject !== localStreamRef.current) {
+      node.srcObject = localStreamRef.current;
+      node.muted = true;
+      node.play().catch(() => {});
     }
-    if (remoteVideoRef.current && remoteStream) {
+  };
+  const attachRemoteVideo = (node) => {
+    remoteVideoRef.current = node;
+    if (node && node.srcObject !== remoteStreamRef.current) {
+      node.srcObject = remoteStreamRef.current;
+      node.play().catch(() => {});
+    }
+  };
+  const attachRemoteAudio = (node) => {
+    audioRef.current = node;
+    if (node && node.srcObject !== remoteStreamRef.current) {
+      node.srcObject = remoteStreamRef.current;
+      node.play().catch(() => {});
+    }
+  };
+
+  // If a stream arrives/changes while the <video>/<audio> element is
+  // already mounted (e.g. toggleVideo after the call is active), apply it.
+  useEffect(() => {
+    if (localVideoRef.current && localVideoRef.current.srcObject !== localStream) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => {});
+    }
+  }, [localStream]);
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [remoteStream]);
-
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+    if (audioRef.current && audioRef.current.srcObject !== remoteStream) {
+      audioRef.current.srcObject = remoteStream;
+      audioRef.current.play().catch(() => {});
     }
-  }, [localStream]);
+  }, [remoteStream]);
 
   if (callState !== "active" && callState !== "calling") return null;
 
@@ -51,10 +89,11 @@ export default function ActiveCallUI() {
   const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
   const hasLocalVideo = localStream && localStream.getVideoTracks().length > 0;
   const showVideo = (hasRemoteVideo || hasLocalVideo) && callState === "active";
+  const showRemoteMain = showVideo && hasRemoteVideo;
 
   return (
     <>
-      <audio ref={audioRef} autoPlay playsInline />
+      <audio ref={attachRemoteAudio} autoPlay playsInline />
 
       <div className="fixed inset-0 z-[60] flex flex-col bg-gradient-to-b from-[#1c1c1c] to-[#2d2d2d]">
         {/* Top bar */}
@@ -104,19 +143,23 @@ export default function ActiveCallUI() {
           )}
         </div>
 
-        {/* Remote video / Avatar area */}
+        {/* Remote video + Avatar fallback (layered) */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6 relative">
-          {/* Remote video */}
-          {showVideo && remoteStream ? (
+          {/* Remote video as the main background view — always mounted while
+              the call is active so both participants can see each other. */}
+          {showRemoteMain && (
             <video
-              ref={remoteVideoRef}
+              ref={attachRemoteVideo}
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain bg-black"
             />
-          ) : (
-            <>
-              {/* Avatar */}
+          )}
+
+          {/* Avatar + status fallback — shown only when there's no remote
+              video track. Sits on top of (or replaces) the remote video. */}
+          {!showRemoteMain && (
+            <div className="flex flex-col items-center justify-center gap-6">
               <div className="relative">
                 <img
                   src={targetAvatar}
@@ -132,12 +175,10 @@ export default function ActiveCallUI() {
                 )}
               </div>
 
-              {/* Status text */}
               <p className="text-white/70 text-base">
                 {callState === "calling" ? "Calling..." : "In call"}
               </p>
 
-              {/* Waveform */}
               {callState === "active" && !isMuted && (
                 <div className="flex items-center gap-1 h-12">
                   {[0.4, 0.7, 1.0, 0.6, 0.8, 0.5, 0.9, 0.3, 0.7, 1.0, 0.5, 0.8, 0.4, 0.9, 0.6].map((h, i) => (
@@ -153,22 +194,24 @@ export default function ActiveCallUI() {
                   ))}
                 </div>
               )}
-            </>
+            </div>
           )}
 
-          {/* Local video PIP */}
+          {/* Local video PIP — 16:9 to match the webcam stream.
+              Sits above the remote video / avatar so both sides
+              can see each other at the same time. */}
           {showVideo && hasLocalVideo && (
-            <div className="absolute bottom-32 right-6 w-36 h-24 bg-black rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
+            <div className="absolute bottom-32 right-6 w-48 aspect-video bg-black rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl z-10">
               <video
-                ref={localVideoRef}
+                ref={attachLocalVideo}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
               {isVideoOff && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white/60" fill="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white/70" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4a1 1 0 00-1 1v10a1 1 0 001 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z" />
                   </svg>
                 </div>

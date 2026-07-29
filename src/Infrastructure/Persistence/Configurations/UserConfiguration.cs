@@ -12,9 +12,6 @@ namespace Infrastructure.Persistence.Configurations
             builder.ToTable("Users");
 
             // SearchVector (shadow property — DB-generated GIN-indexed column)
-            builder.Property<NpgsqlTsVector>("SearchVector")
-                .HasColumnType("tsvector")
-                .ValueGeneratedOnAdd();
 
             // ✅ Required fields
             builder.Property(u => u.FirstName)

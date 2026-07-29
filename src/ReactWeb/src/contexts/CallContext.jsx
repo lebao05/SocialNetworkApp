@@ -102,6 +102,7 @@ export function CallProvider({ children }) {
 
     // ─── Process offer ──────────────────────────────────────────────────────
     const processOffer = useCallback(async (offerData) => {
+        console.log("processOffer", offerData);
         const pc = peerConnectionRef.current;
         if (!pc) {
             pendingOfferRef.current = offerData;
@@ -125,6 +126,7 @@ export function CallProvider({ children }) {
 
     // ─── Process answer ──────────────────────────────────────────────────────
     const processAnswer = useCallback(async (answerData) => {
+        console.log("processAnswer", answerData);
         const pc = peerConnectionRef.current;
         if (!pc) return;
         try {
