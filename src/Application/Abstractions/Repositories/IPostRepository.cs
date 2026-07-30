@@ -1,3 +1,4 @@
+using Application.DTOs.Admin;
 using Application.DTOs.Posts;
 using Application.Shared;
 using Domain.Entities;
@@ -41,5 +42,19 @@ namespace Application.Abstractions.Repositories
         void AddSavedPost(SavedPost savedPost);
         void RemoveSavedPost(SavedPost savedPost);
         Task<PagedList<PostDto>> SearchAsync(Guid userId, string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
+
+        // ---- Admin dashboard aggregates (counts at DB, no entity materialization) ----
+
+        Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<DailyCountDto>> GetPostSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<DailyCountDto>> GetCommentSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default);
     }
 }

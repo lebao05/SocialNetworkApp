@@ -1,15 +1,16 @@
 @*
     Admin Group Management — list, search, filter, and manage platform groups.
-    Mirrors the structure of the Users page so admins have a consistent UI.
+    Mirrors Users.cshtml: rows are populated via AJAX, lock/unlock is wired
+    to /admin/groups/{id}/lock and /unlock.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Groups";
     ViewData["CurrentPage"] = "Groups";
 
-    var currentQuery   = ViewData["Query"]?.ToString()   ?? "";
-    var currentPrivacy = ViewData["Privacy"]?.ToString() ?? "";
-    var currentStatus  = ViewData["Status"]?.ToString()  ?? "";
+    var currentQuery   = Context.Request.Query["q"].ToString();
+    var currentPrivacy = Context.Request.Query["privacy"].ToString();
+    var currentStatus  = Context.Request.Query["status"].ToString();
 }
 
 <!-- Page Header -->
@@ -22,31 +23,31 @@
 
 
 <!-- Filter Bar -->
-<form method="get" action="@Url.Action("Groups", "Admin")">
+<form id="groupsFilterForm" data-admin-table="groups">
     <div class="filter-bar">
         <div class="search-input-wrap">
             <i class="ri-search-line"></i>
             <input type="text"
                    name="q"
                    class="form-control"
-                   placeholder="Search by name"
+                   placeholder="Search by name or description"
                    value="@currentQuery" />
         </div>
         <select name="privacy" class="form-control form-select" style="width:150px;">
-            <option value=""         @(string.IsNullOrEmpty(currentPrivacy) ? "selected" : "")>All Privacy</option>
+            <option value=""         @string.IsNullOrEmpty(currentPrivacy) ? "selected" : "">All Privacy</option>
             <option value="public"   @(currentPrivacy == "public"  ? "selected" : "")>Public</option>
             <option value="private"  @(currentPrivacy == "private" ? "selected" : "")>Private</option>
         </select>
         <select name="status" class="form-control form-select" style="width:150px;">
-            <option value=""          @(string.IsNullOrEmpty(currentStatus) ? "selected" : "")>All Status</option>
+            <option value=""          @string.IsNullOrEmpty(currentStatus) ? "selected" : "">All Status</option>
             <option value="unlocked"  @(currentStatus == "unlocked"  ? "selected" : "")>Unlocked</option>
             <option value="locked"    @(currentStatus == "locked"    ? "selected" : "")>Locked</option>
         </select>
         <div class="filter-bar-right">
-            <a href="@Url.Action("Groups", "Admin")" class="btn btn-secondary btn-sm">
+            <button type="button" class="btn btn-secondary btn-sm" id="groupsResetBtn">
                 <i class="ri-reset-right-line"></i>
                 Reset
-            </a>
+            </button>
             <button type="submit" class="btn btn-primary btn-sm">
                 <i class="ri-filter-3-line"></i>
                 Apply
@@ -54,7 +55,6 @@
         </div>
     </div>
 </form>
-
 
 
 <!-- Table -->
@@ -77,171 +77,22 @@
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @{
-                        var fakeGroups = new[] {
-                            new {
-                                Id       = "G-001",
-                                Name     = "HCMUT Students",
-                                Cover    = "",
-                                Privacy  = "Public",
-                                Members  = 4218,
-                                Posts    = 1284,
-                                Owner    = "Nguyen Van A",
-                                Created  = "Jan 12, 2024",
-                                Status   = "Unlocked"
-                            },
-                            new {
-                                Id       = "G-002",
-                                Name     = "Tech Talk Vietnam",
-                                Cover    = "",
-                                Privacy  = "Public",
-                                Members  = 1892,
-                                Posts    = 547,
-                                Owner    = "Tran Thi B",
-                                Created  = "Feb 03, 2024",
-                                Status   = "Unlocked"
-                            },
-                            new {
-                                Id       = "G-003",
-                                Name     = "Hanoi Photography Club",
-                                Cover    = "",
-                                Privacy  = "Private",
-                                Members  = 612,
-                                Posts    = 320,
-                                Owner    = "Le Van C",
-                                Created  = "Mar 18, 2024",
-                                Status   = "Locked"
-                            },
-                            new {
-                                Id       = "G-004",
-                                Name     = "Data Science Hub",
-                                Cover    = "",
-                                Privacy  = "Public",
-                                Members  = 3041,
-                                Posts    = 902,
-                                Owner    = "Pham Thi D",
-                                Created  = "Apr 22, 2024",
-                                Status   = "Unlocked"
-                            },
-                            new {
-                                Id       = "G-005",
-                                Name     = "Internal Engineering",
-                                Cover    = "",
-                                Privacy  = "Private",
-                                Members  = 47,
-                                Posts    = 132,
-                                Owner    = "Hoang Van E",
-                                Created  = "May 09, 2024",
-                                Status   = "Locked"
-                            },
-                            new {
-                                Id       = "G-006",
-                                Name     = "Cooking & Sharing",
-                                Cover    = "",
-                                Privacy  = "Public",
-                                Members  = 2204,
-                                Posts    = 678,
-                                Owner    = "Dao Thi F",
-                                Created  = "Jun 14, 2024",
-                                Status   = "Unlocked"
-                            },
-                            new {
-                                Id       = "G-007",
-                                Name     = "Gaming VN",
-                                Cover    = "",
-                                Privacy  = "Public",
-                                Members  = 5712,
-                                Posts    = 1893,
-                                Owner    = "Bui Van G",
-                                Created  = "Jul 02, 2024",
-                                Status   = "Unlocked"
-                            },
-                            new {
-                                Id       = "G-008",
-                                Name     = "Bookworms Anonymous",
-                                Cover    = "",
-                                Privacy  = "Private",
-                                Members  = 318,
-                                Posts    = 96,
-                                Owner    = "Do Thi H",
-                                Created  = "Aug 27, 2024",
-                                Status   = "Locked"
-                            },
-                        };
-                    }
-
-                    @foreach (var group in fakeGroups)
-                    {
-                        var initials = string.Join("", group.Name.Split(' ').Take(2).Select(w => w[0]));
-
-                        var statusBadgeClass = group.Status switch {
-                            "Unlocked"  => "badge-active",
-                            "Locked"    => "badge-banned",
-                            _           => "badge-active"
-                        };
-
-                        var privacyBadgeClass = group.Privacy switch {
-                            "Public"  => "badge-info",
-                            "Private" => "badge-pending",
-                            _         => ""
-                        };
-
-                        <tr>
-                            <td><input type="checkbox" /></td>
-                            <td>
-                                <div class="cell-user">
-                                    <div class="cell-user-avatar">@initials</div>
-                                    <div class="cell-user-info">
-                                        <div class="cell-user-name">@group.Name</div>
-                                        <div class="cell-user-email">@group.Id</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge @privacyBadgeClass"><span class="badge-dot"></span>@group.Privacy</span>
-                            </td>
-                            <td class="cell-muted">@group.Members.ToString("N0")</td>
-                            <td class="cell-muted">@group.Posts.ToString("N0")</td>
-                            <td>@group.Owner</td>
-                            <td class="cell-muted">@group.Created</td>
-                            <td>
-                                <span class="badge @statusBadgeClass"><span class="badge-dot"></span>@group.Status</span>
-                            </td>
-                            <td style="text-align:right;">
-                                <div class="cell-actions" style="justify-content:flex-end;">
-                                    @if (group.Status != "Locked")
-                                    {
-                                        <button class="action-btn danger" title="Lock" aria-label="Lock group">
-                                            <i class="ri-lock-line"></i>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="action-btn success" title="Unlock" aria-label="Unlock group">
-                                            <i class="ri-lock-unlock-line"></i>
-                                        </button>
-                                    }
-                                </div>
-                            </td>
-                        </tr>
-                    }
+                <tbody id="groupsTbody">
+                    <tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination -->
         <div class="pagination">
-            <span class="pagination-info">Showing 1–8 of 892 groups</span>
-            <div class="pagination-controls">
-                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <span class="page-ellipsis">...</span>
-                <button class="page-btn">112</button>
-                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+            <span class="pagination-info" id="groupsPaginationInfo">Loading…</span>
+            <div class="pagination-controls" id="groupsPaginationControls">
+                <!-- buttons rendered by JS -->
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/admin/js/admin.groups.js" asp-append-version="true"></script>
+}

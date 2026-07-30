@@ -1,0 +1,193 @@
+@model dynamic
+@*
+    Renders a self-contained inline-SVG stacked bar chart.
+
+    No external dependencies (no Chart.js / D3 / canvas). All visual rules are
+    inlined as SVG attributes or local <style> so the chart renders correctly
+    even if admin.min.css is rebuilt and unrelated selectors change.
+
+    Model (anonymous):
+      - Id           string     DOM id (required if you have >1 on a page)
+      - Days         string[]   x-axis labels (length must equal Series[i].Values.Length)
+      - Series       object[]   each item has:
+                                  - Label      string   legend label
+                                  - Values     int[]    data points
+                                  - Color      string   bar fill color (#rrggbb)
+      - YAxisLabel   string     label shown top-left of the chart
+      - LegendAlign  string     "right" (default) or "left" — where to place legend chips
+*@
+@using System.Globalization
+@{
+    // ---- Pull & validate model ----
+    var rawSeries = (Model?.Series as IEnumerable<dynamic>) ?? Enumerable.Empty<dynamic>();
+    var days      = (Model?.Days as IEnumerable<string>)     ?? Enumerable.Empty<string>();
+
+    var dayList  = days.ToList();
+    var id       = (string)(Model?.Id           ?? "stackedBarChart");
+    var yLabel   = (string)(Model?.YAxisLabel   ?? "");
+    var legendAlign = (string)(Model?.LegendAlign ?? "right");
+
+    // Materialize series to (Label, Values, Color).
+    var series = new List<(string Label, List<int> Values, string Color)>();
+    foreach (var s in rawSeries)
+    {
+        var lbl   = (string)(s?.Label ?? "");
+        var color = (string)(s?.Color ?? "#3b82f6");
+        var vals  = (s?.Values as IEnumerable<int>)?.ToList() ?? new List<int>();
+        series.Add((lbl, vals, color));
+    }
+
+    int n = dayList.Count;
+
+    // ---- Geometry ----
+    const int W = 720;
+    const int H = 240;
+    const int padL = 44;
+    const int padR = 16;
+    const int padT = 24;
+    const int padB = 36; // extra room for legend chips + x-axis labels
+
+    double plotW = W - padL - padR;
+    double plotH = H - padT - padB;
+
+    // Total height of each stacked column per day = sum of series values at that index.
+    var totals = new int[n];
+    for (int i = 0; i < n; i++)
+    {
+        int sum = 0;
+        foreach (var s in series)
+        {
+            if (i < s.Values.Count) sum += s.Values[i];
+        }
+        totals[i] = sum;
+    }
+
+    int maxTotal = totals.Length > 0 ? totals.Max() : 1;
+    if (maxTotal <= 0) maxTotal = 1;
+
+    int niceMax = (int)Math.Ceiling(maxTotal / 50.0) * 50;
+    if (niceMax < maxTotal) niceMax = maxTotal;
+    if (niceMax <= 0) niceMax = 1;
+
+    var ticks = new int[] { 0, niceMax / 3, (2 * niceMax) / 3, niceMax };
+
+    // Bar layout
+    double slotW   = n > 0 ? plotW / n : plotW;          // horizontal space per day
+    double barW    = Math.Max(8.0, slotW * 0.55);        // bar width
+    double barGap  = (slotW - barW) / 2.0;               // left/right padding within slot
+
+    // ---- Emit SVG ----
+    var inv = CultureInfo.InvariantCulture;
+    Func<double, string> fmt = v => v.ToString("0.##", inv);
+
+    bool empty = n == 0 || series.Count == 0 || totals.All(t => t == 0);
+}
+
+<div class="stacked-bar-wrap" id="@id">
+    <style>
+        .stacked-bar-wrap svg { width: 100%; height: 240px; display: block; }
+        @@media (max-width: 768px) {
+            .stacked-bar-wrap svg { height: 200px !important; }
+        }
+        .stacked-bar-segment { transition: opacity .15s ease; cursor: pointer; }
+        .stacked-bar-segment:hover { opacity: .85; }
+        .stacked-bar-tip { opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+        .stacked-bar-segment:hover .stacked-bar-tip,
+        .stacked-bar-segment:focus .stacked-bar-tip { opacity: 1 !important; }
+    </style>
+
+    @if (empty)
+    {
+        <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">
+            No data available
+        </div>
+    }
+    else
+    {
+        <div style="position:relative;">
+            <span style="position:absolute;top:0;left:0;font-size:.7rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+                @yLabel
+            </span>
+            <span style="position:absolute;top:0;right:0;font-size:.7rem;color:#94a3b8;">
+                Peak: <strong style="color:#0f172a;">@maxTotal</strong>
+            </span>
+
+            <svg viewBox="0 0 @W @H" preserveAspectRatio="none">
+                <!-- Gridlines -->
+                @for (int t = 0; t < ticks.Length; t++)
+                {
+                    var ratio = (double)ticks[t] / niceMax;
+                    var y = padT + plotH - ratio * plotH;
+                    <line x1="@padL" x2="@(padL + plotW)" y1="@y" y2="@y"
+                          stroke="#e2e8f0" stroke-width="1" stroke-dasharray="@(t == 0 ? "0" : "3 4")" />
+                    WriteLiteral($"<text x=\"{padL - 8}\" y=\"{y + 4}\" text-anchor=\"end\" " +
+                                 $"font-size=\"10\" fill=\"#94a3b8\" font-family=\"Inter, sans-serif\">" +
+                                 $"{ticks[t]}</text>");
+                }
+
+                <!-- Stacked bars -->
+                @for (int i = 0; i < n; i++)
+                {
+                    double slotX = padL + slotW * i;
+                    double x = slotX + barGap;
+                    double stackTop = padT + plotH; // start at baseline
+
+                    foreach (var s in series)
+                    {
+                        if (i >= s.Values.Count) continue;
+                        int v = s.Values[i];
+                        if (v <= 0) continue;
+
+                        double segH = ((double)v / niceMax) * plotH;
+                        double y = stackTop - segH;
+
+                        <g class="stacked-bar-segment" tabindex="0">
+                            <rect x="@fmt(x)" y="@fmt(y)" width="@fmt(barW)" height="@fmt(segH)" fill="@s.Color" />
+                            @* Tooltip *@
+                            <g class="stacked-bar-tip">
+                                <rect x="@fmt(x + barW / 2 - 30)" y="@fmt(y - 28)" width="60" height="22" rx="4" fill="#0f172a" />
+                                WriteLiteral($"<text x=\"{fmt(x + barW / 2)}\" y=\"{fmt(y - 12)}\" text-anchor=\"middle\" " +
+                                             $"font-size=\"11\" fill=\"#fff\" font-family=\"Inter, sans-serif\" font-weight=\"600\">" +
+                                             $"{s.Label}: {v}</text>");
+                            </g>
+                        </g>
+
+                        stackTop -= segH;
+                    }
+
+                    // Day total label above each bar
+                    double labelY = padT + plotH - ((double)totals[i] / niceMax) * plotH - 6;
+                    WriteLiteral($"<text x=\"{fmt(x + barW / 2)}\" y=\"{fmt(labelY)}\" text-anchor=\"middle\" " +
+                                 $"font-size=\"10\" fill=\"#0f172a\" font-family=\"Inter, sans-serif\" font-weight=\"600\">" +
+                                 $"{totals[i]}</text>");
+                }
+
+                <!-- X-axis labels -->
+                @for (int i = 0; i < dayList.Count; i++)
+                {
+                    var x = padL + slotW * i + slotW / 2.0;
+                    WriteLiteral($"<text x=\"{fmt(x)}\" y=\"{padT + plotH + 18}\" text-anchor=\"middle\" " +
+                                 $"font-size=\"10\" fill=\"#94a3b8\" font-family=\"Inter, sans-serif\">" +
+                                 $"{dayList[i]}</text>");
+                }
+            </svg>
+
+            <!-- Legend -->
+            @if (series.Count > 0)
+            {
+                string justify = legendAlign == "left" ? "flex-start" : "flex-end";
+                <div style="display:flex;justify-content:@justify;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:.75rem;color:#475569;">
+                    @foreach (var s in series)
+                    {
+                        int total = 0;
+                        foreach (var v in s.Values) total += v;
+                        <span style="display:inline-flex;align-items:center;gap:6px;">
+                            <span style="width:10px;height:10px;border-radius:2px;background:@s.Color;display:inline-block;"></span>
+                            @s.Label <strong style="color:#0f172a;">@total</strong>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

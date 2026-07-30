@@ -1,4 +1,9 @@
+using Application.Admin.Commands.SetGroupLock;
+using Application.Admin.Commands.SetUserLock;
+using Application.Admin.Queries.SearchAdminGroups;
+using Application.Admin.Queries.SearchAdminUsers;
 using Application.Auth.Commands.AdminLogin;
+using Application.Shared;
 using Domain.Entities;
 using Infrastructure.Persistence.Contexts;
 using MediatR;
@@ -224,6 +229,106 @@ namespace Presentation.Controllers
             HttpContext.Session.Clear();
             return RedirectToAction(nameof(Login));
         }
+
+        // ── AJAX endpoints (Users / Groups admin pages) ───────────
+
+        /// <summary>
+        /// GET /admin/users/list?q=&status=&role=&page=&pageSize=
+        /// Returns a paged, filtered list for the admin Users page.
+        /// </summary>
+        [HttpGet("users/list")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UsersList(
+            [FromQuery] string? q,
+            [FromQuery] string? status,
+            [FromQuery] string? role,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default)
+        {
+            var result = await _sender.Send(
+                new SearchAdminUsersQuery(q, status, role, page, pageSize), ct);
+
+            return result.IsSuccess
+                ? Ok(ToListPayload(result.Value))
+                : StatusCode(500, new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/users/{id}/lock — flip IsLocked on.</summary>
+        [HttpPost("users/{id:guid}/lock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> LockUser(Guid id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetUserLockCommand(id, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/users/{id}/unlock — flip IsLocked off.</summary>
+        [HttpPost("users/{id:guid}/unlock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UnlockUser(Guid id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetUserLockCommand(id, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>GET /admin/groups/list?q=&privacy=&status=&page=&pageSize=</summary>
+        [HttpGet("groups/list")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> GroupsList(
+            [FromQuery] string? q,
+            [FromQuery] string? privacy,
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default)
+        {
+            var result = await _sender.Send(
+                new SearchAdminGroupsQuery(q, privacy, status, page, pageSize), ct);
+
+            return result.IsSuccess
+                ? Ok(ToListPayload(result.Value))
+                : StatusCode(500, new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/groups/{id}/lock</summary>
+        [HttpPost("groups/{id:long}/lock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> LockGroup(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetGroupLockCommand(id, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/groups/{id}/unlock</summary>
+        [HttpPost("groups/{id:long}/unlock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UnlockGroup(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetGroupLockCommand(id, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        // PagedList<T> → JSON. The handler stays typed; the controller is the
+        // only place that needs to know what shape JS expects.
+        private static object ToListPayload<T>(PagedList<T> list) => new
+        {
+            items      = list.Items,
+            page       = list.PageNumber,
+            pageSize   = list.PageSize,
+            totalCount = list.TotalCount,
+            totalPages = list.TotalPages,
+            hasNext    = list.HasNextPage,
+            hasPrev    = list.HasPreviousPage,
+        };
 
         // ── Private helpers ───────────────────────────────
 

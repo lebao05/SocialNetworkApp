@@ -17,10 +17,18 @@ namespace Domain.Entities
         public bool IsPostApprovalRequired { get; private set; }
         /// <summary>When true joining the group requires approval.</summary>
         public bool IsGroupJoinApprovalRequired { get; private set; }
-        /// <summary>When true members may post/comment anonymously.</summary>
-        public bool AllowAnonymousPost { get; private set; }
+    /// <summary>When true members may post/comment anonymously.</summary>
+    public bool AllowAnonymousPost { get; private set; }
 
-        // Navigation Property
+    // True when an admin has locked the group. Locked groups are still
+    // visible (so members can see why) but new posts are rejected by the
+    // moderation check at the application layer.
+    public bool IsLocked { get; private set; }
+
+    public void Lock()   => IsLocked = true;
+    public void Unlock() => IsLocked = false;
+
+    // Navigation Property
         public User Owner { get; private set; } = null!;
 
         private readonly List<GroupMember> _members = new();

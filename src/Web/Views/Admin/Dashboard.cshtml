@@ -1,20 +1,14 @@
 @*
     Admin Dashboard — overview with stats, growth charts, and activity.
-    Line charts are rendered as inline SVG so they require no JS library
-    or external CSS — they look identical regardless of admin.min.css state.
+    All numbers are loaded via AJAX from /admin/api/stats/* (see AdminStatsController).
+    The server-rendered SVG partials are kept as a fallback / no-JS path: when
+    JavaScript is disabled the page renders an empty container per chart that
+    admin.dashboard.js will hydrate as soon as it boots.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Dashboard";
     ViewData["CurrentPage"] = "Dashboard";
-
-    // Shared 7-day window — used by all three line charts.
-    var days = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-
-    // Sample data series (replace with real aggregates later).
-    var userGrowth = new[] { 412, 438, 461, 489, 510, 548, 587 };      // new users / day
-    var postVolume = new[] { 68, 82, 75, 91, 110, 134, 120 };          // posts / day
-    var commentVolume = new[] { 220, 261, 247, 298, 342, 401, 378 };   // comments / day
 }
 
 <!-- Stats Row -->
@@ -26,7 +20,7 @@
         </div>
         <div class="stat-info">
             <div class="stat-label">Total Users</div>
-            <div class="stat-value">48,231</div>
+            <div class="stat-value" data-stat="total-users">—</div>
         </div>
     </div>
 
@@ -36,17 +30,7 @@
         </div>
         <div class="stat-info">
             <div class="stat-label">Posts</div>
-            <div class="stat-value">3.1M</div>
-        </div>
-    </div>
-
-    <div class="stat-card animate-in">
-        <div class="stat-icon red">
-            <i class="ri-notification-3-line"></i>
-        </div>
-        <div class="stat-info">
-            <div class="stat-label">Reports</div>
-            <div class="stat-value">142</div>
+            <div class="stat-value" data-stat="total-posts">—</div>
         </div>
     </div>
 
@@ -56,7 +40,7 @@
         </div>
         <div class="stat-info">
             <div class="stat-label">Active Groups</div>
-            <div class="stat-value">892</div>
+            <div class="stat-value" data-stat="active-groups">—</div>
         </div>
     </div>
 
@@ -66,7 +50,7 @@
         </div>
         <div class="stat-info">
             <div class="stat-label">Online Now</div>
-            <div class="stat-value">1,847</div>
+            <div class="stat-value" data-stat="online-now">—</div>
         </div>
     </div>
 
@@ -79,25 +63,19 @@
     <div class="card">
         <div class="card-header">
             <div>
-                <div class="card-title">User Growth — Last 7 Days</div>
+                <div class="card-title">User Growth — Last <span data-period-label="user-growth">7</span> Days</div>
                 <div class="card-subtitle">New registrations per day</div>
             </div>
-            <select class="form-control form-select" style="width:140px;">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-                <option>Last 90 days</option>
+            <select class="form-control form-select" data-period="user-growth" style="width:140px;">
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
             </select>
         </div>
         <div class="card-body">
-            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-            {
-                Id          = "userGrowthChart",
-                Days        = days,
-                Values      = userGrowth,
-                StrokeColor = "#3b82f6",
-                FillColor   = "rgba(59, 130, 246, .18)",
-                YAxisLabel  = "Users"
-            })
+            <div class="line-chart-wrap" id="userGrowthChart">
+                <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">Loading…</div>
+            </div>
         </div>
     </div>
 
@@ -105,20 +83,19 @@
     <div class="card">
         <div class="card-header">
             <div>
-                <div class="card-title">Posts — Last 7 Days</div>
+                <div class="card-title">Posts — Last <span data-period-label="post-volume">7</span> Days</div>
                 <div class="card-subtitle">Daily post volume</div>
             </div>
+            <select class="form-control form-select" data-period="post-volume" style="width:140px;">
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
         </div>
         <div class="card-body">
-            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-            {
-                Id          = "postsChart",
-                Days        = days,
-                Values      = postVolume,
-                StrokeColor = "#10b981",
-                FillColor   = "rgba(16, 185, 129, .18)",
-                YAxisLabel  = "Posts"
-            })
+            <div class="line-chart-wrap" id="postsChart">
+                <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">Loading…</div>
+            </div>
         </div>
     </div>
 
@@ -126,21 +103,44 @@
     <div class="card">
         <div class="card-header">
             <div>
-                <div class="card-title">Comments — Last 7 Days</div>
+                <div class="card-title">Comments — Last <span data-period-label="comment-volume">7</span> Days</div>
                 <div class="card-subtitle">Daily comment volume</div>
             </div>
+            <select class="form-control form-select" data-period="comment-volume" style="width:140px;">
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
         </div>
         <div class="card-body">
-            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-            {
-                Id          = "commentsChart",
-                Days        = days,
-                Values      = commentVolume,
-                StrokeColor = "#f59e0b",
-                FillColor   = "rgba(245, 158, 11, .18)",
-                YAxisLabel  = "Comments"
-            })
+            <div class="line-chart-wrap" id="commentsChart">
+                <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reels (stacked bar) -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Reels — Last <span data-period-label="reel-volume">7</span> Days</div>
+                <div class="card-subtitle">Reels uploaded per day</div>
+            </div>
+            <select class="form-control form-select" data-period="reel-volume" style="width:140px;">
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
+        </div>
+        <div class="card-body">
+            <div class="stacked-bar-wrap" id="reelsChart">
+                <div style="text-align:center;color:#94a3b8;padding:60px 0;font-size:.875rem;">Loading…</div>
+            </div>
         </div>
     </div>
 
 </div>
+
+@section Scripts {
+    <script src="~/admin/js/admin.dashboard.js" asp-append-version="true"></script>
+}

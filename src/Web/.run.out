@@ -1,0 +1,46 @@
+Using launch settings from D:\SocialNetworkApp\SocialNetworkApp\src\Web\Properties\launchSettings.json...
+Building...
+D:\SocialNetworkApp\SocialNetworkApp\src\Web\Web.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc
+D:\SocialNetworkApp\SocialNetworkApp\src\Web\Web.csproj : warning NU1903: Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc
+Client Url http://localhost:5173
+[23:14:33 INF] RoleSeeder starting...
+[23:14:34 WRN] Entity 'PostComment' has a global query filter defined and is the required end of a relationship with the entity 'CommentReaction'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'PostMedia'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'PostReaction'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'PostTag'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Reel' has a global query filter defined and is the required end of a relationship with the entity 'ReelReaction'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'ReportedGroupContent'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'SavedPost'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:34 WRN] Entity 'Post' has a global query filter defined and is the required end of a relationship with the entity 'UserFeed'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[23:14:37 INF] Role USER already exists.
+[23:14:37 INF] Role ADMIN already exists.
+[23:14:37 INF] Admin user admin@socialhub.com already exists (Id=019fb2f8-8be0-73e1-baab-a48cb03b164b). Ensuring role ADMIN...
+[23:14:37 INF] Admin user admin@socialhub.com already has role ADMIN.
+[23:14:37 INF] RoleSeeder finished.
+[23:14:38 INF] Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+[23:14:38 INF] Quartz Scheduler created
+[23:14:38 INF] JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+[23:14:38 INF] RAMJobStore initialized.
+[23:14:38 INF] Quartz Scheduler 3.18.1.0 - 'QuartzScheduler' with instanceId 'NON_CLUSTERED' initialized
+[23:14:38 INF] Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+[23:14:38 INF] Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+[23:14:38 INF] Adding 1 jobs, 1 triggers.
+[23:14:38 INF] Adding job: DEFAULT.OutboxProcessingBackgroundService
+[23:14:38 INF] Scheduler QuartzScheduler_$_NON_CLUSTERED started.
+[23:14:38 WRN] You do not have a valid license key for the Lucky Penny software MediatR. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.
+[23:15:47 WRN] Failed to determine the https port for redirect.
+[23:15:47 INF] HTTP POST /admin/login responded 400 in 125.4910 ms
+[23:16:32 INF] HTTP GET /admin/api/stats/totals responded 401 in 12.1026 ms
+[23:16:54 INF] HTTP GET /admin/api/stats/totals responded 401 in 4.5207 ms
+[23:16:54 INF] HTTP GET /admin/api/stats/user-growth responded 401 in 1.3245 ms
+[23:16:54 INF] HTTP GET /admin/api/stats/post-volume responded 401 in 0.3495 ms
+[23:16:54 INF] HTTP GET /admin/api/stats/comment-volume responded 401 in 0.3246 ms
+[23:16:54 INF] HTTP GET /admin/api/stats/reel-volume responded 401 in 0.3443 ms
+[23:17:10 INF] HTTP GET /admin/api/stats/user-growth responded 401 in 0.5241 ms
+[23:17:10 INF] HTTP GET /admin/api/stats/user-growth responded 401 in 0.3945 ms
+[23:17:10 INF] HTTP GET /admin/api/stats/post-volume responded 401 in 0.3259 ms
+[23:17:10 INF] HTTP GET /admin/api/stats/reel-volume responded 401 in 0.3404 ms
+[23:17:30 INF] HTTP GET /admin responded 200 in 59.6600 ms
+[23:17:47 INF] HTTP GET /admin/js/admin.dashboard.js responded 200 in 7.5671 ms
+[23:18:03 INF] HTTP GET /admin/js/admin.core.js responded 200 in 4.9938 ms
+[23:18:18 INF] HTTP GET /admin/js/admin.min.js responded 404 in 0.8233 ms

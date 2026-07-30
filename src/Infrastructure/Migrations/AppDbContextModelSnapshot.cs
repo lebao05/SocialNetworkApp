@@ -311,6 +311,11 @@ namespace Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsPostApprovalRequired")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -335,6 +340,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsLocked");
 
                     b.HasIndex("OwnerUserId");
 
@@ -1347,6 +1354,11 @@ namespace Infrastructure.Migrations
                     b.Property<string>("CoverPhotoUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now() AT TIME ZONE 'utc'");
+
                     b.Property<string>("CurrentLocation")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1372,6 +1384,11 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Hometown")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -1423,7 +1440,11 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("Email");
+
+                    b.HasIndex("IsLocked");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");

@@ -69,6 +69,15 @@ namespace Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasDefaultValue(false);
 
+            // SearchVector (shadow) — DB-generated tsvector from PostConfiguration;
+            // declared here so the EF model snapshot matches reality. The column
+            // itself is created via raw SQL in the 20260715080740_AddReelSearchVector
+            // migration (and the Posts equivalent) — we only describe it to EF.
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd()
+                .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+
             // Self-referencing Relationship: Post -> SharePost (Post)
             builder.HasOne(p => p.SharePost)
                 .WithMany()

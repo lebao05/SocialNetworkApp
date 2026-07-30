@@ -1,10 +1,17 @@
 @*
     Admin User Management — list, search, filter, and manage platform users.
+    All data is loaded via AJAX from /admin/users/list (and lock/unlock
+    endpoints). The hard-coded rows that used to live here were a UI mock;
+    real users are fetched live so admin actions are reflected immediately.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Users";
     ViewData["CurrentPage"] = "Users";
+
+    var currentQuery  = Context.Request.Query["q"].ToString();
+    var currentStatus = Context.Request.Query["status"].ToString();
+    var currentRole   = Context.Request.Query["role"].ToString();
 }
 
 <!-- Page Header -->
@@ -16,33 +23,33 @@
 </div>
 
 
-<!-- Filter Bar -->
-<form method="get" action="@Url.Action("Users", "Admin")">
+<!-- Filter Bar — submit triggers AJAX re-fetch via admin.users.js -->
+<form id="usersFilterForm" data-admin-table="users">
     <div class="filter-bar">
         <div class="search-input-wrap">
             <i class="ri-search-line"></i>
             <input type="text"
                    name="q"
                    class="form-control"
-                   placeholder="Search by username"
-                   value="@Context.Request.Query["q"]" />
+                   placeholder="Search by name or email"
+                   value="@currentQuery" />
         </div>
         <select name="status" class="form-control form-select" style="width:150px;">
-            <option value="">All Status</option>
-            <option value="unlocked">Unlocked</option>
-            <option value="locked">Locked</option>
+            <option value=""          @string.IsNullOrEmpty(currentStatus) ? "selected" : "">All Status</option>
+            <option value="unlocked"  @(currentStatus == "unlocked" ? "selected" : "")>Unlocked</option>
+            <option value="locked"    @(currentStatus == "locked"   ? "selected" : "")>Locked</option>
         </select>
         <select name="role" class="form-control form-select" style="width:150px;">
-            <option value="">All Roles</option>
-            <option value="user">User</option>
-            <option value="moderator">Moderator</option>
-            <option value="admin">Admin</option>
+            <option value=""          @string.IsNullOrEmpty(currentRole) ? "selected" : "">All Roles</option>
+            <option value="user"      @(currentRole == "user"      ? "selected" : "")>User</option>
+            <option value="moderator" @(currentRole == "moderator" ? "selected" : "")>Moderator</option>
+            <option value="admin"     @(currentRole == "admin"     ? "selected" : "")>Admin</option>
         </select>
         <div class="filter-bar-right">
-            <a href="@Url.Action("Users", "Admin")" class="btn btn-secondary btn-sm">
+            <button type="button" class="btn btn-secondary btn-sm" id="usersResetBtn">
                 <i class="ri-reset-right-line"></i>
                 Reset
-            </a>
+            </button>
             <button type="submit" class="btn btn-primary btn-sm">
                 <i class="ri-filter-3-line"></i>
                 Apply
@@ -52,7 +59,7 @@
 </form>
 
 
-<!-- Table -->
+<!-- Table — rows are populated by admin.users.js -->
 <div class="card">
     <div class="card-body" style="padding:0;">
         <div class="table-wrapper">
@@ -71,180 +78,17 @@
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @{
-                        var fakeUsers = new[] {
-                            new {
-                                Id = "U-001",
-                                Name = "Nguyen Van A",
-                                Email = "nguyenvana@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Unlocked",
-                                Posts = 342,
-                                Joined = "Jan 12, 2024",
-                                LastActive = "2 min ago"
-                            },
-                            new {
-                                Id = "U-002",
-                                Name = "Tran Thi B",
-                                Email = "tranthib@example.com",
-                                Avatar = "",
-                                Role = "Moderator",
-                                Status = "Unlocked",
-                                Posts = 89,
-                                Joined = "Mar 3, 2024",
-                                LastActive = "15 min ago"
-                            },
-                            new {
-                                Id = "U-003",
-                                Name = "Le Van C",
-                                Email = "levanc@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Locked",
-                                Posts = 1_204,
-                                Joined = "Nov 8, 2023",
-                                LastActive = "3 days ago"
-                            },
-                            new {
-                                Id = "U-004",
-                                Name = "Pham Thi D",
-                                Email = "phamthid@example.com",
-                                Avatar = "",
-                                Role = "Admin",
-                                Status = "Unlocked",
-                                Posts = 56,
-                                Joined = "Jan 1, 2024",
-                                LastActive = "1 hr ago"
-                            },
-                            new {
-                                Id = "U-005",
-                                Name = "Hoang Van E",
-                                Email = "hoangvane@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Unlocked",
-                                Posts = 78,
-                                Joined = "Feb 19, 2024",
-                                LastActive = "Just now"
-                            },
-                            new {
-                                Id = "U-006",
-                                Name = "Dao Thi F",
-                                Email = "daothif@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Unlocked",
-                                Posts = 12,
-                                Joined = "Apr 5, 2024",
-                                LastActive = "30 days ago"
-                            },
-                            new {
-                                Id = "U-007",
-                                Name = "Bui Van G",
-                                Email = "buivang@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Unlocked",
-                                Posts = 567,
-                                Joined = "Dec 11, 2023",
-                                LastActive = "4 min ago"
-                            },
-                            new {
-                                Id = "U-008",
-                                Name = "Do Thi H",
-                                Email = "dothih@example.com",
-                                Avatar = "",
-                                Role = "User",
-                                Status = "Locked",
-                                Posts = 892,
-                                Joined = "Oct 2, 2023",
-                                LastActive = "5 days ago"
-                            },
-                        };
-                    }
-
-                    @foreach (var user in fakeUsers)
-                    {
-                        var initials = string.Join("", user.Name.Split(' ').Take(2).Select(w => w[0]));
-                        var statusBadgeClass = user.Status switch {
-                            "Unlocked" => "badge-active",
-                            "Locked"   => "badge-banned",
-                            _          => "badge-active"
-                        };
-                        var roleBadgeClass = user.Role switch {
-                            "Admin"      => "badge-info",
-                            "Moderator"  => "badge-pending",
-                            _            => ""
-                        };
-
-                        <tr>
-                            <td><input type="checkbox" /></td>
-                            <td>
-                                <div class="cell-user">
-                                    <div class="cell-user-avatar">@initials</div>
-                                    <div class="cell-user-info">
-                                        <div class="cell-user-name">@user.Name</div>
-                                        <div class="cell-user-email">@user.Email</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge @(roleBadgeClass)">@user.Role</span>
-                            </td>
-                            <td>
-                                <span class="badge @statusBadgeClass"><span class="badge-dot"></span>@user.Status</span>
-                            </td>
-                            <td class="cell-muted">@user.Posts.ToString("N0")</td>
-                            <td class="cell-muted">@user.Joined</td>
-                            <td class="cell-muted">@user.LastActive</td>
-                            <td>
-                                <div class="cell-actions" style="justify-content:flex-end;">
-                                    <button class="action-btn primary"
-                                            title="View profile"
-                                            data-modal="userDetailModal">
-                                        <i class="ri-eye-line"></i>
-                                    </button>
-                                    <button class="action-btn"
-                                            title="Edit user"
-                                            data-modal="editUserModal">
-                                        <i class="ri-edit-line"></i>
-                                    </button>
-                                    @if (user.Status != "Locked")
-                                    {
-                                        <button class="action-btn danger"
-                                                title="Lock user"
-                                                data-modal="banUserModal">
-                                            <i class="ri-lock-line"></i>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="action-btn success"
-                                                title="Unlock user">
-                                            <i class="ri-lock-unlock-line"></i>
-                                        </button>
-                                    }
-                                </div>
-                            </td>
-                        </tr>
-                    }
+                <tbody id="usersTbody">
+                    <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination -->
         <div class="pagination">
-            <span class="pagination-info">Showing 1–8 of 48,231 users</span>
-            <div class="pagination-controls">
-                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <span class="page-ellipsis">...</span>
-                <button class="page-btn">5,029</button>
-                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+            <span class="pagination-info" id="usersPaginationInfo">Loading…</span>
+            <div class="pagination-controls" id="usersPaginationControls">
+                <!-- buttons rendered by JS -->
             </div>
         </div>
     </div>
@@ -268,45 +112,36 @@
         </div>
         <div class="modal-body">
             <div style="text-align:center;margin-bottom:20px;">
-                <div class="cell-user-avatar" style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 10px;">NV A</div>
-                <h3 style="font-size:1.1rem;font-weight:700;">Nguyen Van A</h3>
-                <p style="color:#64748b;font-size:.85rem;">nguyenvana@example.com</p>
+                <div class="cell-user-avatar" style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 10px;">—</div>
+                <h3 style="font-size:1.1rem;font-weight:700;" id="userDetailName">User</h3>
+                <p style="color:#64748b;font-size:.85rem;" id="userDetailEmail">—</p>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Role</div>
-                    <div class="fw-600">User</div>
+                    <div class="fw-600" id="userDetailRole">—</div>
                 </div>
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Status</div>
-                    <div class="fw-600 text-success">Unlocked</div>
+                    <div class="fw-600" id="userDetailStatus">—</div>
                 </div>
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Posts</div>
-                    <div class="fw-600">342</div>
-                </div>
-                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
-                    <div class="text-muted text-sm">Friends</div>
-                    <div class="fw-600">127</div>
+                    <div class="fw-600" id="userDetailPosts">0</div>
                 </div>
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Joined</div>
-                    <div class="fw-600">Jan 12, 2024</div>
-                </div>
-                <div style="background:#f8fafc;padding:12px;border-radius:8px;">
-                    <div class="text-muted text-sm">Reports</div>
-                    <div class="fw-600 text-danger">3</div>
+                    <div class="fw-600" id="userDetailJoined">—</div>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Close</button>
-            <button class="btn btn-danger btn-sm"><i class="ri-lock-line"></i> Lock</button>
         </div>
     </div>
 </div>
 
-<!-- Lock User Modal -->
+<!-- Lock User Modal (confirm prompt) -->
 <div class="modal-overlay hidden" id="banUserModal">
     <div class="modal">
         <div class="modal-header">
@@ -318,51 +153,18 @@
                 <i class="ri-error-warning-line"></i>
                 This action will immediately lock the user's access to the platform.
             </div>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label class="form-label" for="banReason">Lock Reason <span>*</span></label>
-                <select id="banReason" class="form-control form-select">
-                    <option value="">Select a reason</option>
-                    <option>Spam or misleading content</option>
-                    <option>Hate speech or harassment</option>
-                    <option>Inappropriate content</option>
-                    <option>Fake account</option>
-                    <option>Terms of service violation</option>
-                    <option>Other</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="banNote">Admin Note</label>
-                <textarea id="banNote"
-                          class="form-control"
-                          rows="3"
-                          placeholder="Optional internal note..."></textarea>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Lock Duration</label>
-                <div style="display:flex;gap:8px;">
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
-                        <input type="radio" name="banDuration" value="permanent" checked style="accent-color:var(--c-primary);" />
-                        Permanent
-                    </label>
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
-                        <input type="radio" name="banDuration" value="7days" style="accent-color:var(--c-primary);" />
-                        7 days
-                    </label>
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
-                        <input type="radio" name="banDuration" value="30days" style="accent-color:var(--c-primary);" />
-                        30 days
-                    </label>
-                </div>
-            </div>
+            <p style="color:#64748b;font-size:.9rem;">
+                Lock <strong id="banUserName">this user</strong>? You can unlock them at any time.
+            </p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-danger"><i class="ri-lock-line"></i> Confirm Lock</button>
+            <button class="btn btn-danger" id="banUserConfirm"><i class="ri-lock-line"></i> Confirm Lock</button>
         </div>
     </div>
 </div>
 
-<!-- Edit User Modal -->
+<!-- Edit User Modal (placeholder; no backend yet) -->
 <div class="modal-overlay hidden" id="editUserModal">
     <div class="modal">
         <div class="modal-header">
@@ -394,3 +196,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/admin/js/admin.users.js" asp-append-version="true"></script>
+}

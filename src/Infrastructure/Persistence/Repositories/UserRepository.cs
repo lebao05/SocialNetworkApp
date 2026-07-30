@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.SignalR;
+using Application.DTOs.Admin;
 using Application.DTOs.Search;
 using Application.Shared;
 using Domain.Entities;
@@ -120,6 +121,157 @@ namespace Infrastructure.Persistence.Repositories
             var dtos = (await Task.WhenAll(tasks)).ToList();
 
             return new PagedList<SearchUserDto>(dtos, page, pageSize, totalCount);
+        }
+
+        // ---- Admin dashboard aggregates ----
+
+        public Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default)
+        {
+            // Count() translates to SELECT count(*) — no entity materialization.
+            return _context.Users.AsNoTracking().LongCountAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<DailyCountDto>> GetRegistrationSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default)
+        {
+            // Group by CreatedAt.Date so EF/SQL gives us one row per day.
+            // The index IX_AspNetUsers_CreatedAt added in AddUserCreatedAt
+            // migration makes the WHERE CreatedAt >= @from AND < @to a range scan.
+            var raw = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.CreatedAt >= fromUtc && u.CreatedAt < toUtc)
+                .GroupBy(u => u.CreatedAt.Date)
+                .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+                .ToListAsync(cancellationToken);
+
+            return raw;
+        }
+
+        // ---- Admin moderation ----
+
+        public async Task<PagedList<AdminUserRowDto>> SearchAdminAsync(
+            string? searchQuery,
+            string? status,
+            string? role,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            // ── Base query ──────────────────────────────────────────────
+            // Pull only the columns we project out so EF doesn't materialise
+            // the entire AspNetUsers row.
+            var query = _context.Users
+                .AsNoTracking()
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Email,
+                    u.FirstName,
+                    u.LastName,
+                    u.AvatarUrl,
+                    u.IsLocked,
+                    u.CreatedAt,
+                    // Post count computed at the DB — single subquery per page.
+                    PostCount = _context.Posts.Count(p => p.AuthorId == u.Id && p.DeletedAt == null)
+                });
+
+            // ── Free-text search via the SearchVector shadow column ──────
+            // The GIN index is created in migration 20260610155828_updb1.cs.
+            // We match against FirstName, LastName, and Email concatenated so
+            // admins can search by any of the three.
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var tsQuery = EF.Functions.WebSearchToTsQuery("english", searchQuery);
+                query = query.Where(u =>
+                    _context.Users
+                        .Where(x => x.Id == u.Id)
+                        .Select(x => EF.Property<NpgsqlTypes.NpgsqlTsVector>(x, "SearchVector"))
+                        .FirstOrDefault()
+                        .Matches(tsQuery)
+                );
+            }
+
+            // ── Status filter ────────────────────────────────────────────
+            if (string.Equals(status, "locked",   StringComparison.OrdinalIgnoreCase)) query = query.Where(u =>  u.IsLocked);
+            if (string.Equals(status, "unlocked", StringComparison.OrdinalIgnoreCase)) query = query.Where(u => !u.IsLocked);
+
+            // ── Role filter ──────────────────────────────────────────────
+            // "admin" = user has the ADMIN role. "user" = has USER but NOT ADMIN.
+            // We check AspNetUserRoles via the Identity tables exposed by the base DbContext.
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                if (string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(u =>
+                        _context.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == _context.Roles
+                            .Where(r => r.NormalizedName == "ADMIN")
+                            .Select(r => r.Id)
+                            .FirstOrDefault()));
+                }
+                else if (string.Equals(role, "moderator", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(u =>
+                        _context.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == _context.Roles
+                            .Where(r => r.NormalizedName == "MODERATOR")
+                            .Select(r => r.Id)
+                            .FirstOrDefault()));
+                }
+                else
+                {
+                    // "user" — has USER role but not ADMIN.
+                    query = query.Where(u =>
+                        _context.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == _context.Roles
+                            .Where(r => r.NormalizedName == "USER")
+                            .Select(r => r.Id)
+                            .FirstOrDefault())
+                        &&
+                        !_context.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == _context.Roles
+                            .Where(r => r.NormalizedName == "ADMIN")
+                            .Select(r => r.Id)
+                            .FirstOrDefault()));
+                }
+            }
+
+            // ── Page + project ───────────────────────────────────────────
+            var projected = query
+                .OrderByDescending(u => u.CreatedAt)
+                .Select(u => new AdminUserRowDto(
+                    u.Id,
+                    u.Email ?? string.Empty,
+                    u.FirstName,
+                    u.LastName,
+                    u.AvatarUrl,
+                    u.IsLocked,
+                    // IsAdmin resolved per-row from the join (already in the
+                    // query shape — this is one extra EXISTS-like subquery).
+                    _context.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == _context.Roles
+                        .Where(r => r.NormalizedName == "ADMIN")
+                        .Select(r => r.Id)
+                        .FirstOrDefault()),
+                    u.PostCount,
+                    u.CreatedAt,
+                    // LastActive: users don't track LastLoginAt in our schema;
+                    // fall back to CreatedAt so the column is always populated.
+                    u.CreatedAt));
+
+            return await PagedList<AdminUserRowDto>.CreateAsync(
+                projected, page, pageSize, cancellationToken);
+        }
+
+        public async Task<bool> SetLockedAsync(
+            Guid userId,
+            bool isLocked,
+            CancellationToken cancellationToken = default)
+        {
+            // Update is a single SQL UPDATE — no entity materialisation.
+            // We return rows affected so the caller can detect a missing user.
+            var affected = await _context.Users
+                .Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsLocked, isLocked),
+                    cancellationToken);
+            return affected > 0;
         }
     }
 }

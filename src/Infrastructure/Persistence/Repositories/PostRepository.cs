@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Admin;
 using Application.DTOs.Feeds;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
@@ -626,5 +627,44 @@ namespace Infrastructure.Persistence.Repositories
             post.IsAnonymous
         ));
     }
+
+    // ---- Admin dashboard aggregates ----
+
+    public Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default)
+    {
+        // HasQueryFilter(p => p.DeletedAt == null) is applied automatically.
+        return _context.Posts.AsNoTracking().LongCountAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<DailyCountDto>> GetPostSeriesAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        // Soft-deleted posts are excluded by the global query filter in
+        // PostConfiguration. The Posts table has a default index on CreatedAt
+        // added in the initial migration.
+        return await _context.Posts
+            .AsNoTracking()
+            .Where(p => p.CreatedAt >= fromUtc && p.CreatedAt < toUtc)
+            .GroupBy(p => p.CreatedAt.Date)
+            .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DailyCountDto>> GetCommentSeriesAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        // PostComments has its own CreatedAt column (BaseEntity) and a
+        // HasQueryFilter(DeletedAt == null) on PostCommentConfiguration.
+        return await _context.PostComments
+            .AsNoTracking()
+            .Where(c => c.CreatedAt >= fromUtc && c.CreatedAt < toUtc)
+            .GroupBy(c => c.CreatedAt.Date)
+            .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+            .ToListAsync(cancellationToken);
+    }
+}
 }

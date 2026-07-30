@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Admin;
 using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
@@ -201,11 +202,30 @@ namespace Infrastructure.Persistence.Repositories
                         && (r.AuthorId == viewerId
                             || _context.Friendships.Any(fr =>
                                 (fr.User1Id == viewerId && fr.User2Id == r.AuthorId) ||
-                                (fr.User2Id == viewerId && fr.User1Id == r.AuthorId))))              
-                
+                                (fr.User2Id == viewerId && fr.User1Id == r.AuthorId))))
+
             );
         }
-    }
 
-     
+        // ---- Admin dashboard aggregates ----
+
+        public Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default)
+        {
+            // HasQueryFilter(r => r.DeletedAt == null) is applied automatically.
+            return _context.Reels.AsNoTracking().LongCountAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<DailyCountDto>> GetReelSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Reels
+                .AsNoTracking()
+                .Where(r => r.CreatedAt >= fromUtc && r.CreatedAt < toUtc)
+                .GroupBy(r => r.CreatedAt.Date)
+                .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+                .ToListAsync(cancellationToken);
+        }
+    }
 }

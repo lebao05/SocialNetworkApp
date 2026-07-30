@@ -81,6 +81,19 @@ namespace Infrastructure.Persistence.Configurations
             builder.Navigation(g => g.Rules)
                 .HasField("_rules")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // SearchVector (shadow) — see PostConfiguration for rationale.
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd()
+                .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+
+            // IsLocked — admin moderation switch.
+            builder.Property(g => g.IsLocked)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.HasIndex(g => g.IsLocked);
         }
     }
 }

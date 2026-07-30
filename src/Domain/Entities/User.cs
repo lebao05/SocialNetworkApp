@@ -20,11 +20,24 @@ namespace Domain.Entities
         {
             _domainEvents.Clear();
         }
-        public string FirstName { get; private set; } = string.Empty;
-        public string LastName { get; private set; } = string.Empty;
-        public DateOnly DateOfBirth { get; private set; }
-        public string? AvatarUrl { get; private set; }
-        public Gender Gender { get; private set; }
+public string FirstName { get; private set; } = string.Empty;
+    public string LastName { get; private set; } = string.Empty;
+    public DateOnly DateOfBirth { get; private set; }
+    public string? AvatarUrl { get; private set; }
+    public Gender Gender { get; private set; }
+
+    // Date the user registered. IdentityUser doesn't expose this natively and the
+    // AspNetUsers table didn't have a timestamp column, so we add one to enable
+    // admin dashboard aggregations ("new users per day") without scanning every row.
+    public DateTime CreatedAt { get; private set; }
+
+    // True when an admin has locked this user out. Independent of
+    // IdentityUser.LockoutEnabled (which is a soft, time-bounded ban triggered
+    // by failed logins). This flag is the admin moderation switch.
+    public bool IsLocked { get; private set; }
+
+    public void Lock()   => IsLocked = true;
+    public void Unlock() => IsLocked = false;
 
         public string? Bio { get; set; }
         public string? CoverPhotoUrl { get; set; }
@@ -105,14 +118,15 @@ namespace Domain.Entities
             if (string.IsNullOrWhiteSpace(email))
                 throw new ArgumentException("Email required");
 
-            FirstName = firstName;
-            LastName = lastName;
-            DateOfBirth = dateOfBirth;
-            Gender = gender;
+FirstName = firstName;
+        LastName = lastName;
+        DateOfBirth = dateOfBirth;
+        Gender = gender;
 
-            Email = email;
-            UserName = email;
-        }
+        Email = email;
+        UserName = email;
+        CreatedAt = DateTime.UtcNow;
+    }
 
         public Result UpdatePersonalInfo(
             string firstName,

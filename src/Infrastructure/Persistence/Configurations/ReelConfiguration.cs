@@ -77,6 +77,12 @@ namespace Infrastructure.Persistence.Configurations
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
             builder.HasQueryFilter(r => r.DeletedAt == null);
+
+            // SearchVector (shadow) — see PostConfiguration for rationale.
+            builder.Property<NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd()
+                .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
         }
     }
 }

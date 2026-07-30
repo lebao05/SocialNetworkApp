@@ -251,6 +251,29 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.HasIndex(u => u.Email);
             builder.HasIndex(u => u.UserName);
+
+            // CreatedAt — registered-at timestamp for admin analytics. Required,
+            // defaults to now() so rows inserted before this migration gets a
+            // sensible value rather than a NULL constraint violation.
+            builder.Property(u => u.CreatedAt)
+                .IsRequired()
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now() AT TIME ZONE 'utc'");
+
+            builder.HasIndex(u => u.CreatedAt);
+
+            // SearchVector (shadow) — see PostConfiguration for rationale.
+            builder.Property<NpgsqlTypes.NpgsqlTsVector>("SearchVector")
+                .HasColumnType("tsvector")
+                .ValueGeneratedOnAdd()
+                .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+
+            // IsLocked — admin moderation switch.
+            builder.Property(u => u.IsLocked)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.HasIndex(u => u.IsLocked);
         }
     }
 }

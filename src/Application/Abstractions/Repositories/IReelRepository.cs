@@ -1,3 +1,4 @@
+using Application.DTOs.Admin;
 using Application.DTOs.Search;
 using Domain.Entities;
 using Application.Shared;
@@ -21,5 +22,14 @@ namespace Application.Abstractions.Repositories
         void Update(Reel reel);
         void Delete(Reel reel);
         Task<PagedList<SearchReelDto>> SearchAsync(Guid userId,string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default);
+
+        // ---- Admin dashboard aggregates ----
+
+        Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<DailyCountDto>> GetReelSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default);
     }
 }

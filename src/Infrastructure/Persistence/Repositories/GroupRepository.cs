@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Admin;
 using Application.DTOs.Groups;
 using Application.DTOs.Search;
 using Application.Shared;
@@ -206,6 +207,101 @@ namespace Infrastructure.Persistence.Repositories
             var cards = await pagedQuery.ToListAsync(cancellationToken);
 
             return new PagedList<GroupCardDto>(cards, page, pageSize, totalCount);
+        }
+
+        // ---- Admin dashboard aggregate ----
+        // "Active" = at least one post in the last 30 days. Cheap because we
+        // only touch the post index, never load group entities.
+        public async Task<long> GetActiveGroupCountAsync(CancellationToken cancellationToken = default)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-30);
+            return await _context.Posts
+                .AsNoTracking()
+                .Where(p => p.GroupId != null && p.CreatedAt >= cutoff)
+                .Select(p => p.GroupId!.Value)
+                .Distinct()
+                .LongCountAsync(cancellationToken);
+        }
+
+        // ---- Admin moderation ----
+
+        public async Task<PagedList<AdminGroupRowDto>> SearchAdminAsync(
+            string? searchQuery,
+            string? privacy,
+            string? status,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            // ── Base query ──────────────────────────────────────────────
+            var query = _context.Groups
+                .AsNoTracking()
+                .Select(g => new
+                {
+                    g.Id,
+                    g.Name,
+                    g.PrivacyType,
+                    g.CoverPhotoUrl,
+                    OwnerFirstName = g.Owner.FirstName,
+                    OwnerLastName  = g.Owner.LastName,
+                    g.IsLocked,
+                    g.CreatedAt,
+                    MemberCount = _context.GroupMembers.Count(m => m.GroupId == g.Id),
+                    PostCount   = _context.Posts.Count(p => p.GroupId == g.Id && p.DeletedAt == null)
+                });
+
+            // ── Free-text search via SearchVector ───────────────────────
+            // Groups.SearchVector was added in migration 20260610160827.
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var tsQuery = EF.Functions.WebSearchToTsQuery("english", searchQuery);
+                query = query.Where(g =>
+                    _context.Groups
+                        .Where(x => x.Id == g.Id)
+                        .Select(x => EF.Property<NpgsqlTypes.NpgsqlTsVector>(x, "SearchVector"))
+                        .FirstOrDefault()
+                        .Matches(tsQuery)
+                );
+            }
+
+            // ── Privacy filter ──────────────────────────────────────────
+            if (string.Equals(privacy, "public",  StringComparison.OrdinalIgnoreCase))
+                query = query.Where(g => g.PrivacyType == GroupPrivacyType.Public);
+            else if (string.Equals(privacy, "private", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(g => g.PrivacyType == GroupPrivacyType.Private);
+
+            // ── Status filter ───────────────────────────────────────────
+            if (string.Equals(status, "locked",   StringComparison.OrdinalIgnoreCase)) query = query.Where(g =>  g.IsLocked);
+            if (string.Equals(status, "unlocked", StringComparison.OrdinalIgnoreCase)) query = query.Where(g => !g.IsLocked);
+
+            // ── Page + project ───────────────────────────────────────────
+            var projected = query
+                .OrderByDescending(g => g.CreatedAt)
+                .Select(g => new AdminGroupRowDto(
+                    g.Id,
+                    g.Name,
+                    g.PrivacyType.ToString(),
+                    g.CoverPhotoUrl,
+                    (g.OwnerFirstName + " " + g.OwnerLastName).Trim(),
+                    g.MemberCount,
+                    g.PostCount,
+                    g.IsLocked,
+                    g.CreatedAt));
+
+            return await PagedList<AdminGroupRowDto>.CreateAsync(
+                projected, page, pageSize, cancellationToken);
+        }
+
+        public async Task<bool> SetLockedAsync(
+            long groupId,
+            bool isLocked,
+            CancellationToken cancellationToken = default)
+        {
+            var affected = await _context.Groups
+                .Where(g => g.Id == groupId)
+                .ExecuteUpdateAsync(s => s.SetProperty(g => g.IsLocked, isLocked),
+                    cancellationToken);
+            return affected > 0;
         }
     }
 }
