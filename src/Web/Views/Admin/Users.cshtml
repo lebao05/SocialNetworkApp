@@ -13,49 +13,8 @@
         <h1 class="page-title">User Management</h1>
         <p class="page-subtitle">Search, filter, and manage all users on the platform</p>
     </div>
-    <div class="page-actions">
-        <button class="btn btn-secondary btn-sm">
-            <i class="ri-download-cloud-2-line"></i>
-            Export CSV
-        </button>
-        <button class="btn btn-primary btn-sm">
-            <i class="ri-user-add-line"></i>
-            Add User
-        </button>
-    </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon blue"><i class="ri-user-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Total Users</div>
-            <div class="stat-value" style="font-size:1.4rem;">48,231</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon green"><i class="ri-checkbox-circle-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Active</div>
-            <div class="stat-value" style="font-size:1.4rem;">41,203</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon amber"><i class="ri-time-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Inactive</div>
-            <div class="stat-value" style="font-size:1.4rem;">6,842</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon red"><i class="ri-user-forbid-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Banned</div>
-            <div class="stat-value" style="font-size:1.4rem;">186</div>
-        </div>
-    </div>
-</div>
 
 <!-- Filter Bar -->
 <form method="get" action="@Url.Action("Users", "Admin")">
@@ -65,14 +24,13 @@
             <input type="text"
                    name="q"
                    class="form-control"
-                   placeholder="Search by name, email, or ID..."
+                   placeholder="Search by username"
                    value="@Context.Request.Query["q"]" />
         </div>
         <select name="status" class="form-control form-select" style="width:150px;">
             <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="banned">Banned</option>
+            <option value="unlocked">Unlocked</option>
+            <option value="locked">Locked</option>
         </select>
         <select name="role" class="form-control form-select" style="width:150px;">
             <option value="">All Roles</option>
@@ -93,21 +51,6 @@
     </div>
 </form>
 
-<!-- Tabs -->
-<div class="tabs" role="tablist">
-    <button class="tab active" data-tab-group="users" data-tab="all">
-        All <span class="tab-badge">48,231</span>
-    </button>
-    <button class="tab" data-tab-group="users" data-tab="active">
-        Active <span class="tab-badge">41,203</span>
-    </button>
-    <button class="tab" data-tab-group="users" data-tab="inactive">
-        Inactive <span class="tab-badge">6,842</span>
-    </button>
-    <button class="tab" data-tab-group="users" data-tab="banned">
-        Banned <span class="tab-badge">186</span>
-    </button>
-</div>
 
 <!-- Table -->
 <div class="card">
@@ -137,7 +80,7 @@
                                 Email = "nguyenvana@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Active",
+                                Status = "Unlocked",
                                 Posts = 342,
                                 Joined = "Jan 12, 2024",
                                 LastActive = "2 min ago"
@@ -148,7 +91,7 @@
                                 Email = "tranthib@example.com",
                                 Avatar = "",
                                 Role = "Moderator",
-                                Status = "Active",
+                                Status = "Unlocked",
                                 Posts = 89,
                                 Joined = "Mar 3, 2024",
                                 LastActive = "15 min ago"
@@ -159,7 +102,7 @@
                                 Email = "levanc@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Banned",
+                                Status = "Locked",
                                 Posts = 1_204,
                                 Joined = "Nov 8, 2023",
                                 LastActive = "3 days ago"
@@ -170,7 +113,7 @@
                                 Email = "phamthid@example.com",
                                 Avatar = "",
                                 Role = "Admin",
-                                Status = "Active",
+                                Status = "Unlocked",
                                 Posts = 56,
                                 Joined = "Jan 1, 2024",
                                 LastActive = "1 hr ago"
@@ -181,7 +124,7 @@
                                 Email = "hoangvane@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Active",
+                                Status = "Unlocked",
                                 Posts = 78,
                                 Joined = "Feb 19, 2024",
                                 LastActive = "Just now"
@@ -192,7 +135,7 @@
                                 Email = "daothif@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Inactive",
+                                Status = "Unlocked",
                                 Posts = 12,
                                 Joined = "Apr 5, 2024",
                                 LastActive = "30 days ago"
@@ -203,7 +146,7 @@
                                 Email = "buivang@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Active",
+                                Status = "Unlocked",
                                 Posts = 567,
                                 Joined = "Dec 11, 2023",
                                 LastActive = "4 min ago"
@@ -214,7 +157,7 @@
                                 Email = "dothih@example.com",
                                 Avatar = "",
                                 Role = "User",
-                                Status = "Banned",
+                                Status = "Locked",
                                 Posts = 892,
                                 Joined = "Oct 2, 2023",
                                 LastActive = "5 days ago"
@@ -226,10 +169,9 @@
                     {
                         var initials = string.Join("", user.Name.Split(' ').Take(2).Select(w => w[0]));
                         var statusBadgeClass = user.Status switch {
-                            "Active"   => "badge-active",
-                            "Inactive" => "badge-inactive",
-                            "Banned"  => "badge-banned",
-                            _          => "badge-inactive"
+                            "Unlocked" => "badge-active",
+                            "Locked"   => "badge-banned",
+                            _          => "badge-active"
                         };
                         var roleBadgeClass = user.Role switch {
                             "Admin"      => "badge-info",
@@ -269,19 +211,19 @@
                                             data-modal="editUserModal">
                                         <i class="ri-edit-line"></i>
                                     </button>
-                                    @if (user.Status != "Banned")
+                                    @if (user.Status != "Locked")
                                     {
                                         <button class="action-btn danger"
-                                                title="Ban user"
+                                                title="Lock user"
                                                 data-modal="banUserModal">
-                                            <i class="ri-forbid-line"></i>
+                                            <i class="ri-lock-line"></i>
                                         </button>
                                     }
                                     else
                                     {
                                         <button class="action-btn success"
-                                                title="Unban user">
-                                            <i class="ri-checkbox-circle-line"></i>
+                                                title="Unlock user">
+                                            <i class="ri-lock-unlock-line"></i>
                                         </button>
                                     }
                                 </div>
@@ -313,7 +255,7 @@
      style="position:sticky;bottom:20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:400px;margin:0 auto;">
     <span class="text-sm fw-600"><span class="bulk-count">0</span> selected</span>
     <div style="flex:1;"></div>
-    <button class="btn btn-secondary btn-sm">Ban selected</button>
+    <button class="btn btn-secondary btn-sm">Lock selected</button>
     <button class="btn btn-primary btn-sm">Export selected</button>
 </div>
 
@@ -337,7 +279,7 @@
                 </div>
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Status</div>
-                    <div class="fw-600 text-success">Active</div>
+                    <div class="fw-600 text-success">Unlocked</div>
                 </div>
                 <div style="background:#f8fafc;padding:12px;border-radius:8px;">
                     <div class="text-muted text-sm">Posts</div>
@@ -359,26 +301,25 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Close</button>
-            <button class="btn btn-danger btn-sm"><i class="ri-forbid-line"></i> Ban</button>
-            <button class="btn btn-primary btn-sm"><i class="ri-edit-line"></i> Edit</button>
+            <button class="btn btn-danger btn-sm"><i class="ri-lock-line"></i> Lock</button>
         </div>
     </div>
 </div>
 
-<!-- Ban User Modal -->
+<!-- Lock User Modal -->
 <div class="modal-overlay hidden" id="banUserModal">
     <div class="modal">
         <div class="modal-header">
-            <h2 class="modal-title">Ban User</h2>
+            <h2 class="modal-title">Lock User</h2>
             <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
         </div>
         <div class="modal-body">
             <div class="alert alert-warning" style="margin-bottom:16px;">
                 <i class="ri-error-warning-line"></i>
-                This action will immediately revoke the user's access to the platform.
+                This action will immediately lock the user's access to the platform.
             </div>
             <div class="form-group" style="margin-bottom:14px;">
-                <label class="form-label" for="banReason">Ban Reason <span>*</span></label>
+                <label class="form-label" for="banReason">Lock Reason <span>*</span></label>
                 <select id="banReason" class="form-control form-select">
                     <option value="">Select a reason</option>
                     <option>Spam or misleading content</option>
@@ -397,7 +338,7 @@
                           placeholder="Optional internal note..."></textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Ban Duration</label>
+                <label class="form-label">Lock Duration</label>
                 <div style="display:flex;gap:8px;">
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;">
                         <input type="radio" name="banDuration" value="permanent" checked style="accent-color:var(--c-primary);" />
@@ -416,7 +357,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-danger"><i class="ri-forbid-line"></i> Confirm Ban</button>
+            <button class="btn btn-danger"><i class="ri-lock-line"></i> Confirm Lock</button>
         </div>
     </div>
 </div>
@@ -431,14 +372,6 @@
         <div class="modal-body">
             <div style="display:flex;flex-direction:column;gap:14px;">
                 <div class="form-group">
-                    <label class="form-label">Display Name</label>
-                    <input type="text" class="form-control" value="Nguyen Van A" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" value="nguyenvana@example.com" />
-                </div>
-                <div class="form-group">
                     <label class="form-label">Role</label>
                     <select class="form-control form-select">
                         <option selected>User</option>
@@ -449,9 +382,8 @@
                 <div class="form-group">
                     <label class="form-label">Status</label>
                     <select class="form-control form-select">
-                        <option selected>Active</option>
-                        <option>Inactive</option>
-                        <option>Banned</option>
+                        <option selected>Unlocked</option>
+                        <option>Locked</option>
                     </select>
                 </div>
             </div>

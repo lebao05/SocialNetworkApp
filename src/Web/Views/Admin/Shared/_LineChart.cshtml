@@ -113,10 +113,11 @@
                     var y = padT + plotH - ratio * plotH;
                     <line x1="@padL" x2="@(padL + plotW)" y1="@y" y2="@y"
                           stroke="#e2e8f0" stroke-width="1" stroke-dasharray="@(t == 0 ? "0" : "3 4")" />
-                    <text x="@(padL - 8)" y="@(y + 4)" text-anchor="end"
-                          font-size="10" fill="#94a3b8" font-family="Inter, sans-serif">
-                        @ticks[t]
-                    </text>
+                    @* Razor's reserved <text> tag can't carry SVG attributes, so we emit the
+                       SVG <text> element via WriteLiteral instead of markup syntax. *@
+                    WriteLiteral($"<text x=\"{padL - 8}\" y=\"{y + 4}\" text-anchor=\"end\" " +
+                                 $"font-size=\"10\" fill=\"#94a3b8\" font-family=\"Inter, sans-serif\">" +
+                                 $"{ticks[t]}</text>");
                 }
 
                 <!-- Area fill -->
@@ -147,11 +148,10 @@
                                 stroke="@stroke" stroke-width="2.5" />
                         <g class="line-chart-tip">
                             <rect x="@(px - 24)" y="@(py - 32)" width="48" height="20" rx="4" fill="#0f172a" />
-                            <text x="@x" y="@(py - 18)" text-anchor="middle"
-                                  font-size="11" fill="#fff"
-                                  font-family="Inter, sans-serif" font-weight="600">
-                                @valueList[i]
-                            </text>
+                            WriteLiteral($"<text x=\"{x}\" y=\"{py - 18}\" text-anchor=\"middle\" " +
+                                         $"font-size=\"11\" fill=\"#fff\" " +
+                                         $"font-family=\"Inter, sans-serif\" font-weight=\"600\">" +
+                                         $"{valueList[i]}</text>");
                         </g>
                     </g>
                 }
@@ -160,10 +160,9 @@
                 @for (int i = 0; i < dayList.Count; i++)
                 {
                     var x = padL + (plotW * i) / Math.Max(1, dayList.Count - 1);
-                    <text x="@x" y="@(padT + plotH + 18)" text-anchor="middle"
-                          font-size="10" fill="#94a3b8" font-family="Inter, sans-serif">
-                        @dayList[i]
-                    </text>
+                    WriteLiteral($"<text x=\"{x}\" y=\"{padT + plotH + 18}\" text-anchor=\"middle\" " +
+                                 $"font-size=\"10\" fill=\"#94a3b8\" font-family=\"Inter, sans-serif\">" +
+                                 $"{dayList[i]}</text>");
                 }
             </svg>
         </div>

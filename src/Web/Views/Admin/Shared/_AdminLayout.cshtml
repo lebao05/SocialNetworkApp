@@ -62,11 +62,6 @@
 
         <div class="sidebar-section-label">Analytics</div>
         <nav class="sidebar-nav">
-            <a class="nav-item @(currentPage == "Reports" ? "active" : "")"
-               href="@Url.Action("Reports", "Admin")">
-                <i class="ri-bar-chart-line"></i>
-                <span>Reports</span>
-            </a>
             <a class="nav-item @(currentPage == "AuditLogs" ? "active" : "")"
                href="@Url.Action("AuditLogs", "Admin")">
                 <i class="ri-file-list-3-line"></i>
@@ -101,14 +96,6 @@
             </div>
 
             <div class="topbar-actions">
-                <button class="topbar-btn" aria-label="Notifications">
-                    <i class="ri-notification-3-line"></i>
-                    <span class="topbar-badge">3</span>
-                </button>
-                <button class="topbar-btn" aria-label="Messages">
-                    <i class="ri-message-3-line"></i>
-                    <span class="topbar-badge">2</span>
-                </button>
                 <div class="topbar-divider"></div>
                 <div class="topbar-profile">
                     <div class="profile-avatar">

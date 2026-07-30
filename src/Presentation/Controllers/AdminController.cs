@@ -1,10 +1,14 @@
 using Application.Auth.Commands.AdminLogin;
+using Domain.Entities;
+using Infrastructure.Persistence.Contexts;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 
 namespace Presentation.Controllers
@@ -46,8 +50,8 @@ namespace Presentation.Controllers
             string? returnUrl)
         {
             var command = new AdminLoginCommand(email, password);
-            var result = await _sender.Send(command, HttpContext.RequestAborted);
 
+            var result = await _sender.Send(command, HttpContext.RequestAborted);
             if (result.IsFailure)
             {
                 TempData["Error"] = result.Error.Message;
@@ -161,6 +165,55 @@ namespace Presentation.Controllers
         public IActionResult ForgotPassword()
         {
             return View();
+        }
+
+        [HttpPost("forgot-password")]
+        [ValidateAntiForgeryToken]
+        public IActionResult ForgotPassword(string email)
+        {
+            // Password reset flow is not implemented yet. Show a generic
+            // success message regardless of whether the email exists, so
+            // we don't leak account presence.
+            TempData["ResetSent"] = "If an admin account exists for that email, a reset link has been sent.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        /// <summary>
+        /// DEV-ONLY: ensures the default admin user exists and returns a JSON
+        /// report describing the current state of the admin account. Use this
+        /// to verify whether the seed ran successfully.
+        ///
+        /// GET /admin/seed-admin
+        /// POST /admin/seed-admin  (idempotent — runs the seeder again)
+        /// </summary>
+        [HttpGet("seed-admin")]
+        [HttpPost("seed-admin")]
+        public async Task<IActionResult> SeedAdmin()
+        {
+            await RoleSeeder.SeedAsync(HttpContext.RequestServices);
+
+            var userManager = HttpContext.RequestServices
+                .GetRequiredService<UserManager<User>>();
+            var roleManager = HttpContext.RequestServices
+                .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+            var user = await userManager.FindByEmailAsync(RoleSeeder.AdminEmail);
+            var roles = user != null ? await userManager.GetRolesAsync(user) : new List<string>();
+
+            return Json(new
+            {
+                adminEmail       = RoleSeeder.AdminEmail,
+                userExists       = user != null,
+                userId           = user?.Id,
+                emailConfirmed   = user?.EmailConfirmed,
+                roles            = roles,
+                isAdmin          = roles.Contains(RoleSeeder.AdminRole),
+                rolesSeeded      = new
+                {
+                    admin = await roleManager.RoleExistsAsync(RoleSeeder.AdminRole),
+                    user  = await roleManager.RoleExistsAsync("USER"),
+                },
+            });
         }
 
         [HttpPost("logout")]

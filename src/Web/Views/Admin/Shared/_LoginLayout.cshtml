@@ -1,5 +1,5 @@
 @*
-    Full-page layout for the login screen — no sidebar.
+    Full-page layout for the login screen — centered, single column.
 *@
 <!DOCTYPE html>
 <html lang="en">
@@ -12,12 +12,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/admin/css/admin.min.css" asp-append-version="true" />
+    <style>
+        /* Single-column login: no right-side figures or marketing panel. */
+        .login-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 420px);
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .login-artwork { display: none !important; }
+        .login-panel {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 32px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, .12);
+            background: #fff;
+        }
+    </style>
 </head>
 <body class="login-body">
 
 <div class="login-shell">
     <div class="login-panel">
-        <div class="login-brand">
+        <div class="login-brand" style="text-align:center;margin-bottom:28px;">
             <div class="login-brand-icon">
                 <i class="ri-global-fill"></i>
             </div>
@@ -28,24 +48,7 @@
         @RenderBody()
     </div>
 
-    <div class="login-artwork">
-        <div class="artwork-content">
-            <div class="artwork-stats">
-                <div class="artwork-stat">
-                    <span class="artwork-stat-num">12.4k</span>
-                    <span class="artwork-stat-label">Active Users</span>
-                </div>
-                <div class="artwork-stat">
-                    <span class="artwork-stat-num">98.2%</span>
-                    <span class="artwork-stat-label">Uptime</span>
-                </div>
-                <div class="artwork-stat">
-                    <span class="artwork-stat-num">3.1M</span>
-                    <span class="artwork-stat-label">Posts / mo</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- The right-side marketing panel is intentionally not rendered. -->
 </div>
 
 </body>

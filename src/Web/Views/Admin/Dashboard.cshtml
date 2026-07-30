@@ -27,10 +27,6 @@
         <div class="stat-info">
             <div class="stat-label">Total Users</div>
             <div class="stat-value">48,231</div>
-            <div class="stat-meta up">
-                <i class="ri-arrow-up-line"></i>
-                <span>+1,204 this month</span>
-            </div>
         </div>
     </div>
 
@@ -41,24 +37,6 @@
         <div class="stat-info">
             <div class="stat-label">Posts</div>
             <div class="stat-value">3.1M</div>
-            <div class="stat-meta up">
-                <i class="ri-arrow-up-line"></i>
-                <span>+18.3% vs last month</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="stat-card animate-in">
-        <div class="stat-icon amber">
-            <i class="ri-message-3-line"></i>
-        </div>
-        <div class="stat-info">
-            <div class="stat-label">Comments</div>
-            <div class="stat-value">12.7M</div>
-            <div class="stat-meta up">
-                <i class="ri-arrow-up-line"></i>
-                <span>+5.2% this week</span>
-            </div>
         </div>
     </div>
 
@@ -69,10 +47,6 @@
         <div class="stat-info">
             <div class="stat-label">Reports</div>
             <div class="stat-value">142</div>
-            <div class="stat-meta down">
-                <i class="ri-arrow-down-line"></i>
-                <span>-8 pending review</span>
-            </div>
         </div>
     </div>
 
@@ -83,10 +57,6 @@
         <div class="stat-info">
             <div class="stat-label">Active Groups</div>
             <div class="stat-value">892</div>
-            <div class="stat-meta neutral">
-                <i class="ri-checkbox-circle-line"></i>
-                <span>No change</span>
-            </div>
         </div>
     </div>
 
@@ -97,163 +67,80 @@
         <div class="stat-info">
             <div class="stat-label">Online Now</div>
             <div class="stat-value">1,847</div>
-            <div class="stat-meta up">
-                <i class="ri-arrow-up-line"></i>
-                <span>+312 since 1h ago</span>
-            </div>
         </div>
     </div>
 
 </div>
 
 <!-- Charts Row -->
-<div class="grid-sidebar">
+<div style="max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
 
-    <!-- Left column -->
-    <div style="display:flex;flex-direction:column;gap:24px;">
-
-        <!-- User Growth (line) -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">User Growth — Last 7 Days</div>
-                    <div class="card-subtitle">New registrations per day</div>
-                </div>
-                <select class="form-control form-select" style="width:140px;">
-                    <option>Last 7 days</option>
-                    <option>Last 30 days</option>
-                    <option>Last 90 days</option>
-                </select>
+    <!-- User Growth (line) -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">User Growth — Last 7 Days</div>
+                <div class="card-subtitle">New registrations per day</div>
             </div>
-            <div class="card-body">
-                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-                {
-                    Id          = "userGrowthChart",
-                    Days        = days,
-                    Values      = userGrowth,
-                    StrokeColor = "#3b82f6",
-                    FillColor   = "rgba(59, 130, 246, .18)",
-                    YAxisLabel  = "Users"
-                })
-            </div>
+            <select class="form-control form-select" style="width:140px;">
+                <option>Last 7 days</option>
+                <option>Last 30 days</option>
+                <option>Last 90 days</option>
+            </select>
         </div>
-
-        <!-- Posts (line) -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Posts — Last 7 Days</div>
-                    <div class="card-subtitle">Daily post volume</div>
-                </div>
-                <span class="badge badge-active"><span class="badge-dot"></span>+18.3%</span>
-            </div>
-            <div class="card-body">
-                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-                {
-                    Id          = "postsChart",
-                    Days        = days,
-                    Values      = postVolume,
-                    StrokeColor = "#10b981",
-                    FillColor   = "rgba(16, 185, 129, .18)",
-                    YAxisLabel  = "Posts"
-                })
-            </div>
+        <div class="card-body">
+            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+            {
+                Id          = "userGrowthChart",
+                Days        = days,
+                Values      = userGrowth,
+                StrokeColor = "#3b82f6",
+                FillColor   = "rgba(59, 130, 246, .18)",
+                YAxisLabel  = "Users"
+            })
         </div>
-
-        <!-- Comments (line) -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Comments — Last 7 Days</div>
-                    <div class="card-subtitle">Daily comment volume</div>
-                </div>
-                <span class="badge badge-active"><span class="badge-dot"></span>+5.2%</span>
-            </div>
-            <div class="card-body">
-                @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
-                {
-                    Id          = "commentsChart",
-                    Days        = days,
-                    Values      = commentVolume,
-                    StrokeColor = "#f59e0b",
-                    FillColor   = "rgba(245, 158, 11, .18)",
-                    YAxisLabel  = "Comments"
-                })
-            </div>
-        </div>
-
-        <!-- Recent Reports -->
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Recent Reports</div>
-                    <div class="card-subtitle">Flagged content awaiting review</div>
-                </div>
-                <a href="@Url.Action("Moderation", "Admin")" class="btn btn-secondary btn-sm">
-                    View all
-                    <i class="ri-arrow-right-line"></i>
-                </a>
-            </div>
-            <div class="card-body" style="padding:0;">
-                <ul class="activity-list" style="padding:0 18px;">
-                    <li class="report-item">
-                        <div class="report-icon" style="background:#fee2e2;color:#ef4444;">
-                            <i class="ri-error-warning-line"></i>
-                        </div>
-                        <div class="report-info">
-                            <div class="report-title">Hate speech in post #89234</div>
-                            <div class="report-meta">Reported by 4 users &middot; 12 min ago</div>
-                        </div>
-                        <span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>
-                    </li>
-                    <li class="report-item">
-                        <div class="report-icon" style="background:#fef3c7;color:#f59e0b;">
-                            <i class="ri-image-line"></i>
-                        </div>
-                        <div class="report-info">
-                            <div class="report-title">Inappropriate image in group "Tech Talk"</div>
-                            <div class="report-meta">Reported by 2 users &middot; 28 min ago</div>
-                        </div>
-                        <span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>
-                    </li>
-                    <li class="report-item">
-                        <div class="report-icon" style="background:#fee2e2;color:#ef4444;">
-                            <i class="ri-spam-line"></i>
-                        </div>
-                        <div class="report-info">
-                            <div class="report-title">Spam comment on post #88301</div>
-                            <div class="report-meta">Reported by 1 user &middot; 1 hr ago</div>
-                        </div>
-                        <span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>
-                    </li>
-                    <li class="report-item">
-                        <div class="report-icon" style="background:#cffafe;color:#06b6d4;">
-                            <i class="ri-user-follow-line"></i>
-                        </div>
-                        <div class="report-info">
-                            <div class="report-title">Fake profile — "Celebrity Official"</div>
-                            <div class="report-meta">Reported by 7 users &middot; 2 hr ago</div>
-                        </div>
-                        <span class="badge badge-active"><span class="badge-dot"></span>In Review</span>
-                    </li>
-                    <li class="report-item">
-                        <div class="report-icon" style="background:#f1f5f9;color:#64748b;">
-                            <i class="ri-file-warning-line"></i>
-                        </div>
-                        <div class="report-info">
-                            <div class="report-title">Misinformation in post #87012</div>
-                            <div class="report-meta">Reported by 3 users &middot; 3 hr ago</div>
-                        </div>
-                        <span class="badge badge-banned"><span class="badge-dot"></span>Dismissed</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Right column intentionally left empty — Dashboard now uses full width
-         to give the three line charts enough room. Future widgets (e.g.
-         "Top Groups", "Top Posters") can be added here. -->
-    <div></div>
+    <!-- Posts (line) -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Posts — Last 7 Days</div>
+                <div class="card-subtitle">Daily post volume</div>
+            </div>
+        </div>
+        <div class="card-body">
+            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+            {
+                Id          = "postsChart",
+                Days        = days,
+                Values      = postVolume,
+                StrokeColor = "#10b981",
+                FillColor   = "rgba(16, 185, 129, .18)",
+                YAxisLabel  = "Posts"
+            })
+        </div>
+    </div>
+
+    <!-- Comments (line) -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Comments — Last 7 Days</div>
+                <div class="card-subtitle">Daily comment volume</div>
+            </div>
+        </div>
+        <div class="card-body">
+            @await Html.PartialAsync("~/Views/Admin/Shared/_LineChart.cshtml", new
+            {
+                Id          = "commentsChart",
+                Days        = days,
+                Values      = commentVolume,
+                StrokeColor = "#f59e0b",
+                FillColor   = "rgba(245, 158, 11, .18)",
+                YAxisLabel  = "Comments"
+            })
+        </div>
+    </div>
+
 </div>

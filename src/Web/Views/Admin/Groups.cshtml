@@ -18,49 +18,8 @@
         <h1 class="page-title">Group Management</h1>
         <p class="page-subtitle">Search, filter, and manage all groups on the platform</p>
     </div>
-    <div class="page-actions">
-        <button class="btn btn-secondary btn-sm">
-            <i class="ri-download-cloud-2-line"></i>
-            Export CSV
-        </button>
-        <button class="btn btn-primary btn-sm">
-            <i class="ri-add-circle-line"></i>
-            Create Group
-        </button>
-    </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon blue"><i class="ri-group-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Total Groups</div>
-            <div class="stat-value" style="font-size:1.4rem;">892</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon green"><i class="ri-checkbox-circle-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Active</div>
-            <div class="stat-value" style="font-size:1.4rem;">821</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon amber"><i class="ri-time-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Pending</div>
-            <div class="stat-value" style="font-size:1.4rem;">47</div>
-        </div>
-    </div>
-    <div class="stat-card animate-in" style="padding:16px 18px;">
-        <div class="stat-icon red"><i class="ri-forbid-2-line"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Suspended</div>
-            <div class="stat-value" style="font-size:1.4rem;">24</div>
-        </div>
-    </div>
-</div>
 
 <!-- Filter Bar -->
 <form method="get" action="@Url.Action("Groups", "Admin")">
@@ -70,20 +29,18 @@
             <input type="text"
                    name="q"
                    class="form-control"
-                   placeholder="Search by group name, owner, or ID..."
+                   placeholder="Search by name"
                    value="@currentQuery" />
         </div>
         <select name="privacy" class="form-control form-select" style="width:150px;">
             <option value=""         @(string.IsNullOrEmpty(currentPrivacy) ? "selected" : "")>All Privacy</option>
             <option value="public"   @(currentPrivacy == "public"  ? "selected" : "")>Public</option>
             <option value="private"  @(currentPrivacy == "private" ? "selected" : "")>Private</option>
-            <option value="secret"   @(currentPrivacy == "secret"  ? "selected" : "")>Secret</option>
         </select>
         <select name="status" class="form-control form-select" style="width:150px;">
             <option value=""          @(string.IsNullOrEmpty(currentStatus) ? "selected" : "")>All Status</option>
-            <option value="active"    @(currentStatus == "active"    ? "selected" : "")>Active</option>
-            <option value="pending"   @(currentStatus == "pending"   ? "selected" : "")>Pending</option>
-            <option value="suspended" @(currentStatus == "suspended" ? "selected" : "")>Suspended</option>
+            <option value="unlocked"  @(currentStatus == "unlocked"  ? "selected" : "")>Unlocked</option>
+            <option value="locked"    @(currentStatus == "locked"    ? "selected" : "")>Locked</option>
         </select>
         <div class="filter-bar-right">
             <a href="@Url.Action("Groups", "Admin")" class="btn btn-secondary btn-sm">
@@ -98,21 +55,7 @@
     </div>
 </form>
 
-<!-- Tabs -->
-<div class="tabs" role="tablist">
-    <button class="tab active" data-tab-group="groups" data-tab="all">
-        All <span class="tab-badge">892</span>
-    </button>
-    <button class="tab" data-tab-group="groups" data-tab="active">
-        Active <span class="tab-badge">821</span>
-    </button>
-    <button class="tab" data-tab-group="groups" data-tab="pending">
-        Pending <span class="tab-badge">47</span>
-    </button>
-    <button class="tab" data-tab-group="groups" data-tab="suspended">
-        Suspended <span class="tab-badge">24</span>
-    </button>
-</div>
+
 
 <!-- Table -->
 <div class="card">
@@ -146,7 +89,7 @@
                                 Posts    = 1284,
                                 Owner    = "Nguyen Van A",
                                 Created  = "Jan 12, 2024",
-                                Status   = "Active"
+                                Status   = "Unlocked"
                             },
                             new {
                                 Id       = "G-002",
@@ -157,7 +100,7 @@
                                 Posts    = 547,
                                 Owner    = "Tran Thi B",
                                 Created  = "Feb 03, 2024",
-                                Status   = "Active"
+                                Status   = "Unlocked"
                             },
                             new {
                                 Id       = "G-003",
@@ -168,7 +111,7 @@
                                 Posts    = 320,
                                 Owner    = "Le Van C",
                                 Created  = "Mar 18, 2024",
-                                Status   = "Suspended"
+                                Status   = "Locked"
                             },
                             new {
                                 Id       = "G-004",
@@ -179,18 +122,18 @@
                                 Posts    = 902,
                                 Owner    = "Pham Thi D",
                                 Created  = "Apr 22, 2024",
-                                Status   = "Active"
+                                Status   = "Unlocked"
                             },
                             new {
                                 Id       = "G-005",
                                 Name     = "Internal Engineering",
                                 Cover    = "",
-                                Privacy  = "Secret",
+                                Privacy  = "Private",
                                 Members  = 47,
                                 Posts    = 132,
                                 Owner    = "Hoang Van E",
                                 Created  = "May 09, 2024",
-                                Status   = "Pending"
+                                Status   = "Locked"
                             },
                             new {
                                 Id       = "G-006",
@@ -201,7 +144,7 @@
                                 Posts    = 678,
                                 Owner    = "Dao Thi F",
                                 Created  = "Jun 14, 2024",
-                                Status   = "Active"
+                                Status   = "Unlocked"
                             },
                             new {
                                 Id       = "G-007",
@@ -212,7 +155,7 @@
                                 Posts    = 1893,
                                 Owner    = "Bui Van G",
                                 Created  = "Jul 02, 2024",
-                                Status   = "Active"
+                                Status   = "Unlocked"
                             },
                             new {
                                 Id       = "G-008",
@@ -223,7 +166,7 @@
                                 Posts    = 96,
                                 Owner    = "Do Thi H",
                                 Created  = "Aug 27, 2024",
-                                Status   = "Pending"
+                                Status   = "Locked"
                             },
                         };
                     }
@@ -233,16 +176,14 @@
                         var initials = string.Join("", group.Name.Split(' ').Take(2).Select(w => w[0]));
 
                         var statusBadgeClass = group.Status switch {
-                            "Active"    => "badge-active",
-                            "Pending"   => "badge-pending",
-                            "Suspended" => "badge-banned",
-                            _           => "badge-inactive"
+                            "Unlocked"  => "badge-active",
+                            "Locked"    => "badge-banned",
+                            _           => "badge-active"
                         };
 
                         var privacyBadgeClass = group.Privacy switch {
                             "Public"  => "badge-info",
                             "Private" => "badge-pending",
-                            "Secret"  => "badge-banned",
                             _         => ""
                         };
 
@@ -269,27 +210,18 @@
                             </td>
                             <td style="text-align:right;">
                                 <div class="cell-actions" style="justify-content:flex-end;">
-                                    <button class="action-btn" title="View" aria-label="View group">
-                                        <i class="ri-eye-line"></i>
-                                    </button>
-                                    <button class="action-btn" title="Edit" aria-label="Edit group">
-                                        <i class="ri-edit-line"></i>
-                                    </button>
-                                    @if (group.Status != "Suspended")
+                                    @if (group.Status != "Locked")
                                     {
-                                        <button class="action-btn danger" title="Suspend" aria-label="Suspend group">
-                                            <i class="ri-forbid-2-line"></i>
+                                        <button class="action-btn danger" title="Lock" aria-label="Lock group">
+                                            <i class="ri-lock-line"></i>
                                         </button>
                                     }
                                     else
                                     {
-                                        <button class="action-btn success" title="Unsuspend" aria-label="Unsuspend group">
-                                            <i class="ri-checkbox-circle-line"></i>
+                                        <button class="action-btn success" title="Unlock" aria-label="Unlock group">
+                                            <i class="ri-lock-unlock-line"></i>
                                         </button>
                                     }
-                                    <button class="action-btn danger" title="Delete" aria-label="Delete group">
-                                        <i class="ri-delete-bin-line"></i>
-                                    </button>
                                 </div>
                             </td>
                         </tr>

@@ -1,10 +1,26 @@
 @*
-    Admin Login — standalone page (uses _LoginLayout, no sidebar).
+    Admin Login — single, focused sign-in page.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_LoginLayout.cshtml";
     ViewData["Title"] = "Sign In";
 }
+
+<style>
+    .login-form .form-label {
+        display: block;
+        text-align: center;
+        margin-bottom: 6px;
+    }
+    .login-form .search-input-wrap i {
+        display: none;
+    }
+    .login-form .form-control {
+        text-align: center;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+</style>
 
 @if (TempData["Error"] != null)
 {
@@ -45,29 +61,12 @@
         </div>
     </div>
 
-    <div class="flex" style="justify-content:space-between;align-items:center;">
-        <label class="form-check">
-            <input type="checkbox" name="rememberMe" value="true" />
-            <span>Keep me signed in</span>
-        </label>
-        <a href="@Url.Action("ForgotPassword", "Admin")" class="text-sm text-primary fw-600">Forgot password?</a>
-    </div>
-
     <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
         <i class="ri-login-box-line"></i>
         Sign in
     </button>
-
-    <div class="login-divider">or</div>
-
-    <a href="@Url.Action("Index", "Home")" class="btn btn-secondary" style="width:100%;justify-content:center;">
-        <i class="ri-arrow-left-line"></i>
-        Back to App
-    </a>
 </form>
 
-<p class="login-footer text-sm text-muted">
-    Protected by SocialHub Admin &copy; @DateTime.UtcNow.Year<br />
-    <a href="@Url.Action("Privacy", "Home")">Privacy Policy</a> &middot;
-    <a href="@Url.Action("Terms", "Home")">Terms of Service</a>
+<p class="login-footer text-sm text-muted" style="text-align:center;margin-top:18px;">
+    &copy; @DateTime.UtcNow.Year SocialHub Admin
 </p>
