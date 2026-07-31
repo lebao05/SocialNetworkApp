@@ -1,13 +1,18 @@
 /* Admin Users page
  *
  * Loads the user list via /admin/users/list (AJAX), wires the filter
- * form, pagination controls, and lock/unlock buttons. Uses the same
- * window.Admin namespace as admin.core.js but only owns Users-page state.
+ * form, pagination controls, and lock/unlock + promote/demote buttons.
+ *
+ * Lock/unlock and promote/demote update only the affected row in place —
+ * the rest of the table is left untouched so the admin doesn't lose
+ * their scroll position or pending bulk selections.
  *
  * Endpoints:
  *   GET  /admin/users/list?q=&status=&role=&page=&pageSize=
  *   POST /admin/users/{id}/lock
  *   POST /admin/users/{id}/unlock
+ *   POST /admin/users/{id}/promote
+ *   POST /admin/users/{id}/demote
  */
 (function () {
   'use strict';
@@ -17,13 +22,47 @@
 
   var PAGE_SIZE = 20;
 
-  // Current filter state — keeps the form in sync with what's rendered.
+  // Mirror of the server-side row model. We store the per-row role/lock
+  // state here so we can update the row in place after an AJAX mutation
+  // without re-fetching the whole page.
+  var rowState = {};   // userId -> { isAdmin, isLocked }
+
   var state = {
     q: '',
     status: '',
     role: '',
     page: 1
   };
+
+  /* ── Helpers ───────────────────────────────────────────────── */
+
+  function currentAdminId() {
+    var host = document.getElementById('users-current-admin-id');
+    return (host && host.dataset.adminId) || '';
+  }
+
+  function badge(roleText, statusText) {
+    var roleClass   = roleText === 'Admin'   ? 'badge-info'    : '';
+    var statusClass = statusText === 'Locked' ? 'badge-banned'  : 'badge-active';
+    return {
+      role:   '<span class="badge ' + roleClass   + '">' + escapeHtml(roleText)   + '</span>',
+      status: '<span class="badge ' + statusClass + '"><span class="badge-dot"></span>' + escapeHtml(statusText) + '</span>'
+    };
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
 
   /* ── Fetch + render ─────────────────────────────────────────── */
 
@@ -58,8 +97,6 @@
           state.page = nextPage;
           fetchAndRender();
         });
-        // After we replace the table body, row checkboxes need to be wired
-        // back into the bulk action bar.
         if (Admin.initTables) Admin.initTables();
       })
       .catch(function (err) {
@@ -67,6 +104,34 @@
           '<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626;">' +
           'Failed to load users: ' + escapeHtml(err.message) + '</td></tr>';
       });
+  }
+
+  function buildActionCell(userId) {
+    var lockBtnHtml = rowState[userId].isLocked
+      ? '<button class="action-btn success" title="Unlock user" data-action="unlock" data-user-id="' + userId + '">' +
+          '<i class="ri-lock-unlock-line"></i></button>'
+      : '<button class="action-btn danger" title="Lock user" data-action="lock" data-user-id="' + userId + '">' +
+          '<i class="ri-lock-line"></i></button>';
+
+    // The role toggle is hidden when the target user IS the acting admin —
+    // self-promotion/demotion is rejected by the server anyway, so don't
+    // offer the button at all.
+    var roleBtnHtml = '';
+    if (userId !== currentAdminId()) {
+      roleBtnHtml = rowState[userId].isAdmin
+        ? '<button class="action-btn warning" title="Demote to User" data-action="demote" data-user-id="' + userId + '">' +
+            '<i class="ri-shield-user-line"></i></button>'
+        : '<button class="action-btn primary" title="Promote to Admin" data-action="promote" data-user-id="' + userId + '">' +
+            '<i class="ri-shield-star-line"></i></button>';
+    }
+
+    return '' +
+      '<div class="cell-actions" style="justify-content:flex-end;">' +
+        '<button class="action-btn primary" title="View profile" data-action="view" data-user-id="' + userId + '">' +
+          '<i class="ri-eye-line"></i></button>' +
+        roleBtnHtml +
+        lockBtnHtml +
+      '</div>';
   }
 
   function renderRows(items) {
@@ -81,24 +146,22 @@
 
     var html = '';
     items.forEach(function (u) {
+      // Cache server-side truth so in-place updates after a mutation are
+      // correct even when the next render hasn't happened yet.
+      rowState[u.id] = { isAdmin: !!u.isAdmin, isLocked: !!u.isLocked };
+
       var fullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim() || u.email || 'User';
       var initials = (fullName.split(/\s+/).slice(0, 2)
         .map(function (w) { return w[0] || ''; }).join('') || '?').toUpperCase();
 
-      var roleText = u.isAdmin ? 'Admin' : 'User';
-      var roleClass = u.isAdmin ? 'badge-info' : '';
-      var statusText  = u.isLocked ? 'Locked' : 'Unlocked';
-      var statusClass = u.isLocked ? 'badge-banned' : 'badge-active';
+      var b = badge(
+        rowState[u.id].isAdmin ? 'Admin' : 'User',
+        rowState[u.id].isLocked ? 'Locked' : 'Unlocked'
+      );
 
       var avatar = u.avatarUrl
         ? '<img src="' + escapeAttr(u.avatarUrl) + '" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />'
         : '<div class="cell-user-avatar">' + escapeHtml(initials) + '</div>';
-
-      var lockBtn = u.isLocked
-        ? '<button class="action-btn success" title="Unlock user" data-action="unlock" data-user-id="' + u.id + '">' +
-            '<i class="ri-lock-unlock-line"></i></button>'
-        : '<button class="action-btn danger" title="Lock user" data-action="lock" data-user-id="' + u.id + '">' +
-            '<i class="ri-lock-line"></i></button>';
 
       html += '' +
         '<tr data-user-id="' + u.id + '">' +
@@ -112,22 +175,44 @@
               '</div>' +
             '</div>' +
           '</td>' +
-          '<td><span class="badge ' + roleClass + '">' + escapeHtml(roleText) + '</span></td>' +
-          '<td><span class="badge ' + statusClass + '"><span class="badge-dot"></span>' + statusText + '</span></td>' +
+          '<td data-cell="role">' + b.role + '</td>' +
+          '<td data-cell="status">' + b.status + '</td>' +
           '<td class="cell-muted">' + (u.postCount || 0).toLocaleString() + '</td>' +
           '<td class="cell-muted">' + formatDate(u.createdAt) + '</td>' +
           '<td class="cell-muted">' + formatDate(u.lastActiveAt || u.createdAt) + '</td>' +
-          '<td>' +
-            '<div class="cell-actions" style="justify-content:flex-end;">' +
-              '<button class="action-btn primary" title="View profile" data-action="view" data-user-id="' + u.id + '">' +
-                '<i class="ri-eye-line"></i></button>' +
-              lockBtn +
-            '</div>' +
-          '</td>' +
+          '<td data-cell="actions">' + buildActionCell(u.id) + '</td>' +
         '</tr>';
     });
     tbody.innerHTML = html;
   }
+
+  /* ── In-place row updates ───────────────────────────────────── */
+
+  // After a successful mutation we update the cached state, then rewrite
+  // the role cell, status cell, and action cell of *that one row*. The
+  // rest of the table (including any open detail modals backed by other
+  // rows) is untouched.
+  function applyMutationToRow(userId, patch) {
+    if (!rowState[userId]) return;
+    Object.assign(rowState[userId], patch);
+
+    var row = document.querySelector('#usersTbody tr[data-user-id="' + userId + '"]');
+    if (!row) return;
+
+    var b = badge(
+      rowState[userId].isAdmin  ? 'Admin'   : 'User',
+      rowState[userId].isLocked ? 'Locked'  : 'Unlocked'
+    );
+
+    var roleCell   = row.querySelector('[data-cell="role"]');
+    var statusCell = row.querySelector('[data-cell="status"]');
+    var actionsCell= row.querySelector('[data-cell="actions"]');
+    if (roleCell)    roleCell.innerHTML   = b.role;
+    if (statusCell)  statusCell.innerHTML = b.status;
+    if (actionsCell) actionsCell.innerHTML = buildActionCell(userId);
+  }
+
+  /* ── Pagination (unchanged) ─────────────────────────────────── */
 
   function renderPagination(payload, info, ctrls, onPage) {
     var page       = payload.page       || state.page;
@@ -148,7 +233,6 @@
     html += '<button class="page-btn" ' + (page <= 1 ? 'disabled' : '') +
             ' data-page="' + (page - 1) + '"><i class="ri-arrow-left-s-line"></i></button>';
 
-    // Compact page list: 1 ... (p-1) p (p+1) ... last
     var pages = compactPages(page, totalPages);
     pages.forEach(function (p) {
       if (p === '...') {
@@ -187,7 +271,7 @@
     return out;
   }
 
-  /* ── Action handlers (lock/unlock/view) ─────────────────────── */
+  /* ── Action handlers (lock/unlock + promote/demote) ─────────── */
 
   // Pending user id for the "Confirm Lock" modal.
   var pendingLockUserId = null;
@@ -219,6 +303,10 @@
         }
       } else if (action === 'unlock') {
         toggleLock(userId, false, btn);
+      } else if (action === 'promote') {
+        toggleRole(userId, true, btn);
+      } else if (action === 'demote') {
+        toggleRole(userId, false, btn);
       } else if (action === 'view') {
         populateUserDetail(userId);
       }
@@ -283,11 +371,39 @@
         return r.json();
       })
       .then(function () {
-        // Refresh only the current page so we see the new badge state.
-        fetchAndRender();
+        // Update only the affected row — no full-list reload.
+        applyMutationToRow(userId, { isLocked: isLocked });
       })
       .catch(function (err) {
         alert(isLocked ? 'Failed to lock user: ' : 'Failed to unlock user: ' + err.message);
+        if (originBtn) originBtn.disabled = false;
+      });
+  }
+
+  function toggleRole(userId, makeAdmin, originBtn) {
+    var url = '/admin/users/' + encodeURIComponent(userId) + (makeAdmin ? '/promote' : '/demote');
+    if (originBtn) originBtn.disabled = true;
+
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    })
+      .then(function (r) {
+        // 400 = self-role-change or validation; 404 = user gone. Both are
+        // hard failures for this row — surface the server message.
+        if (!r.ok) {
+          return r.json().then(function (body) {
+            throw new Error((body && body.error) || ('HTTP ' + r.status));
+          });
+        }
+        return r.json();
+      })
+      .then(function () {
+        applyMutationToRow(userId, { isAdmin: makeAdmin });
+      })
+      .catch(function (err) {
+        alert((makeAdmin ? 'Failed to promote user: ' : 'Failed to demote user: ') + err.message);
         if (originBtn) originBtn.disabled = false;
       });
   }
@@ -319,27 +435,9 @@
     }
   }
 
-  /* ── Utilities ──────────────────────────────────────────────── */
-
-  function formatDate(iso) {
-    if (!iso) return '—';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
-    });
-  }
-
-  function escapeAttr(s) { return escapeHtml(s); }
-
   /* ── Boot ───────────────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', function () {
-    // Pull initial values from the URL so deep-linked filter state survives.
     var params = new URLSearchParams(window.location.search);
     if (params.has('q'))      state.q      = params.get('q');
     if (params.has('status')) state.status = params.get('status');

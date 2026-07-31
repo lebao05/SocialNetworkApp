@@ -19,7 +19,7 @@ namespace Presentation.Controllers;
 /// </summary>
 [ApiController]
 [Route("admin/api/stats")]
-[Authorize(Roles = "ADMIN")]
+[Authorize(AuthenticationSchemes = "AdminCookie", Roles = "ADMIN")]
 public class AdminStatsController : ControllerBase
 {
     private readonly ISender _sender;

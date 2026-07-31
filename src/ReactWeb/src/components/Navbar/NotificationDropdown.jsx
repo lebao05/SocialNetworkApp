@@ -144,6 +144,7 @@ export default function NotificationDropdown({ onClose }) {
           const label = NOTIFICATION_TYPE_LABELS[notificationType] ?? "interacted with you";
           const actorName = [actorFirstName, actorLastName].filter(Boolean).join(" ") || "Someone";
           const link = getNotificationLink(notification);
+          const avatarSrc = actorAvatarUrl || import.meta.env.VITE_DEFAULT_AVATAR;
 
           const item = (
             <div
@@ -155,7 +156,7 @@ export default function NotificationDropdown({ onClose }) {
               {/* Avatar + icon overlay */}
               <div className="relative flex-shrink-0">
                 <img
-                  src={actorAvatarUrl || "https://i.pravatar.cc/100"}
+                  src={avatarSrc}
                   alt={actorName}
                   className="w-11 h-11 rounded-full object-cover"
                 />

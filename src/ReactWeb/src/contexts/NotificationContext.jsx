@@ -48,39 +48,47 @@ export function NotificationProvider({ children }) {
   const totalLoadedRef = useRef(0);
   const connectionRef = useRef(null);
 
-  const loadPage = useCallback(
-    async (p = 1, append = false) => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const data = await getNotificationsApi(p, DEFAULT_PAGE_SIZE);
-        const { items, totalCount } = normalizeResponse(data);
+    const loadPage = useCallback(
+      async (p = 1, append = false) => {
+        if (!user) return;
+        setLoading(true);
+        try {
+          const data = await getNotificationsApi(p, DEFAULT_PAGE_SIZE);
+          const { items, totalCount } = normalizeResponse(data);
 
-        if (!append) {
-          setNotifications(items);
-          totalLoadedRef.current = items.length;
-        } else {
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map((n) => n.id));
-            const newItems = items.filter((n) => !existingIds.has(n.id));
-            totalLoadedRef.current += newItems.length;
-            return [...prev, ...newItems];
-          });
+          // API responses can occasionally contain the same notification id
+          // twice (e.g. when a SQL JOIN in the repository pulls in a row per
+          // related entity). Collapse by id before merging into state so the
+          // dropdown/page never shows the same notification twice.
+          const uniqueItems = Array.from(
+            new Map(items.map((n) => [n.id, n])).values(),
+          );
+
+          if (!append) {
+            setNotifications(uniqueItems);
+            totalLoadedRef.current = uniqueItems.length;
+          } else {
+            setNotifications((prev) => {
+              const existingIds = new Set(prev.map((n) => n.id));
+              const newItems = uniqueItems.filter((n) => !existingIds.has(n.id));
+              totalLoadedRef.current += newItems.length;
+              return [...prev, ...newItems];
+            });
+          }
+
+          setPage(p);
+          setHasMore(totalLoadedRef.current < totalCount);
+          setUnseenCount(uniqueItems.filter((n) => !n.isSeen).length);
+          setError(null);
+        } catch (err) {
+          console.error("Failed to load notifications:", err);
+          setError("Unable to load notifications.");
+        } finally {
+          setLoading(false);
         }
-
-        setPage(p);
-        setHasMore(totalLoadedRef.current < totalCount);
-        setUnseenCount(items.filter((n) => !n.isSeen).length);
-        setError(null);
-      } catch (err) {
-        console.error("Failed to load notifications:", err);
-        setError("Unable to load notifications.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user],
-  );
+      },
+      [user],
+    );
 
   // Initial load + reload whenever the authenticated user changes.
   useEffect(() => {
@@ -138,16 +146,22 @@ export function NotificationProvider({ children }) {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const baseUrl =
-      import.meta.env.VITE_API_BASE_URL ||
-      import.meta.env.VITE_API_URL ||
-      "";
+    // Use the hub base URL (no /api suffix) so we connect to /hubs/notifications.
+    // VITE_API_BASE_URL points at the REST API and ends in /api; using it would
+    // produce a 405 because ASP.NET only maps /hubs/notifications, not
+    // /api/hubs/notifications. The other hubs (chat, call) already follow
+    // this pattern — see ChatContext / CallContext.
+    const baseUrl = import.meta.env.VITE_API_HUB_BASE_URL || "";
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${baseUrl}/hubs/notifications`, {
         accessTokenFactory: () => token,
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets,
+        // Do NOT skip negotiate. With skipNegotiation=true the client never
+        // POSTs /hubs/notifications/negotiate, so the server never mints a
+        // connection token and the subsequent WebSocket upgrade is rejected
+        // with "the connection ID is not present on the server". Letting
+        // SignalR negotiate first matches what ChatContext/CallContext do
+        // and is the canonical setup for ASP.NET SignalR.
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
@@ -155,7 +169,6 @@ export function NotificationProvider({ children }) {
 
     const onReceiveNotification = (notification) => {
       if (!notification?.id) return;
-
       setNotifications((prev) => {
         const exists = prev.some((n) => n.id === notification.id);
         if (exists) return prev;
@@ -187,7 +200,7 @@ export function NotificationProvider({ children }) {
         connectionRef.current = null;
       }
     };
-  }, [user, loadPage]);
+  }, [user]);
 
   const value = {
     notifications,

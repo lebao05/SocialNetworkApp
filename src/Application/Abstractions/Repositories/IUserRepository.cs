@@ -63,5 +63,16 @@ namespace Application.Abstractions.Repositories
             Guid userId,
             bool isLocked,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Batched display-name lookup. Returns a dictionary keyed by user id
+        /// with the value being "{FirstName} {LastName}" — only includes users
+        /// that actually exist (missing ids are silently dropped).
+        ///
+        /// Used to resolve tagged-user ids to names when reading posts.
+        /// </summary>
+        Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesByIdsAsync(
+            IReadOnlyCollection<Guid> userIds,
+            CancellationToken cancellationToken = default);
     }
 }

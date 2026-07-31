@@ -61,7 +61,13 @@ internal sealed class GroupJoinRequestAcceptedDomainEventHandler
         notificationEntity.SetGroupId(notification.GroupId);
         notificationEntity.SetGroupJoinRequestId(notification.GroupJoinRequestId);
 
-        await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        var saved = await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        if (saved is null)
+        {
+            _logger.LogError("Failed to persist group invite notification for group {GroupId}", notification.GroupId);
+            return;
+        }
+        notificationEntity = saved;
 
         var dto = new NotificationDto(
             Id: notificationEntity.Id,

@@ -107,7 +107,7 @@ export default function LeftSidebar() {
           avatar: g.avatar,
           newPosts: g.newPosts ?? 0,
         }))
-      : groupShortcuts;
+      : [];
 
   return (
     <aside className="scrollbar-thin fixed left-0 top-14 z-10 hidden h-[calc(100vh-56px)] w-[280px] select-none flex-col overflow-y-auto border-r border-[#ced0d4] bg-white p-2 lg:flex">
@@ -141,16 +141,6 @@ export default function LeftSidebar() {
               <ShortcutItem key={shortcut.id} shortcut={shortcut} />
             ))}
           </div>
-
-          <Link
-            to="/groups"
-            className="mt-1 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-inherit no-underline hover:bg-[#F2F2F2]"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4e6eb]">
-              <Pencil size={16} className="text-[#050505]" />
-            </div>
-            <span className="truncate text-[15px] font-medium text-[#050505]">Edit</span>
-          </Link>
         </>
       )}
     </aside>

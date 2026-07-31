@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { GrLike } from "react-icons/gr";
 import { PiShareFatLight } from "react-icons/pi";
 import PostComment from "./PostComment";
@@ -6,6 +7,49 @@ import MediaGallery from "./MediaGallery";
 import ShareModal from "./ShareModal";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
+function renderTaggedUsers(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+  const list = tags.filter((t) => t && t.tagName);
+  if (list.length === 0) return null;
+
+  const linkClass = "font-semibold text-[#1877F2] hover:underline cursor-pointer";
+
+  const renderName = (tag, key) => {
+    const inner = <span className={linkClass}>{tag.tagName}</span>;
+    return tag.id != null ? (
+      <Link key={key} to={`/profile/${tag.id}`} className="no-underline">
+        {inner}
+      </Link>
+    ) : (
+      <span key={key}>{inner}</span>
+    );
+  };
+
+  if (list.length <= 2) {
+    return (
+      <span>
+        with {list.map((tag, i) => (
+          <React.Fragment key={tag.id ?? tag.tagName}>
+            {i > 0 && ", "}
+            {renderName(tag, tag.id ?? tag.tagName)}
+          </React.Fragment>
+        ))}
+      </span>
+    );
+  }
+
+  const first = list[0];
+  const second = list[1];
+  const remaining = list.length - 2;
+  return (
+    <span>
+      with {renderName(first, first.id ?? first.tagName)},{" "}
+      {renderName(second, second.id ?? second.tagName)} and{" "}
+      <span className="font-semibold text-[#050505]">{remaining} others</span>
+    </span>
+  );
+}
 
 const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave }) => (
   <button
@@ -148,6 +192,12 @@ export default function PostModal({
 
             {post.content && (
               <p className="mt-4 text-[15px] leading-relaxed text-gray-800">{post.content}</p>
+            )}
+
+            {renderTaggedUsers(post.tags) && (
+              <p className="mt-2 text-[14px] text-gray-500">
+                {renderTaggedUsers(post.tags)}
+              </p>
             )}
 
             <div className="mt-4">

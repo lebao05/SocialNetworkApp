@@ -47,6 +47,8 @@ namespace Application.Abstractions.Repositories
 
         Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default);
 
+        Task<bool> SetLockedAsync(long postId, bool isLocked, CancellationToken cancellationToken = default);
+
         Task<IReadOnlyList<DailyCountDto>> GetPostSeriesAsync(
             DateTime fromUtc,
             DateTime toUtc,

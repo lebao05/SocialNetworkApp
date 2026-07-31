@@ -52,7 +52,14 @@ internal sealed class FriendshipCreatedDomainEventHandler
             metadata: null
         );
 
-        await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        var saved = await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        if (saved is null)
+        {
+            _logger.LogError("Failed to persist friendship notification for {SenderId} → {ReceiverId}",
+                notification.SenderId, notification.ReceiverId);
+            return;
+        }
+        notificationEntity = saved;
 
         var dto = new NotificationDto(
             Id: notificationEntity.Id,

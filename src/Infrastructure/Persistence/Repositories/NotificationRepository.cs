@@ -21,9 +21,14 @@ public class NotificationRepository : INotificationRepository
             .FirstOrDefaultAsync(n => n.Id == id, cancellationToken);
     }
 
-    public async Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
+    public async Task<Notification?> AddAsync(Notification notification, CancellationToken cancellationToken = default)
     {
         await _context.Notifications.AddAsync(notification, cancellationToken);
+        // SaveChanges is required so the DB-assigned identity value is
+        // populated on the entity. Callers broadcast a real-time
+        // notification immediately after Add, so they need the actual id.
+        await _context.SaveChangesAsync(cancellationToken);
+        return notification;
     }
 
     public async Task<PagedList<Notification>> GetPagedAsync(

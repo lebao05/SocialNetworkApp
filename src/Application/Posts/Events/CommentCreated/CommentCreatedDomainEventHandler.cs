@@ -93,7 +93,14 @@ internal sealed class CommentCreatedDomainEventHandler
         notificationEntity.SetPostId(postId);
         notificationEntity.SetCommentId(commentId);
 
-        await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        var saved = await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        if (saved is null)
+        {
+            _logger.LogError("Failed to persist comment notification for comment {CommentId} → user {UserId}",
+                commentId, recipientUserId);
+            return;
+        }
+        notificationEntity = saved;
 
         var actor = await _userRepository.GetByIdAsync(actorUserId, cancellationToken);
         var dto = new NotificationDto(

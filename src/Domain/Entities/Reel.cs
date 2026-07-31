@@ -13,6 +13,7 @@ namespace Domain.Entities
         public string? Duration { get; private set; }
         public ReelVisibility Visibility { get; private set; }
         public int ViewCount { get; private set; }
+        public bool IsLocked { get; private set; }
 
         public User Author { get; private set; } = null!;
 
@@ -77,5 +78,8 @@ namespace Domain.Entities
         {
             DeletedAt = null;
         }
+
+        public void Lock()   => IsLocked = true;
+        public void Unlock() => IsLocked = false;
     }
 }

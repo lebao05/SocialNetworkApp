@@ -27,6 +27,8 @@ namespace Application.Abstractions.Repositories
 
         Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default);
 
+        Task<bool> SetLockedAsync(long reelId, bool isLocked, CancellationToken cancellationToken = default);
+
         Task<IReadOnlyList<DailyCountDto>> GetReelSeriesAsync(
             DateTime fromUtc,
             DateTime toUtc,

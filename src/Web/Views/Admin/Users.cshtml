@@ -40,10 +40,9 @@
             <option value="locked"    @(currentStatus == "locked"   ? "selected" : "")>Locked</option>
         </select>
         <select name="role" class="form-control form-select" style="width:150px;">
-            <option value=""          @string.IsNullOrEmpty(currentRole) ? "selected" : "">All Roles</option>
-            <option value="user"      @(currentRole == "user"      ? "selected" : "")>User</option>
-            <option value="moderator" @(currentRole == "moderator" ? "selected" : "")>Moderator</option>
-            <option value="admin"     @(currentRole == "admin"     ? "selected" : "")>Admin</option>
+            <option value=""      @string.IsNullOrEmpty(currentRole) ? "selected" : "">All Roles</option>
+            <option value="user"  @(currentRole == "user"  ? "selected" : "")>User</option>
+            <option value="admin" @(currentRole == "admin" ? "selected" : "")>Admin</option>
         </select>
         <div class="filter-bar-right">
             <button type="button" class="btn btn-secondary btn-sm" id="usersResetBtn">
@@ -60,7 +59,7 @@
 
 
 <!-- Table — rows are populated by admin.users.js -->
-<div class="card">
+<div class="card" id="users-current-admin-id" data-admin-id="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "")">
     <div class="card-body" style="padding:0;">
         <div class="table-wrapper">
             <table>
@@ -164,38 +163,8 @@
     </div>
 </div>
 
-<!-- Edit User Modal (placeholder; no backend yet) -->
-<div class="modal-overlay hidden" id="editUserModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h2 class="modal-title">Edit User</h2>
-            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
-        </div>
-        <div class="modal-body">
-            <div style="display:flex;flex-direction:column;gap:14px;">
-                <div class="form-group">
-                    <label class="form-label">Role</label>
-                    <select class="form-control form-select">
-                        <option selected>User</option>
-                        <option>Moderator</option>
-                        <option>Admin</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-control form-select">
-                        <option selected>Unlocked</option>
-                        <option>Locked</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
-        </div>
-    </div>
-</div>
+<!-- Edit User Modal removed — promote/demote is now inline in the row's
+     action cell (see admin.users.js). -->
 
 @section Scripts {
     <script src="~/admin/js/admin.users.js" asp-append-version="true"></script>

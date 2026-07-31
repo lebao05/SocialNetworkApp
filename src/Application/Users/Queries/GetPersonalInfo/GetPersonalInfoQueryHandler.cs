@@ -89,7 +89,7 @@ namespace Application.Users.Queries.GetPersonalInfo
                 user.Hometown,
                 user.Website,
                 user.RelationshipStatus,
-                new DateTime(2018, 5, 1),
+                user.CreatedAt,
                 isFriend,
                 isFollowing,
                 hasIncomingRequest,

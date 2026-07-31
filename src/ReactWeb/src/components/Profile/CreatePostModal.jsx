@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, ChevronDown, Smile, Search, ArrowLeft, Loader2, User } from "lucide-react";
 import { useTag } from "../../hooks/useTag";
-import { createPostApi } from "../../apis/postApi";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -131,8 +130,10 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
 
     try {
       setIsSubmitting(true);
-      const postId = await createPostApi(payload);
-      if (onSubmit) await onSubmit({ ...payload, id: postId });
+      // The parent component owns the create-post API call (so it can refresh
+      // the feed / update context). Hand off the payload via onSubmit and let
+      // it call createPostApi exactly once.
+      if (onSubmit) await onSubmit(payload);
       handleResetAndClose();
     } catch (err) {
       console.error("Failed to create post:", err);

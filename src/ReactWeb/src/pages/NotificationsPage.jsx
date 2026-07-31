@@ -66,6 +66,7 @@ function NotificationItem({ notification, onMarkSeen }) {
   const label = NOTIFICATION_TYPE_LABELS[notificationType] ?? "interacted with you";
   const actorName = [actorFirstName, actorLastName].filter(Boolean).join(" ") || "Someone";
   const link = getNotificationLink(notification);
+  const avatarSrc = actorAvatarUrl || import.meta.env.VITE_DEFAULT_AVATAR;
 
   const content = (
     <div
@@ -76,7 +77,7 @@ function NotificationItem({ notification, onMarkSeen }) {
       {/* Avatar + Icon overlay */}
       <div className="relative flex-shrink-0">
         <img
-          src={actorAvatarUrl || "https://i.pravatar.cc/100"}
+          src={avatarSrc}
           alt={actorName}
           className="w-12 h-12 rounded-full object-cover"
         />

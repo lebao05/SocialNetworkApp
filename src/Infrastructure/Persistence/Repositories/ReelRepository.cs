@@ -227,5 +227,16 @@ namespace Infrastructure.Persistence.Repositories
                 .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<bool> SetLockedAsync(
+            long reelId,
+            bool isLocked,
+            CancellationToken cancellationToken = default)
+        {
+            var affected = await _context.Reels
+                .Where(r => r.Id == reelId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsLocked, isLocked), cancellationToken);
+            return affected > 0;
+        }
     }
 }

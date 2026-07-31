@@ -51,7 +51,7 @@ internal sealed class PostCreatedDomainEventHandler
             {
                 continue;
             }
-
+            Console.WriteLine(taggedUserId);
             var notificationEntity = new Notification(
                 id: 0,
                 recipientUserId: taggedUserId,
@@ -63,7 +63,14 @@ internal sealed class PostCreatedDomainEventHandler
 
             notificationEntity.SetPostId(notification.PostId);
 
-            await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+            var saved = await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+            if (saved is null)
+            {
+                _logger.LogError("Failed to persist post-tag notification for post {PostId} → user {UserId}",
+                    notification.PostId, taggedUserId);
+                continue;
+            }
+            notificationEntity = saved;
 
             var dto = new NotificationDto(
                 Id: notificationEntity.Id,

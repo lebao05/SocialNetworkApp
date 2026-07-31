@@ -8,10 +8,12 @@ namespace Application.Posts.Queries.GetDetailPost
     internal sealed class GetDetailPostQueryHandler : IQueryHandler<GetDetailPostQuery, PostDto>
     {
         private readonly IPostRepository _postRepository;
+        private readonly IUserRepository _userRepository;
 
-        public GetDetailPostQueryHandler(IPostRepository postRepository)
+        public GetDetailPostQueryHandler(IPostRepository postRepository, IUserRepository userRepository)
         {
             _postRepository = postRepository;
+            _userRepository = userRepository;
         }
 
         public async Task<Result<PostDto>> Handle(GetDetailPostQuery request, CancellationToken cancellationToken)
@@ -24,7 +26,15 @@ namespace Application.Posts.Queries.GetDetailPost
                     $"The post with Id {request.PostId} was not found."));
             }
 
-            return Result.Success(post);
+            // The repository projection leaves tag names as raw Guid strings;
+            // swap in real display names in a single batched lookup so the
+            // client gets a ready-to-render TagDto. ResolveAllAsync rewrites
+            // the post in place via a `with` expression, so we read it back
+            // from the list.
+            var posts = new List<PostDto> { post };
+            await TagResolver.ResolveAllAsync(posts, _userRepository, cancellationToken);
+
+            return Result.Success(posts[0]);
         }
     }
 }

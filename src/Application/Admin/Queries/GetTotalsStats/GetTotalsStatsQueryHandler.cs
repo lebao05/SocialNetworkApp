@@ -34,20 +34,19 @@ internal sealed class GetTotalsStatsQueryHandler : IQueryHandler<GetTotalsStatsQ
     {
         // Fan out the 4 DB COUNTs concurrently. Presence is an in-memory
         // dictionary lookup so it's negligible compared to the DB round-trips.
-        var usersTask  = _users.GetTotalCountAsync(cancellationToken);
-        var postsTask  = _posts.GetTotalCountAsync(cancellationToken);
-        var reelsTask  = _reels.GetTotalCountAsync(cancellationToken);
-        var groupsTask = _groups.GetActiveGroupCountAsync(cancellationToken);
+        var usersTask  = await _users.GetTotalCountAsync(cancellationToken);
+        var postsTask  = await _posts.GetTotalCountAsync(cancellationToken);
+        var reelsTask  = await _reels.GetTotalCountAsync(cancellationToken);
+        var groupsTask = await _groups.GetActiveGroupCountAsync(cancellationToken);
 
-        await Task.WhenAll(usersTask, postsTask, reelsTask, groupsTask);
 
         var onlineNow = _presence.GetOnlineUsers().Count;
 
         return Result.Success(new DashboardTotalsDto(
-            TotalUsers:       await usersTask,
-            TotalPosts:       await postsTask,
-            TotalReels:       await reelsTask,
+            TotalUsers:        usersTask,
+            TotalPosts:        postsTask,
+            TotalReels:        reelsTask,
             OnlineNow:        onlineNow,
-            TotalActiveGroups: await groupsTask));
+            TotalActiveGroups:  groupsTask));
     }
 }

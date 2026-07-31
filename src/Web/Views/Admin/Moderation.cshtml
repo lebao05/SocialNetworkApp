@@ -1,5 +1,5 @@
 @*
-    Admin Content Moderation — review flagged posts, comments, and reports.
+    Admin Content Moderation — review flagged posts, reels, users, and groups.
 *@
 @{
     Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
@@ -7,59 +7,51 @@
     ViewData["CurrentPage"] = "Moderation";
 }
 
+<!-- Toast -->
+<div id="toast" class="alert hidden"
+     style="position:fixed;top:20px;right:20px;z-index:9999;min-width:260px;max-width:400px;display:flex;align-items:center;gap:10px;">
+</div>
+
 <!-- Page Header -->
 <div class="page-header">
     <div>
         <h1 class="page-title">Content Moderation</h1>
-        <p class="page-subtitle">Review flagged posts, comments, and user reports</p>
+        <p class="page-subtitle">Review and act on user-submitted reports</p>
     </div>
 </div>
-
 
 <!-- Filter Bar -->
 <div class="filter-bar">
-    <div class="search-input-wrap">
-        <i class="ri-search-line"></i>
-        <input type="text"
-               class="form-control"
-               placeholder="Search by post ID, content, or reporter..."
-               style="min-width:280px;" />
-    </div>
-    <select class="form-control form-select" style="width:160px;">
+    <select id="filterType" class="form-control form-select" style="width:150px;">
         <option value="">All Types</option>
-        <option>Post</option>
-        <option>Comment</option>
-        <option>User Profile</option>
-        <option>Group</option>
+        <option value="Post">Post</option>
+        <option value="Reel">Reel</option>
+        <option value="User">User</option>
+        <option value="Group">Group</option>
     </select>
-    <select class="form-control form-select" style="width:160px;">
-        <option value="">All Reasons</option>
-        <option>Hate speech</option>
-        <option>Spam</option>
-        <option>Harassment</option>
-        <option>Misinformation</option>
-        <option>Inappropriate content</option>
-        <option>Fake account</option>
-    </select>
-    <select class="form-control form-select" style="width:150px;">
+    <select id="filterStatus" class="form-control form-select" style="width:150px;">
         <option value="">All Status</option>
-        <option>Pending</option>
-        <option>In Review</option>
-        <option>Resolved</option>
-        <option>Dismissed</option>
+        <option value="Pending">Pending</option>
+        <option value="Reviewed">Reviewed</option>
+        <option value="Dismissed">Dismissed</option>
     </select>
+    <div class="search-input-wrap" style="flex:0 0 180px;">
+        <i class="ri-calendar-line"></i>
+        <input type="date" id="filterFrom" class="form-control" placeholder="From" style="padding-left:34px;" />
+    </div>
+    <div class="search-input-wrap" style="flex:0 0 180px;">
+        <i class="ri-calendar-line"></i>
+        <input type="date" id="filterTo" class="form-control" placeholder="To" style="padding-left:34px;" />
+    </div>
     <div class="filter-bar-right">
-        <button class="btn btn-secondary btn-sm">
-            <i class="ri-reset-right-line"></i>
-            Reset
+        <button id="btnResetFilter" class="btn btn-secondary btn-sm">
+            <i class="ri-reset-right-line"></i> Reset
         </button>
-        <button class="btn btn-primary btn-sm">
-            <i class="ri-filter-3-line"></i>
-            Filter
+        <button id="btnApplyFilter" class="btn btn-primary btn-sm">
+            <i class="ri-filter-3-line"></i> Filter
         </button>
     </div>
 </div>
-
 
 <!-- Reports Table -->
 <div class="card">
@@ -68,380 +60,160 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:40px;">
-                            <input type="checkbox" />
-                        </th>
+                        <th style="width:40px;"><input type="checkbox" id="checkAll" /></th>
                         <th>Type</th>
                         <th>Content</th>
                         <th>Author</th>
                         <th>Reason</th>
-                        <th>Reporters</th>
+                        <th>Reports</th>
                         <th>Status</th>
                         <th>Date</th>
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @{
-                        var reports = new[] {
-                            new {
-                                Id = "R-001",
-                                Type = "Post",
-                                Content = "This is absolutely disgusting behavior. They deserve everything that's coming to them. #hate",
-                                Author = "Le Van C",
-                                AuthorEmail = "levanc@example.com",
-                                Reason = "Hate speech",
-                                ReasonClass = "badge-danger",
-                                Reporters = 4,
-                                Status = "Pending",
-                                StatusBadge = "badge-pending",
-                                Date = "12 min ago",
-                                PostId = "89234",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-002",
-                                Type = "Post",
-                                Content = "[Image: inappropriate content] Buy followers here!! 10k for $5 — check my bio for the link",
-                                Author = "Bot_8812",
-                                AuthorEmail = "bot8812@example.com",
-                                Reason = "Spam",
-                                ReasonClass = "badge-warning",
-                                Reporters = 2,
-                                Status = "Pending",
-                                StatusBadge = "badge-pending",
-                                Date = "28 min ago",
-                                PostId = "89211",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-003",
-                                Type = "Comment",
-                                Content = "You're such an idiot for thinking that. Go back to school.",
-                                Author = "Nguyen Van D",
-                                AuthorEmail = "nguyenvand@example.com",
-                                Reason = "Harassment",
-                                ReasonClass = "badge-danger",
-                                Reporters = 3,
-                                Status = "In Review",
-                                StatusBadge = "badge-info",
-                                Date = "1 hr ago",
-                                PostId = "89102",
-                                Group = "Tech Talk"
-                            },
-                            new {
-                                Id = "R-004",
-                                Type = "User",
-                                Content = "Fake celebrity account impersonating [Celebrity Name]",
-                                Author = "OfficialCeleb",
-                                AuthorEmail = "officialceleb@example.com",
-                                Reason = "Fake account",
-                                ReasonClass = "badge-danger",
-                                Reporters = 7,
-                                Status = "In Review",
-                                StatusBadge = "badge-info",
-                                Date = "2 hr ago",
-                                PostId = "",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-005",
-                                Type = "Post",
-                                Content = "Scientists say the earth is flat and NASA is lying to you. Wake up sheep! #flatearth",
-                                Author = "FlatEarther99",
-                                AuthorEmail = "flatearth@example.com",
-                                Reason = "Misinformation",
-                                ReasonClass = "badge-warning",
-                                Reporters = 11,
-                                Status = "Resolved",
-                                StatusBadge = "badge-active",
-                                Date = "3 hr ago",
-                                PostId = "88990",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-006",
-                                Type = "Group",
-                                Content = "Group name: 'NSFW Content Only' — Description contains explicit adult content description",
-                                Author = "Admin_G001",
-                                AuthorEmail = "adming1@example.com",
-                                Reason = "Inappropriate content",
-                                ReasonClass = "badge-warning",
-                                Reporters = 2,
-                                Status = "Dismissed",
-                                StatusBadge = "badge-inactive",
-                                Date = "5 hr ago",
-                                PostId = "",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-007",
-                                Type = "Post",
-                                Content = "Click here to win a FREE iPhone 15!! Limited time only!! https://bit.ly/fake-scam",
-                                Author = "PrizeWinnerX",
-                                AuthorEmail = "prizewinnerx@example.com",
-                                Reason = "Spam",
-                                ReasonClass = "badge-warning",
-                                Reporters = 15,
-                                Status = "Resolved",
-                                StatusBadge = "badge-active",
-                                Date = "1 day ago",
-                                PostId = "88701",
-                                Group = ""
-                            },
-                            new {
-                                Id = "R-008",
-                                Type = "Comment",
-                                Content = "You're all wrong. Just delete your accounts and quit.",
-                                Author = "TrollUser99",
-                                AuthorEmail = "troll99@example.com",
-                                Reason = "Harassment",
-                                ReasonClass = "badge-danger",
-                                Reporters = 1,
-                                Status = "Dismissed",
-                                StatusBadge = "badge-inactive",
-                                Date = "1 day ago",
-                                PostId = "88520",
-                                Group = ""
-                            },
-                        };
-                    }
-
-                    @foreach (var r in reports)
-                    {
-                        var typeClass = r.Type switch {
-                            "Post"    => "badge-danger",
-                            "Comment" => "badge-warning",
-                            "User"    => "badge-info",
-                            "Group"   => "badge-pending",
-                            _         => ""
-                        };
-                        var initials = string.Join("", r.Author.Split(' ').Select(w => w[0]));
-
-                        <tr>
-                            <td><input type="checkbox" /></td>
-                            <td>
-                                <span class="badge @typeClass">@r.Type</span>
-                            </td>
-                            <td style="max-width:260px;">
-                                <div class="truncate" style="font-size:.8375rem;line-height:1.4;max-width:240px;"
-                                     title="@r.Content">
-                                    @r.Content
-                                </div>
-                                @if (!string.IsNullOrEmpty(r.Group))
-                                {
-                                    <div class="text-xs text-muted" style="margin-top:2px;">
-                                        <i class="ri-group-line"></i> @r.Group
-                                    </div>
-                                }
-                            </td>
-                            <td>
-                                <div class="cell-user">
-                                    <div class="cell-user-avatar">@initials</div>
-                                    <div class="cell-user-info">
-                                        <div class="cell-user-name">@r.Author</div>
-                                        <div class="cell-user-email">@r.AuthorEmail</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge @r.ReasonClass">@r.Reason</span>
-                            </td>
-                            <td class="cell-muted">
-                                <div style="display:flex;align-items:center;gap:5px;">
-                                    <span>@r.Reporters</span>
-                                    @if (r.Reporters >= 5)
-                                    {
-                                        <i class="ri-fire-line text-danger" style="font-size:.85rem;" title="High report count"></i>
-                                    }
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge @r.StatusBadge"><span class="badge-dot"></span>@r.Status</span>
-                            </td>
-                            <td class="cell-muted">@r.Date</td>
-                            <td>
-                                <div class="cell-actions" style="justify-content:flex-end;">
-                                    <button class="action-btn primary"
-                                            title="View content"
-                                            data-modal="viewReportModal">
-                                        <i class="ri-eye-line"></i>
-                                    </button>
-                                    <button class="action-btn success"
-                                            title="Approve / resolve"
-                                            data-modal="resolveModal">
-                                        <i class="ri-checkbox-circle-line"></i>
-                                    </button>
-                                    <button class="action-btn danger"
-                                            title="Remove content"
-                                            data-modal="removeModal">
-                                        <i class="ri-delete-bin-line"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
+                <tbody id="reportsBody">
+                    <tr>
+                        <td colspan="9" class="text-center text-muted" style="padding:40px;">
+                            <i class="ri-loader-4-line" style="font-size:1.5rem;"></i>
+                            <br />Loading reports...
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination -->
         <div class="pagination">
-            <span class="pagination-info">Showing 1–8 of 50 reports</span>
-            <div class="pagination-controls">
-                <button class="page-btn" disabled><i class="ri-arrow-left-s-line"></i></button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <span class="page-ellipsis">...</span>
-                <button class="page-btn">7</button>
-                <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
-            </div>
+            <span id="paginationInfo" class="pagination-info">—</span>
+            <div id="paginationControls" class="pagination-controls"></div>
         </div>
     </div>
 </div>
 
 <!-- Bulk Action Bar -->
-<div class="bulk-action-bar hidden"
-     style="position:sticky;bottom:20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:420px;margin:0 auto;">
-    <span class="text-sm fw-600"><span class="bulk-count">0</span> selected</span>
+<div id="bulkActionBar" class="hidden"
+     style="position:sticky;bottom:20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 18px;display:none;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:460px;margin:20px auto 0;">
+    <span class="text-sm fw-600"><span id="bulkCount">0</span> selected</span>
     <div style="flex:1;"></div>
-    <button class="btn btn-success btn-sm"><i class="ri-checkbox-circle-line"></i> Resolve</button>
-    <button class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i> Remove</button>
+    <button class="btn btn-success btn-sm" onclick="Admin.Moderation.bulkResolve()"><i class="ri-checkbox-circle-line"></i> Mark Reviewed</button>
+    <button class="btn btn-danger btn-sm" onclick="Admin.Moderation.bulkDismiss()"><i class="ri-forbid-2-line"></i> Dismiss</button>
 </div>
 
-<!-- View Report Modal -->
-<div class="modal-overlay hidden" id="viewReportModal">
+<!-- ══════════════════════════════════════════════
+     VIEW REPORT MODAL
+     ══════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="viewModal">
     <div class="modal" style="max-width:560px;">
         <div class="modal-header">
-            <h2 class="modal-title">Report Detail — R-001</h2>
+            <h2 class="modal-title">Report Detail <span id="vmReportId" class="text-muted"></span></h2>
             <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
         </div>
         <div class="modal-body">
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <!-- Flagged content preview -->
+            <div>
+                <div class="text-xs text-muted fw-600 mb-4" style="margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-muted);">Flagged Content</div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:.875rem;line-height:1.6;min-height:48px;"
+                     id="vmContent">—</div>
+            </div>
+
+            <!-- Grid of info -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
                 <div>
-                    <div class="text-sm text-muted fw-600 mb-4" style="margin-bottom:6px;">Flagged Content</div>
-                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:.875rem;line-height:1.6;">
-                        "This is absolutely disgusting behavior. They deserve everything that's coming to them. #hate"
-                    </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <div class="text-sm text-muted">Author</div>
-                        <div class="fw-600">Le Van C</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-muted">Reason</div>
-                        <span class="badge badge-danger">Hate speech</span>
-                    </div>
-                    <div>
-                        <div class="text-sm text-muted">Reporters</div>
-                        <div class="fw-600">4 users</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-muted">Reported At</div>
-                        <div class="fw-600">12 min ago</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-muted">Post ID</div>
-                        <div class="fw-600 font-mono text-sm">#89234</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-muted">Status</div>
-                        <span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>
-                    </div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Author</div>
+                    <div class="fw-600" id="vmAuthor">—</div>
                 </div>
                 <div>
-                    <div class="text-sm text-muted fw-600 mb-4" style="margin-bottom:6px;">Report Reasons</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                        <span class="badge badge-danger">Hate speech</span>
-                        <span class="badge badge-warning">Harassment</span>
-                        <span class="badge badge-inactive">Offensive language</span>
-                    </div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reason</div>
+                    <div id="vmReason" class="fw-600">—</div>
                 </div>
+                <div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reporters</div>
+                    <div class="fw-600" id="vmReporter">—</div>
+                    <div class="text-xs text-muted" id="vmReportCount"></div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Date</div>
+                    <div class="fw-600" id="vmDate">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Status</div>
+                    <div id="vmStatus">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05er;">Content ID</div>
+                    <div class="fw-600 font-mono" id="vmContentId">—</div>
+                </div>
+            </div>
+
+            <!-- Details if any -->
+            <div id="vmDetailsWrap" style="margin-top:14px;display:none;">
+                <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reporter's Note</div>
+                <div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px 12px;font-size:.8375rem;color:#854d0e;margin-top:4px;" id="vmDetails"></div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Close</button>
-            <button class="btn btn-success" data-modal-close><i class="ri-checkbox-circle-line"></i> Resolve</button>
-            <button class="btn btn-danger"><i class="ri-delete-bin-line"></i> Remove</button>
+            <button class="btn btn-success" onclick="Admin.Moderation.openReviewFromView()"><i class="ri-checkbox-circle-line"></i> Review</button>
         </div>
     </div>
 </div>
 
-<!-- Resolve Modal -->
-<div class="modal-overlay hidden" id="resolveModal">
+<!-- ══════════════════════════════════════════════
+     REVIEW MODAL
+     ══════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="reviewModal">
     <div class="modal">
         <div class="modal-header">
-            <h2 class="modal-title">Resolve Report</h2>
+            <h2 class="modal-title">Review Report <span id="revReportId" class="text-muted"></span></h2>
             <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
         </div>
-        <div class="modal-body">
-            <div class="alert alert-success">
-                <i class="ri-checkbox-circle-line"></i>
-                Marking this report as resolved. No further action will be taken against the content.
-            </div>
-            <div class="form-group">
-                <label class="form-label">Resolution</label>
-                <select class="form-control form-select">
-                    <option>False report — content is acceptable</option>
-                    <option>Resolved — content already removed</option>
-                    <option>Resolved — user warned</option>
-                    <option>Duplicate report</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Admin Note</label>
-                <textarea class="form-control" rows="3" placeholder="Optional note..."></textarea>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-success"><i class="ri-checkbox-circle-line"></i> Confirm Resolution</button>
-        </div>
-    </div>
-</div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
 
-<!-- Remove Content Modal -->
-<div class="modal-overlay hidden" id="removeModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h2 class="modal-title">Remove Content</h2>
-            <button class="modal-close" data-modal-close><i class="ri-close-line"></i></button>
-        </div>
-        <div class="modal-body">
-            <div class="alert alert-danger">
-                <i class="ri-error-warning-line"></i>
-                This action will permanently remove the content from the platform.
-            </div>
+            <!-- Content preview -->
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:.875rem;line-height:1.5;color:var(--c-text-secondary);"
+                 id="revContentPreview">—</div>
+
+            <!-- Action on content -->
             <div class="form-group">
-                <label class="form-label">Removal Reason <span>*</span></label>
-                <select class="form-control form-select">
-                    <option>Terms of service violation</option>
-                    <option>Hate speech</option>
-                    <option>Harassment or bullying</option>
-                    <option>Spam</option>
-                    <option>Misinformation</option>
-                    <option>Inappropriate content</option>
+                <label class="form-label" for="revAction">Action on Content</label>
+                <select id="revAction" class="form-control form-select">
+                    <option value="0">No action on content</option>
+                    @* Options added dynamically by JS based on content type *@
                 </select>
+                <span class="form-hint">Choose whether to lock or unlock the content, then confirm below.</span>
             </div>
+
+            <!-- Dismiss toggle -->
             <div class="form-group">
-                <label class="form-label">
-                    <input type="checkbox" style="accent-color:var(--c-primary);" />
-                    Also ban the author
+                <label class="form-check">
+                    <input type="checkbox" id="revDismiss" style="accent-color:var(--c-primary);" />
+                    <span>Dismiss this report (no violation found)</span>
                 </label>
             </div>
+
+            <!-- Note -->
             <div class="form-group">
-                <label class="form-label">Admin Note</label>
-                <textarea class="form-control" rows="3" placeholder="Required note for audit trail..."></textarea>
+                <label class="form-label" for="revNote">Admin Note <span style="color:var(--c-text-muted);font-weight:400;">(optional)</span></label>
+                <textarea id="revNote" class="form-control" rows="3"
+                          placeholder="e.g. Content already removed by user, no further action needed..."></textarea>
+            </div>
+
+            <!-- Preview of what will happen -->
+            <div id="revPreview" class="alert alert-info" style="display:none;">
+                <i class="ri-information-line"></i>
+                <span id="revPreviewText"></span>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-danger"><i class="ri-delete-bin-line"></i> Remove Content</button>
+            <button class="btn btn-success" onclick="Admin.Moderation.submitReview()">
+                <i class="ri-checkbox-circle-line"></i> Confirm Review
+            </button>
         </div>
     </div>
 </div>
+
+<form id="reviewFormFromView" style="display:none;"></form>
 
 @section Scripts {
     <script src="~/admin/js/admin.moderation.js" asp-append-version="true"></script>

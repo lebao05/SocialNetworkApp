@@ -162,37 +162,26 @@ namespace Infrastructure.Persistence.Repositories
             // ── Base query ──────────────────────────────────────────────
             // Pull only the columns we project out so EF doesn't materialise
             // the entire AspNetUsers row.
-            var query = _context.Users
-                .AsNoTracking()
-                .Select(u => new
-                {
-                    u.Id,
-                    u.Email,
-                    u.FirstName,
-                    u.LastName,
-                    u.AvatarUrl,
-                    u.IsLocked,
-                    u.CreatedAt,
-                    // Post count computed at the DB — single subquery per page.
-                    PostCount = _context.Posts.Count(p => p.AuthorId == u.Id && p.DeletedAt == null)
-                });
+            var users = _context.Users
+                .AsNoTracking();
 
-            // ── Free-text search via the SearchVector shadow column ──────
-            // The GIN index is created in migration 20260610155828_updb1.cs.
-            // We match against FirstName, LastName, and Email concatenated so
-            // admins can search by any of the three.
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
-                var tsQuery = EF.Functions.WebSearchToTsQuery("english", searchQuery);
-                query = query.Where(u =>
-                    _context.Users
-                        .Where(x => x.Id == u.Id)
-                        .Select(x => EF.Property<NpgsqlTypes.NpgsqlTsVector>(x, "SearchVector"))
-                        .FirstOrDefault()
-                        .Matches(tsQuery)
-                );
+                users = users.Where(user => EF.Property<NpgsqlTsVector>(user, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
             }
-
+            var query = users.Select(u => new
+            {
+                u.Id,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.AvatarUrl,
+                u.IsLocked,
+                u.CreatedAt,
+                PostCount = _context.Posts.Count(p =>
+                    p.AuthorId == u.Id &&
+                    p.DeletedAt == null)
+            });
             // ── Status filter ────────────────────────────────────────────
             if (string.Equals(status, "locked",   StringComparison.OrdinalIgnoreCase)) query = query.Where(u =>  u.IsLocked);
             if (string.Equals(status, "unlocked", StringComparison.OrdinalIgnoreCase)) query = query.Where(u => !u.IsLocked);
@@ -272,6 +261,33 @@ namespace Infrastructure.Persistence.Repositories
                 .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsLocked, isLocked),
                     cancellationToken);
             return affected > 0;
+        }
+
+        public async Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesByIdsAsync(
+            IReadOnlyCollection<Guid> userIds,
+            CancellationToken cancellationToken = default)
+        {
+            // Empty input → empty result, no query.
+            if (userIds is null || userIds.Count == 0)
+                return new Dictionary<Guid, string>();
+
+            var distinctIds = userIds.Distinct().ToList();
+
+            // Single query — pulls only the four columns we need and projects
+            // straight to the dictionary so EF doesn't materialise full users.
+            var rows = await _context.Users
+                .AsNoTracking()
+                .Where(u => distinctIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FirstName, u.LastName })
+                .ToListAsync(cancellationToken);
+
+            var result = new Dictionary<Guid, string>(rows.Count);
+            foreach (var r in rows)
+            {
+                var name = (r.FirstName + " " + r.LastName).Trim();
+                result[r.Id] = string.IsNullOrEmpty(name) ? "User" : name;
+            }
+            return result;
         }
     }
 }

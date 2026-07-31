@@ -20,6 +20,7 @@ namespace Domain.Entities
         public DateTime? HiddenAt { get; private set; }
         public string? HideReason { get; private set; }
         public bool IsAnonymous { get; private set; }
+        public bool IsLocked { get; private set; }
 
         // Navigation
         public User Author { get; private set; } = null!;
@@ -113,27 +114,14 @@ namespace Domain.Entities
             HideReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
         }
 
-        public void UnhideFromGroup()
-        {
-            IsHiddenFromGroup = false;
-            HiddenAt = null;
-            HideReason = null;
-        }
+
+        public void Lock()   => IsLocked = true;
+        public void Unlock() => IsLocked = false;
 
         // Tag management
         public void AddTag(PostTag tag)
         {
             _tags.Add(tag);
-        }
-
-        public void RemoveTag(PostTag tag)
-        {
-            _tags.Remove(tag);
-        }
-
-        public void ClearTags()
-        {
-            _tags.Clear();
         }
 
         // Media management
@@ -142,14 +130,5 @@ namespace Domain.Entities
             _media.Add(media);
         }
 
-        public void RemoveMedia(PostMedia media)
-        {
-            _media.Remove(media);
-        }
-
-        public void ClearMedia()
-        {
-            _media.Clear();
-        }
     }
 }

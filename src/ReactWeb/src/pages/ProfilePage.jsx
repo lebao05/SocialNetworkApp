@@ -158,8 +158,8 @@ export default function ProfilePage() {
   // Localized User details
   const displayUser = {
     name: profileName || (authUser ? `${authUser.firstName || ""} ${authUser.lastName || ""}`.trim() : ""),
-    avatar: personalInfo?.avatarUrl || authUser?.avatarUrl || DEFAULT_AVATAR,
-    coverPhoto: personalInfo?.coverPhotoUrl || authUser?.coverPhotoUrl,
+    avatar: personalInfo?.avatarUrl || DEFAULT_AVATAR,
+    coverPhoto: personalInfo?.coverPhotoUrl || DEFAULT_COVER_PHOTO,
     friendsCount: profileFriends.length 
   };
 
@@ -798,10 +798,7 @@ export default function ProfilePage() {
 
                     {/* Actions inside create card */}
                     <div className="flex items-center justify-around pt-3">
-                      <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
-                        <Video size={18} className="text-red-500" />
-                        <span>Live Video</span>
-                      </button>
+             
                       <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
                         <ImageIcon size={18} className="text-green-500" />
                         <span>Photo/video</span>

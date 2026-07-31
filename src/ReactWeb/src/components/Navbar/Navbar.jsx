@@ -282,9 +282,7 @@ export default function Navbar() {
 
       {/* ── Right Actions ── */}
       <div className="flex items-center gap-2 min-w-[240px] justify-end">
-        <ActionBtn>
-          <Grid3X3 size={18} />
-        </ActionBtn>
+      
 
         {/* Messenger — hidden when on /messenger page */}
         {!isMessengerPage && (
@@ -309,7 +307,7 @@ export default function Navbar() {
 
         <Link to="/profile" className="flex items-center gap-0.5 cursor-pointer group">
           <img
-            src={authUser?.avatarUrl || "https://via.placeholder.com/40"}
+            src={authUser?.avatarUrl || DEFAULT_AVATAR}
             alt={authUser ? `${authUser.firstName} ${authUser.lastName}` : "avatar"}
             className="w-10 h-10 rounded-full object-cover hover:ring-2 hover:ring-fb-blue transition-all"
           />

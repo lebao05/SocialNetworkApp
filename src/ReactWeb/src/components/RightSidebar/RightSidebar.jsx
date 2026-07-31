@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useContacts } from "../../hooks/useContacts";
-import { ads, birthdays } from "../../data/mockData";
 
 const DEFAULT_AVATAR =
   import.meta.env.VITE_DEFAULT_AVATAR ||
@@ -70,36 +69,8 @@ export default function RightSidebar() {
 
   return (
     <aside className="hidden xl:flex fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white z-10 flex-col">
-      {/* Birthday */}
-      {/* {birthdays.length > 0 && (
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-fb-hover cursor-pointer mb-3">
-          <span className="text-2xl">🎂</span>
-          <p className="text-sm text-fb-text">
-            <span className="font-semibold">{birthdays[0].name}</span> has a birthday today.
-          </p>
-        </div>
-      )} */}
 
-      {/* Sponsored */}
-      <p className="text-fb-subtext font-semibold text-sm mb-2">Sponsored</p>
-      {ads.map((ad) => (
-        <div
-          key={ad.id}
-          className="flex gap-3 cursor-pointer hover:bg-fb-hover p-2 rounded-lg mb-2"
-        >
-          <img
-            src={ad.image}
-            className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-            alt={ad.brand}
-          />
-          <div>
-            <p className="text-sm text-fb-text leading-snug">{ad.description}</p>
-            <p className="text-xs text-fb-subtext mt-1">{ad.url}</p>
-          </div>
-        </div>
-      ))}
 
-      <hr className="border-fb-sidebar my-3" />
 
       {/* Contacts header */}
       <div className="flex items-center justify-between mb-2">
@@ -164,18 +135,7 @@ export default function RightSidebar() {
         </form>
       )}
 
-      {/* Meta AI */}
-      <div className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-fb-hover mb-1">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-400 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">M</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[15px] font-medium text-fb-text">Meta AI</span>
-          <svg className="w-4 h-4 text-fb-blue" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-          </svg>
-        </div>
-      </div>
+    
 
       {/* Contact list */}
       {loading && contacts.length === 0 && (

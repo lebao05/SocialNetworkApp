@@ -198,7 +198,6 @@ namespace Application.Posts.Commands.CreatePost
 
             try
             {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Raise PostCreatedDomainEvent for tagged users notification
                 if (taggedUserIds.Count > 0)
@@ -210,9 +209,8 @@ namespace Application.Posts.Commands.CreatePost
                         TaggedUserIds: taggedUserIds,
                         CreatedAt: DateTime.UtcNow
                     ));
-
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {

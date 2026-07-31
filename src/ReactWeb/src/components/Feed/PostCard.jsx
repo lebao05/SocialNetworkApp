@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { GrLike } from "react-icons/gr";
 import { FaRegComment } from "react-icons/fa6";
 import { PiShareFatLight } from "react-icons/pi";
@@ -116,6 +116,49 @@ function getReactionTotal(reactionCounts) {
 }
 
 // ─── Relative time helper ───
+function renderTaggedUsers(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+  const list = tags.filter((t) => t && t.tagName);
+  if (list.length === 0) return null;
+
+  const linkClass = "font-semibold text-[#1877F2] hover:underline cursor-pointer";
+
+  const renderName = (tag, key) => {
+    const inner = <span className={linkClass}>{tag.tagName}</span>;
+    return tag.id != null ? (
+      <Link key={key} to={`/profile/${tag.id}`} className="no-underline">
+        {inner}
+      </Link>
+    ) : (
+      <span key={key}>{inner}</span>
+    );
+  };
+
+  if (list.length <= 2) {
+    return (
+      <span>
+        with {list.map((tag, i) => (
+          <React.Fragment key={tag.id ?? tag.tagName}>
+            {i > 0 && ", "}
+            {renderName(tag, tag.id ?? tag.tagName)}
+          </React.Fragment>
+        ))}
+      </span>
+    );
+  }
+
+  const first = list[0];
+  const second = list[1];
+  const remaining = list.length - 2;
+  return (
+    <span>
+      with {renderName(first, first.id ?? first.tagName)},{" "}
+      {renderName(second, second.id ?? second.tagName)} and{" "}
+      <span className="font-semibold text-[#050505]">{remaining} others</span>
+    </span>
+  );
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return "";
   const now = new Date();
@@ -754,6 +797,13 @@ export default function PostCard({ post }) {
 
       {/* Content */}
       {post.content && <p className="px-4 pb-2 text-[15px] text-gray-800">{post.content}</p>}
+
+      {/* Tagged Users */}
+      {renderTaggedUsers(post.tags) && (
+        <p className="px-4 pb-2 text-[14px] text-gray-500">
+          {renderTaggedUsers(post.tags)}
+        </p>
+      )}
 
       {/* Media Gallery */}
       <MediaGallery media={post.media} />

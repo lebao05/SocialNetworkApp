@@ -1,10 +1,16 @@
+using Application.Admin.Commands.ReviewReport;
 using Application.Admin.Commands.SetGroupLock;
 using Application.Admin.Commands.SetUserLock;
+using Application.Admin.Commands.SetUserRole;
+using Application.Admin.Commands.SetPostLock;
+using Application.Admin.Commands.SetReelLock;
+using Application.Admin.Queries.GetModerationReports;
 using Application.Admin.Queries.SearchAdminGroups;
 using Application.Admin.Queries.SearchAdminUsers;
 using Application.Auth.Commands.AdminLogin;
 using Application.Shared;
 using Domain.Entities;
+using Domain.Shared;
 using Infrastructure.Persistence.Contexts;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
@@ -13,6 +19,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 
@@ -221,6 +228,95 @@ namespace Presentation.Controllers
             });
         }
 
+        /// <summary>
+        /// DEV-ONLY: seeds diversified test data (users, posts, reels, groups,
+        /// comments, reports) for admin dashboard testing.
+        ///
+        /// GET  /admin/seed-test-data    — returns current state
+        /// POST /admin/seed-test-data   — runs the seeder (idempotent)
+        /// DELETE /admin/seed-test-data — clears test data
+        /// </summary>
+        [HttpGet("seed-test-data")]
+        [HttpPost("seed-test-data")]
+        [HttpDelete("seed-test-data")]
+        public async Task<IActionResult> SeedTestData()
+        {
+            var method = HttpContext.Request.Method;
+
+            if (HttpContext.Request.Method == "DELETE")
+            {
+                await TestDataSeeder.ClearTestDataAsync(HttpContext.RequestServices);
+                return Json(new { message = "Test data cleared." });
+            }
+
+            await TestDataSeeder.SeedAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var userCount    = await db.Users.Where(u => u.Email != RoleSeeder.AdminEmail).CountAsync<User>();
+            var postCount    = await db.Posts.CountAsync<Post>();
+            var reelCount    = await db.Reels.CountAsync<Reel>();
+            var groupCount   = await db.Groups.CountAsync<Group>();
+            var reportCount  = await db.Reports.CountAsync<Domain.Entities.Report>();
+            var commentCount = await db.PostComments.CountAsync<PostComment>()
+                             + await db.ReelComments.CountAsync<ReelComment>();
+
+            return Json(new
+            {
+                message     = "Test data seeded.",
+                counts = new
+                {
+                    users    = userCount,
+                    posts    = postCount,
+                    reels    = reelCount,
+                    groups   = groupCount,
+                    reports  = reportCount,
+                    comments = commentCount,
+                }
+            });
+        }
+
+        /// <summary>
+        /// DEV-ONLY: runs raw ALTER TABLE statements to add IsLocked to Posts and
+        /// Reels without requiring a migration. Safe to call multiple times — uses
+        /// IF NOT EXISTS semantics so it won't fail if the column already exists.
+        ///
+        /// GET /admin/ensure-columns
+        /// </summary>
+        [HttpGet("ensure-columns")]
+        public async Task<IActionResult> EnsureColumns()
+        {
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var results = new List<string>();
+
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    @"ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""IsLocked"" BOOLEAN NOT NULL DEFAULT FALSE");
+                results.Add("Posts.IsLocked — OK");
+            }
+            catch (Exception ex)
+            {
+                results.Add($"Posts.IsLocked — ERROR: {ex.Message}");
+            }
+
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    @"ALTER TABLE ""Reels"" ADD COLUMN IF NOT EXISTS ""IsLocked"" BOOLEAN NOT NULL DEFAULT FALSE");
+                results.Add("Reels.IsLocked — OK");
+            }
+            catch (Exception ex)
+            {
+                results.Add($"Reels.IsLocked — ERROR: {ex.Message}");
+            }
+
+            return Json(new { results });
+        }
+
         [HttpPost("logout")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -276,6 +372,46 @@ namespace Presentation.Controllers
                 : NotFound(new { error = result.Error.Message });
         }
 
+        /// <summary>POST /admin/users/{id}/promote — grant the ADMIN role.</summary>
+        [HttpPost("users/{id:guid}/promote")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> PromoteUser(Guid id, CancellationToken ct = default)
+        {
+            var actingId = CurrentUserId();
+            var result = await _sender.Send(new SetUserRoleCommand(id, actingId, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : ToHttpResult(result.Error);
+        }
+
+        /// <summary>POST /admin/users/{id}/demote — strip the ADMIN role.</summary>
+        [HttpPost("users/{id:guid}/demote")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> DemoteUser(Guid id, CancellationToken ct = default)
+        {
+            var actingId = CurrentUserId();
+            var result = await _sender.Send(new SetUserRoleCommand(id, actingId, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : ToHttpResult(result.Error);
+        }
+
+        private Guid CurrentUserId()
+        {
+            var raw = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(raw, out var g) ? g : Guid.Empty;
+        }
+
+        private IActionResult ToHttpResult(Error error)
+        {
+            // Self-role-change is a client error (don't 500), everything else
+            // (UserNotFound) is 404. Keep the original message so the JS layer
+            // can surface it.
+            if (error.Code == "Admin.SelfRoleChange")
+                return BadRequest(new { error = error.Message });
+            return NotFound(new { error = error.Message });
+        }
+
         /// <summary>GET /admin/groups/list?q=&privacy=&status=&page=&pageSize=</summary>
         [HttpGet("groups/list")]
         [Authorize(Roles = AdminRole)]
@@ -317,6 +453,113 @@ namespace Presentation.Controllers
                 : NotFound(new { error = result.Error.Message });
         }
 
+        // ── Moderation endpoints ────────────────────────────────────────────────
+
+        /// <summary>GET /admin/moderation/reports?type=&status=&from=&to=&page=&pageSize=</summary>
+        [HttpGet("moderation/reports")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> ModerationReports(
+            [FromQuery] string? type,
+            [FromQuery] string? status,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default)
+        {
+            Domain.Enums.ReportType? reportType = null;
+            Domain.Enums.ReportStatus? reportStatus = null;
+
+            if (!string.IsNullOrEmpty(type) && Enum.TryParse<Domain.Enums.ReportType>(type, ignoreCase: true, out var rt))
+                reportType = rt;
+
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<Domain.Enums.ReportStatus>(status, ignoreCase: true, out var rs))
+                reportStatus = rs;
+
+            var result = await _sender.Send(
+                new GetModerationReportsQuery(reportType, reportStatus, from, to, page, pageSize), ct);
+
+            if (result.IsFailure)
+                return StatusCode(500, new { error = result.Error.Message });
+
+            var payload = result.Value;
+            return Ok(new
+            {
+                items      = payload.Items,
+                page       = payload.Page,
+                pageSize   = payload.PageSize,
+                totalCount = payload.TotalCount,
+                totalPages = (int)Math.Ceiling((double)payload.TotalCount / payload.PageSize),
+                hasNext    = payload.Page * payload.PageSize < payload.TotalCount,
+                hasPrev    = payload.Page > 1,
+            });
+        }
+
+        /// <summary>POST /admin/moderation/reports/{id}/review</summary>
+        [HttpPost("moderation/reports/{id:long}/review")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> ReviewReport(
+            long id,
+            [FromBody] ReviewReportRequest body,
+            CancellationToken ct = default)
+        {
+            var reviewerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
+                is { Value: var uid } && Guid.TryParse(uid, out var rid)
+                ? rid
+                : Guid.Empty;
+
+            var result = await _sender.Send(new ReviewReportCommand(
+                id, reviewerId, body.Action, body.IsDismissed, body.ReviewNote), ct);
+
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/posts/{id}/lock</summary>
+        [HttpPost("moderation/posts/{id:long}/lock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> LockPost(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetPostLockCommand(id, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/posts/{id}/unlock</summary>
+        [HttpPost("moderation/posts/{id:long}/unlock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UnlockPost(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetPostLockCommand(id, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/reels/{id}/lock</summary>
+        [HttpPost("moderation/reels/{id:long}/lock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> LockReel(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetReelLockCommand(id, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/reels/{id}/unlock</summary>
+        [HttpPost("moderation/reels/{id:long}/unlock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UnlockReel(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetReelLockCommand(id, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
         // PagedList<T> → JSON. The handler stays typed; the controller is the
         // only place that needs to know what shape JS expects.
         private static object ToListPayload<T>(PagedList<T> list) => new
@@ -338,4 +581,11 @@ namespace Presentation.Controllers
                 || HttpContext.Session.GetString("AdminName") != null;
         }
     }
+
+    // Simple body DTO for the review endpoint so ASP.NET can bind [FromBody].
+    public record ReviewReportRequest(
+        ReportReviewAction Action,
+        bool IsDismissed,
+        string? ReviewNote = null
+    );
 }

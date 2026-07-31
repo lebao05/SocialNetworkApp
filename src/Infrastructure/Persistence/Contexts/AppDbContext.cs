@@ -50,6 +50,7 @@ namespace Infrastructure.Persistence.Contexts
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<School> Schools { get; set; }
         public DbSet<Following> Followings { get; set; }
+        public DbSet<Report> Reports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -67,6 +68,7 @@ namespace Infrastructure.Persistence.Contexts
             builder.ApplyConfiguration(new GroupJoinRequestConfiguration());
             builder.ApplyConfiguration(new GroupRuleConfiguration());
             builder.ApplyConfiguration(new ReportedGroupContentConfiguration());
+            builder.ApplyConfiguration(new ReportConfiguration());
             builder.ApplyConfiguration(new PostConfiguration());
             builder.ApplyConfiguration(new ReelConfiguration());
             builder.ApplyConfiguration(new StorySeenConfiguration());

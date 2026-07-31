@@ -43,10 +43,10 @@ export default function CreatePost({
 
           {/* Actions inside create card */}
           <div className="flex items-center justify-around pt-3">
-            <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
+            {/* <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
               <Video size={18} className="text-red-500" />
               <span>Live Video</span>
-            </button>
+            </button> */}
             <button onClick={() => setIsCreateModalOpen(true)} className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-lg transition-all font-semibold text-sm ${theme.textSub} ${theme.tabHover}`}>
               <ImageIcon size={18} className="text-green-500" />
               <span>Photo/video</span>

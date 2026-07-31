@@ -13,10 +13,12 @@ namespace Application.Posts.Queries.GetSavedPosts
     internal sealed class GetSavedPostsQueryHandler : IQueryHandler<GetSavedPostsQuery, PagedList<SavedPostDto>>
     {
         private readonly IPostRepository _postRepository;
+        private readonly IUserRepository _userRepository;
 
-        public GetSavedPostsQueryHandler(IPostRepository postRepository)
+        public GetSavedPostsQueryHandler(IPostRepository postRepository, IUserRepository userRepository)
         {
             _postRepository = postRepository;
+            _userRepository = userRepository;
         }
 
         public async Task<Result<PagedList<SavedPostDto>>> Handle(GetSavedPostsQuery request, CancellationToken cancellationToken)
@@ -27,7 +29,10 @@ namespace Application.Posts.Queries.GetSavedPosts
             var savedPosts = await _postRepository.GetSavedPostsPagedAsync(
                 request.UserId, page, pageSize, cancellationToken);
 
-            var items = savedPosts.Items.Select(Map).ToList();
+            // One batched lookup for every tagged user across the page.
+            var nameMap = await ResolveTaggedUserNamesAsync(savedPosts.Items, cancellationToken);
+
+            var items = savedPosts.Items.Select(sp => Map(sp, nameMap)).ToList();
 
             return Result.Success(new PagedList<SavedPostDto>(
                 items,
@@ -36,15 +41,15 @@ namespace Application.Posts.Queries.GetSavedPosts
                 savedPosts.TotalCount));
         }
 
-        private static SavedPostDto Map(SavedPost savedPost)
+        private static SavedPostDto Map(SavedPost savedPost, IReadOnlyDictionary<Guid, string> nameMap)
         {
             return new SavedPostDto(
                 savedPost.Id,
                 savedPost.CreatedAt,
-                MapPost(savedPost.Post));
+                MapPost(savedPost.Post, nameMap));
         }
 
-        private static PostDto MapPost(Post post)
+        private static PostDto MapPost(Post post, IReadOnlyDictionary<Guid, string> nameMap)
         {
             var authorName = post.Author != null
                 ? $"{post.Author.FirstName} {post.Author.LastName}"
@@ -78,7 +83,7 @@ namespace Application.Posts.Queries.GetSavedPosts
                 post.Comments.Count,
                 MapGroup(post.Group),
                 sharePostDto,
-                post.Tags.Select(t => new TagDto(t.Id, t.TagName)).ToList(),
+                post.Tags.Select(t => MapTag(t, nameMap)).ToList(),
                 null,
                 post.IsHiddenFromGroup,
                 post.HiddenAt,
@@ -149,6 +154,27 @@ namespace Application.Posts.Queries.GetSavedPosts
                     group.Description,
                     group.PrivacyType,
                     group.CoverPhotoUrl);
+        }
+
+        private static TagDto MapTag(PostTag t, IReadOnlyDictionary<Guid, string> nameMap)
+        {
+            return TagResolver.MapTags(new[] { t }, nameMap).First();
+        }
+
+        private async Task<IReadOnlyDictionary<Guid, string>> ResolveTaggedUserNamesAsync(
+            IEnumerable<SavedPost> savedPosts,
+            CancellationToken cancellationToken)
+        {
+            var ids = new List<Guid>();
+            foreach (var sp in savedPosts)
+            {
+                foreach (var tag in sp.Post.Tags)
+                {
+                    if (Guid.TryParse(tag.TagName, out var userId))
+                        ids.Add(userId);
+                }
+            }
+            return await _userRepository.GetDisplayNamesByIdsAsync(ids, cancellationToken);
         }
     }
 }

@@ -21,6 +21,7 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
     setIsLoading(true);
     try {
       const data = await getFeedPostsApi(p, pageSize, isRefresh);
+      console.log("data", data);
       const { items } = normalizeResponse(data);
 
       if (p === 1) {

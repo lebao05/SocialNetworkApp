@@ -254,14 +254,8 @@ namespace Infrastructure.Persistence.Repositories
             // Groups.SearchVector was added in migration 20260610160827.
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
-                var tsQuery = EF.Functions.WebSearchToTsQuery("english", searchQuery);
-                query = query.Where(g =>
-                    _context.Groups
-                        .Where(x => x.Id == g.Id)
-                        .Select(x => EF.Property<NpgsqlTypes.NpgsqlTsVector>(x, "SearchVector"))
-                        .FirstOrDefault()
-                        .Matches(tsQuery)
-                );
+                query = query.Where(group => EF.Property<NpgsqlTsVector>(group, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
+
             }
 
             // ── Privacy filter ──────────────────────────────────────────

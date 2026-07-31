@@ -60,7 +60,12 @@ namespace Infrastructure.Persistence.Repositories
             var projectedQuery = ApplySelect(query, viewerId);
 
             // 4. Return the calculated detail object or null if unauthorized/not found
-            return await projectedQuery.FirstOrDefaultAsync(cancellationToken);
+            var dto = await projectedQuery.FirstOrDefaultAsync(cancellationToken);
+            if (dto is not null)
+            {
+                await HydrateTagsAsync(new List<PostDto> { dto }, cancellationToken);
+            }
+            return dto;
         }
 
 
@@ -460,7 +465,71 @@ namespace Infrastructure.Persistence.Repositories
             var projectedQuery = ApplySelect(query, userId);
 
             // 5. Build and return the specialized PagedList utilizing the projected query
-            return await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
+            var result = await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
+
+            // 6. Tag projection is emitted as Array.Empty in EF (Guid.TryParse isn't
+            //    translatable). Hydrate from PostTag rows in a single round-trip.
+            await HydrateTagsAsync(result.Items, cancellationToken);
+            return result;
+        }
+
+        /// <summary>
+        /// Loads <see cref="Domain.Entities.PostTag"/> rows for every supplied
+        /// post (top-level and any nested SharePost) and rebuilds the
+        /// <see cref="PostDto.Tags"/> / SharePost.Tags collections in memory.
+        /// The EF projection can't run Guid.TryParse, so we set Tags to
+        /// Array.Empty and patch it back here with one batched query.
+        /// </summary>
+        private async Task HydrateTagsAsync(List<PostDto> posts, CancellationToken cancellationToken)
+        {
+            if (posts.Count == 0) return;
+
+            var topIds = new HashSet<long>();
+            var shareIds = new HashSet<long>();
+            foreach (var p in posts)
+            {
+                if (p.Id != 0) topIds.Add(p.Id);
+                if (p.SharePost is not null && p.SharePost.Id != 0) shareIds.Add(p.SharePost.Id);
+            }
+            var allIds = new List<long>(topIds.Count + shareIds.Count);
+            allIds.AddRange(topIds);
+            allIds.AddRange(shareIds);
+            if (allIds.Count == 0) return;
+
+            var rows = await _context.PostTags
+                .AsNoTracking()
+                .Where(t => allIds.Contains(t.PostId))
+                .Select(t => new { t.PostId, t.TagName })
+                .ToListAsync(cancellationToken);
+
+            var byPostId = rows
+                .GroupBy(r => r.PostId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(x => x.TagName).ToList());
+
+            for (var i = 0; i < posts.Count; i++)
+            {
+                var post = posts[i];
+                var topTags = topIds.Contains(post.Id) && byPostId.TryGetValue(post.Id, out var topNames)
+                    ? (IReadOnlyCollection<TagDto>)topNames.Select(TagDto.FromTagName).ToList()
+                    : Array.Empty<TagDto>();
+
+                if (post.SharePost is not null && shareIds.Contains(post.SharePost.Id)
+                    && byPostId.TryGetValue(post.SharePost.Id, out var shareNames))
+                {
+                    posts[i] = post with
+                    {
+                        Tags = topTags,
+                        SharePost = post.SharePost with
+                        {
+                            Tags = shareNames.Select(TagDto.FromTagName).ToList()
+                        }
+                    };
+                }
+                else
+                {
+                    posts[i] = post with { Tags = topTags };
+                }
+            }
         }
 
 
@@ -608,9 +677,7 @@ namespace Infrastructure.Persistence.Repositories
                     post.SharePost.IsAnonymous
                 ),
 
-            post.Tags
-                .Select(t => new TagDto(t.Id, t.TagName))
-                .ToList(),
+                    Array.Empty<TagDto>(), // hydrated after materialization
 
             viewerId == null
                 ? null
@@ -665,6 +732,17 @@ namespace Infrastructure.Persistence.Repositories
             .GroupBy(c => c.CreatedAt.Date)
             .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> SetLockedAsync(
+        long postId,
+        bool isLocked,
+        CancellationToken cancellationToken = default)
+    {
+        var affected = await _context.Posts
+            .Where(p => p.Id == postId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsLocked, isLocked), cancellationToken);
+        return affected > 0;
     }
 }
 }

@@ -57,7 +57,13 @@ internal sealed class FriendRequestCreatedDomainEventHandler
 
         notificationEntity.SetFriendRequestId(friendRequest.Id);
 
-        await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        var saved = await _notificationRepository.AddAsync(notificationEntity, cancellationToken);
+        if (saved is null)
+        {
+            _logger.LogError("Failed to persist notification for friend request {FriendRequestId}", friendRequest.Id);
+            return;
+        }
+        notificationEntity = saved;
 
         var dto = new NotificationDto(
             Id: notificationEntity.Id,

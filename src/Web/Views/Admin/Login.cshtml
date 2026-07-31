@@ -11,14 +11,30 @@
         display: block;
         text-align: center;
         margin-bottom: 6px;
+        width: 100%;
+    }
+    .login-form .form-group {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .login-form .search-input-wrap {
+        position: relative;
+        width: 100%;
+        display: block;
     }
     .login-form .search-input-wrap i {
-        display: none;
+        display: none !important;
     }
-    .login-form .form-control {
+    .login-form .search-input-wrap .form-control {
         text-align: center;
         padding-left: 12px !important;
         padding-right: 12px !important;
+        width: 100%;
+        display: block;
+    }
+    .login-form .form-control::placeholder {
+        text-align: center;
     }
 </style>
 

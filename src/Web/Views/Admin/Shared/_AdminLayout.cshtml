@@ -60,20 +60,22 @@
             </a>
         </nav>
 
-        <div class="sidebar-section-label">Analytics</div>
+        @* <div class="sidebar-section-label">Analytics</div>
         <nav class="sidebar-nav">
             <a class="nav-item @(currentPage == "AuditLogs" ? "active" : "")"
                href="@Url.Action("AuditLogs", "Admin")">
                 <i class="ri-file-list-3-line"></i>
                 <span>Audit Logs</span>
             </a>
-        </nav>
+        </nav> *@
 
         <div class="sidebar-footer">
-            <a class="nav-item" href="@Url.Action("Login", "Admin")">
-                <i class="ri-logout-box-r-line"></i>
-                <span>Logout</span>
-            </a>
+            <form asp-action="Logout" asp-controller="Admin" asp-area="" method="post">
+                <button type="submit" class="nav-item nav-btn">
+                    <i class="ri-logout-box-r-line"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
         </div>
     </aside>
 
