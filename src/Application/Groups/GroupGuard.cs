@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Shared;
 
 namespace Application.Groups;
@@ -45,5 +46,96 @@ public static class GroupGuard
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Returns <c>null</c> when the viewer is allowed to see group content
+    /// (members, posts, media), otherwise an <see cref="Error"/>.
+    ///
+    /// Rule:
+    ///   • Owner / Admin / Moderator / Member       → always allowed.
+    ///   • Public group                            → allowed for everyone.
+    ///   • Private group                           → only members.
+    ///
+    /// Pass <paramref name="viewerUserId"/> as <c>null</c> when the request is
+    /// anonymous (rare; the public API in this project is JWT-protected).
+    /// </summary>
+    public static Error? EnsureCanViewContent(Group? group, Guid? viewerUserId)
+    {
+        if (group is null)
+        {
+            return new Error(
+                "Group.NotFound",
+                "Group was not found.");
+        }
+
+        if (group.PrivacyType != GroupPrivacyType.Private)
+        {
+            return null;
+        }
+
+        if (viewerUserId is null)
+        {
+            return new Error(
+                "Group.AccessDenied",
+                "This group is private. You must be a member to view its content.");
+        }
+
+        if (group.OwnerUserId == viewerUserId.Value)
+        {
+            return null;
+        }
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == viewerUserId.Value);
+        if (member is null)
+        {
+            return new Error(
+                "Group.AccessDenied",
+                "This group is private. You must be a member to view its content.");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Async variant that does not require <paramref name="group"/> to have its
+    /// <see cref="Group.Members"/> navigation collection loaded. Membership is
+    /// resolved through <paramref name="isUserInGroupAsync"/>, which is
+    /// cheaper and index-friendly when the caller already has a bare group
+    /// entity.
+    /// </summary>
+    public static async Task<Error?> EnsureCanViewContentAsync(
+        Group? group,
+        Guid? viewerUserId,
+        Func<Guid, long, CancellationToken, Task<bool>> isUserInGroupAsync,
+        CancellationToken cancellationToken)
+    {
+        if (group is null)
+        {
+            return new Error(
+                "Group.NotFound",
+                "Group was not found.");
+        }
+
+        if (group.PrivacyType != GroupPrivacyType.Private)
+        {
+            return null;
+        }
+
+        if (viewerUserId is null || group.OwnerUserId == viewerUserId.Value)
+        {
+            return viewerUserId is null
+                ? new Error(
+                    "Group.AccessDenied",
+                    "This group is private. You must be a member to view its content.")
+                : null;
+        }
+
+        var isMember = await isUserInGroupAsync(viewerUserId.Value, group.Id, cancellationToken);
+        return isMember
+            ? null
+            : new Error(
+                "Group.AccessDenied",
+                "This group is private. You must be a member to view its content.");
     }
 }

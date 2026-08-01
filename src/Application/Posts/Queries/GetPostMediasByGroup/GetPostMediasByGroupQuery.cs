@@ -8,5 +8,6 @@ namespace Application.Posts.Queries.GetPostMediasByGroup
         long GroupId,
         int Page = 1,
         int PageSize = 20,
-        string Type = "") : IQuery<PagedList<PostMediaItemDto>>;
+        string Type = "",
+        Guid? UserId = null) : IQuery<PagedList<PostMediaItemDto>>;
 }

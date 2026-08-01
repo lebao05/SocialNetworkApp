@@ -41,7 +41,7 @@ function FriendAvatars({ friends = [] }) {
   );
 }
 
-function SuggestedGroupCard({ group, onJoin }) {
+function SuggestedGroupCard({ group }) {
   const friendCount = group.friendCount ?? 0;
   const friendsLabel = friendCount > 0
     ? `${friendCount} friend${friendCount !== 1 ? "s" : ""} in this group`
@@ -50,11 +50,13 @@ function SuggestedGroupCard({ group, onJoin }) {
   return (
     <article className="overflow-hidden rounded-lg border border-[#dddfe2] bg-white shadow-sm">
       <div className="relative">
-        <img
-          src={group.coverPhotoUrl || `https://picsum.photos/seed/group${group.id}/420/220`}
-          alt={group.name}
-          className="aspect-[1.9/1] w-full object-cover"
-        />
+        <Link to={`/groups/${group.id}`} className="block">
+          <img
+            src={group.coverPhotoUrl || `https://picsum.photos/seed/group${group.id}/420/220`}
+            alt={group.name}
+            className="aspect-[1.9/1] w-full object-cover"
+          />
+        </Link>
         <button
           type="button"
           aria-label="Dismiss suggestion"
@@ -65,7 +67,9 @@ function SuggestedGroupCard({ group, onJoin }) {
       </div>
       <div className="p-3">
         <h2 className="line-clamp-2 min-h-[40px] text-[15px] font-bold leading-snug text-[#050505]">
-          {group.name}
+          <Link to={`/groups/${group.id}`} className="hover:underline">
+            {group.name}
+          </Link>
         </h2>
         <p className="mt-1 text-[13px] text-[#65676b]">
           {group.memberCount.toLocaleString()} member{group.memberCount !== 1 ? "s" : ""}
@@ -77,9 +81,9 @@ function SuggestedGroupCard({ group, onJoin }) {
         </div>
         <Link
           to={`/groups/${group.id}`}
-          className="mt-3 flex h-9 w-full items-center justify-center rounded-md bg-[#e4e6eb] text-[14px] font-semibold hover:bg-[#d8dadf]"
+          className="mt-3 flex h-9 w-full items-center justify-center rounded-md bg-[#e7f3ff] text-[14px] font-semibold text-[#0866ff] hover:bg-[#dbeeff]"
         >
-          Join group
+          View
         </Link>
       </div>
     </article>
@@ -169,27 +173,16 @@ export default function GroupsPage() {
     debounceTimer.current = setTimeout(() => setDebouncedTerm(value), 400);
   };
 
-  const { groups: discoverGroups, loading: discoverLoading, error: discoverError, totalCount: discoverTotal, fetch: fetchDiscover } =
+  const { groups: discoverGroups, loading: discoverLoading, error: discoverError, totalCount: discoverTotal } =
     useSearchGroups({ page, pageSize: 12, searchTerm: debouncedTerm });
 
-  const { groups: yourGroups, loading: yourLoading, error: yourError, totalCount: yourTotal, fetch: fetchYour } =
+  const { groups: yourGroups, loading: yourLoading, error: yourError, totalCount: yourTotal } =
     useYourGroups({ page, pageSize: 12, searchTerm: debouncedTerm });
 
   const groups = isDiscover ? discoverGroups : yourGroups;
   const loading = isDiscover ? discoverLoading : yourLoading;
   const error = isDiscover ? discoverError : yourError;
   const totalCount = isDiscover ? discoverTotal : yourTotal;
-
-  const handleJoin = async (groupId) => {
-    try {
-      const { joinGroupApi } = await import("../apis/groupApi");
-      await joinGroupApi(groupId);
-      fetchDiscover();
-      fetchYour();
-    } catch (err) {
-      console.error("Failed to join group:", err);
-    }
-  };
 
   const emptyDiscover = debouncedTerm
     ? `No groups match "${debouncedTerm}"`
@@ -272,7 +265,7 @@ export default function GroupsPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {groups.map((group) =>
                 isDiscover ? (
-                  <SuggestedGroupCard key={group.id} group={group} onJoin={handleJoin} />
+                  <SuggestedGroupCard key={group.id} group={group} />
                 ) : (
                   <GroupCard key={group.id} group={group} />
                 )

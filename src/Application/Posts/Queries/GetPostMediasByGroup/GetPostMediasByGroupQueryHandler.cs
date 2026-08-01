@@ -1,6 +1,7 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Posts;
+using Application.Groups;
 using Application.Shared;
 using Domain.Entities;
 using Domain.Shared;
@@ -10,14 +11,30 @@ namespace Application.Posts.Queries.GetPostMediasByGroup
     internal sealed class GetPostMediasByGroupQueryHandler : IQueryHandler<GetPostMediasByGroupQuery, PagedList<PostMediaItemDto>>
     {
         private readonly IPostRepository _postRepository;
+        private readonly IGroupRepository _groupRepository;
 
-        public GetPostMediasByGroupQueryHandler(IPostRepository postRepository)
+        public GetPostMediasByGroupQueryHandler(
+            IPostRepository postRepository,
+            IGroupRepository groupRepository)
         {
             _postRepository = postRepository;
+            _groupRepository = groupRepository;
         }
 
         public async Task<Result<PagedList<PostMediaItemDto>>> Handle(GetPostMediasByGroupQuery request, CancellationToken cancellationToken)
         {
+            var group = await _groupRepository.GetByIdAsync(request.GroupId, cancellationToken);
+
+            var accessError = await GroupGuard.EnsureCanViewContentAsync(
+                group,
+                request.UserId,
+                (uid, gid, ct) => _groupRepository.IsUserInGroupAsync(uid, gid, ct),
+                cancellationToken);
+            if (accessError is not null)
+            {
+                return Result.Failure<PagedList<PostMediaItemDto>>(accessError);
+            }
+
             var page = Math.Max(1, request.Page);
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
             var mediaType = NormalizeMediaType(request.Type);

@@ -44,16 +44,21 @@ export function NotificationProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [unseenCount, setUnseenCount] = useState(0);
+  // "all" => no isSeen filter passed to API; "unseen" => isSeen=false.
+  // The dropdown switches between these two by calling setFilter().
+  const [filter, setFilter] = useState("all");
 
   const totalLoadedRef = useRef(0);
   const connectionRef = useRef(null);
 
     const loadPage = useCallback(
-      async (p = 1, append = false) => {
+      async (p = 1, append = false, currentFilter = filter) => {
         if (!user) return;
         setLoading(true);
         try {
-          const data = await getNotificationsApi(p, DEFAULT_PAGE_SIZE);
+          const isSeenParam =
+            currentFilter === "unseen" ? false : currentFilter === "seen" ? true : null;
+          const data = await getNotificationsApi(p, DEFAULT_PAGE_SIZE, isSeenParam);
           const { items, totalCount } = normalizeResponse(data);
 
           // API responses can occasionally contain the same notification id
@@ -100,12 +105,12 @@ export function NotificationProvider({ children }) {
       totalLoadedRef.current = 0;
       return;
     }
-    loadPage(1);
-  }, [user, loadPage]);
+    loadPage(1, false, filter);
+  }, [user, loadPage, filter]);
 
   const loadMore = () => {
     if (!hasMore || loading) return;
-    loadPage(page + 1, true);
+    loadPage(page + 1, true, filter);
   };
 
   const markAsSeen = useCallback(async (notificationId) => {
@@ -209,10 +214,12 @@ export function NotificationProvider({ children }) {
     hasMore,
     page,
     unseenCount,
+    filter,
+    setFilter,
     loadMore,
     markAsSeen,
     markAllAsSeen,
-    refresh: () => loadPage(1),
+    refresh: () => loadPage(1, false, filter),
   };
 
   return (

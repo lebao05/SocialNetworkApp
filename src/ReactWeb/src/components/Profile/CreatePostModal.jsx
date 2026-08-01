@@ -47,10 +47,18 @@ const FEELINGS_LIST = [
   { emoji: "😔", label: "lonely" }
 ];
 
+function pickAllowedMediaFiles(files) {
+  return files.filter((f) => {
+    if (!f || !f.type) return false;
+    return f.type.startsWith("image/") || f.type.startsWith("video/");
+  });
+}
+
 export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: DEFAULT_AVATAR }, onSubmit, groupId = null, allowAnonymousPost = false }) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
   const [newPostFiles, setNewPostFiles] = useState([]);
+  const [attachmentWarning, setAttachmentWarning] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Visibility state: 0 = Public, 1 = Friends, 2 = Only me
@@ -89,6 +97,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
     setNewPostContent("");
     setNewPostImage("");
     setNewPostFiles([]);
+    setAttachmentWarning("");
     setSelectedFeeling(null);
     setSelectedLocation(null);
     setTaggedFriends([]);
@@ -298,7 +307,10 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                       )}
                       <button
                         type="button"
-                        onClick={() => setNewPostFiles(prev => prev.filter((_, idx) => idx !== i))}
+                        onClick={() => {
+                          setNewPostFiles(prev => prev.filter((_, idx) => idx !== i));
+                          setAttachmentWarning("");
+                        }}
                         className="absolute top-1 right-1 bg-gray-900/70 text-white rounded-full p-1 hover:bg-gray-900 cursor-pointer"
                       >
                         <X size={12} />
@@ -306,6 +318,12 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                     </div>
                   ))}
                 </div>
+                {attachmentWarning && (
+                  <div className="mt-2 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+                    <span className="font-semibold shrink-0">!</span>
+                    <span>{attachmentWarning}</span>
+                  </div>
+                )}
               </div>
 
               {/* URL preview rendering widget */}
@@ -336,7 +354,16 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                       className="hidden"
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        setNewPostFiles(prev => [...prev, ...files]);
+                        const allowed = pickAllowedMediaFiles(files);
+                        const rejected = files.length - allowed.length;
+                        if (rejected > 0) {
+                          setAttachmentWarning(`Only images and videos are allowed. ${rejected} file${rejected !== 1 ? "s" : ""} skipped.`);
+                        } else {
+                          setAttachmentWarning("");
+                        }
+                        if (allowed.length) setNewPostFiles(prev => [...prev, ...allowed]);
+                        // Always reset so the same file can be re-selected later.
+                        e.target.value = "";
                       }}
                     />
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -621,7 +648,15 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                     className="hidden"
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []);
-                      setNewPostFiles(prev => [...prev, ...files]);
+                      const allowed = pickAllowedMediaFiles(files);
+                      const rejected = files.length - allowed.length;
+                      if (rejected > 0) {
+                        setAttachmentWarning(`Only images and videos are allowed. ${rejected} file${rejected !== 1 ? "s" : ""} skipped.`);
+                      } else {
+                        setAttachmentWarning("");
+                      }
+                      if (allowed.length) setNewPostFiles(prev => [...prev, ...allowed]);
+                      e.target.value = "";
                       setCreatePostModalView("main");
                     }}
                   />

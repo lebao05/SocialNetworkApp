@@ -1,8 +1,10 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
+using Application.Groups;
 using Application.Shared;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Shared;
 
 namespace Application.Groups.Queries.GetGroupMembers
@@ -19,11 +21,15 @@ namespace Application.Groups.Queries.GetGroupMembers
         public async Task<Result<PagedList<GroupMemberDto>>> Handle(GetGroupMembersQuery request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdAsync(request.GroupId, cancellationToken);
-            if (group is null)
+
+            var accessError = await GroupGuard.EnsureCanViewContentAsync(
+                group,
+                request.ViewerUserId,
+                (uid, gid, ct) => _groupRepository.IsUserInGroupAsync(uid, gid, ct),
+                cancellationToken);
+            if (accessError is not null)
             {
-                return Result.Failure<PagedList<GroupMemberDto>>(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure<PagedList<GroupMemberDto>>(accessError);
             }
 
             var page = Math.Max(1, request.Page);

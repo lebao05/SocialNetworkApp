@@ -155,7 +155,10 @@ namespace Presentation.Controllers
             [FromQuery] string type = "",
             CancellationToken cancellationToken = default)
         {
-            var query = new GetPostMediasByGroupQuery(groupId, page, pageSize, type);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid? currentUserId = Guid.TryParse(userIdClaim, out var parsedUserId) ? parsedUserId : null;
+
+            var query = new GetPostMediasByGroupQuery(groupId, page, pageSize, type, currentUserId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

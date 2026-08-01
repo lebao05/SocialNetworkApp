@@ -1,5 +1,7 @@
 using Application.Groups.Commands.AssignGroupRole;
+using Application.Groups.Commands.CancelJoinRequest;
 using Application.Groups.Commands.CreateGroup;
+using Application.Groups.Commands.DeleteGroup;
 using Application.Groups.Commands.ExecuteReportedContent;
 using Application.Groups.Commands.ReportGroupPost;
 using Application.Groups.Commands.UploadGroupCoverPhoto;
@@ -18,6 +20,8 @@ using Application.Groups.Queries.GetGroupMembers;
 using Application.Groups.Queries.GetGroupRules;
 using Application.Groups.Queries.GetReportedContents;
 using Application.Groups.Queries.GetGroups;
+using Application.Groups.Queries.IsHavingPendingRequest;
+using Application.Groups.Queries.IsMemberOfGroup;
 using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -169,6 +173,23 @@ namespace Presentation.Controllers
             return result.IsSuccess ? Ok(new { Url = result.Value }) : HandleFailure(result);
         }
 
+        [HttpDelete("{groupId:long}")]
+        public async Task<IActionResult> DeleteGroup(
+            long groupId,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new DeleteGroupCommand(userId, groupId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess ? Ok() : HandleFailure(result);
+        }
+
         [HttpPost("{groupId:long}/join")]
         public async Task<IActionResult> JoinGroup(
             long groupId,
@@ -198,6 +219,57 @@ namespace Presentation.Controllers
             }
 
             var command = new LeaveGroupCommand(userId, groupId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.IsSuccess ? Ok() : HandleFailure(result);
+        }
+
+        [HttpGet("{groupId:long}/is-member")]
+        public async Task<IActionResult> IsMemberOfGroup(
+            long groupId,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new IsMemberOfGroupQuery(groupId, userId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpGet("{groupId:long}/has-pending-request")]
+        public async Task<IActionResult> IsHavingPendingRequest(
+            long groupId,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new IsHavingPendingRequestQuery(groupId, userId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
+        }
+
+        [HttpDelete("{groupId:long}/join-requests")]
+        public async Task<IActionResult> CancelJoinRequest(
+            long groupId,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var command = new CancelJoinRequestCommand(userId, groupId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.IsSuccess ? Ok() : HandleFailure(result);
@@ -369,7 +441,10 @@ namespace Presentation.Controllers
                 groupRole = parsedRole;
             }
 
-            var query = new GetGroupMembersQuery(groupId, page, pageSize, searchTerm, groupRole);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid? viewerUserId = Guid.TryParse(userIdClaim, out var parsedViewerId) ? parsedViewerId : null;
+
+            var query = new GetGroupMembersQuery(groupId, page, pageSize, searchTerm, groupRole, viewerUserId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

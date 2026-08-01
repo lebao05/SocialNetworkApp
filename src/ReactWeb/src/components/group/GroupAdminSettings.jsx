@@ -212,7 +212,7 @@ export default function GroupAdminSettings({ view, groupId }) {
             </div>
 
             {/* Anonymous Post */}
-            <div
+            {/* <div
               className="grid w-full grid-cols-[1fr_auto] items-center gap-4 py-3 text-left px-2"
             >
               <span>
@@ -233,7 +233,7 @@ export default function GroupAdminSettings({ view, groupId }) {
               >
                 <Edit3 size={16} />
               </button>
-            </div>
+            </div> */}
           </div>
         </section>
       </div>

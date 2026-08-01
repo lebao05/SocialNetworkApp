@@ -10,5 +10,6 @@ namespace Application.Groups.Queries.GetGroupMembers
         int Page = 1,
         int PageSize = 20,
         string? SearchTerm = null,
-        GroupMemberRole? Role = null) : IQuery<PagedList<GroupMemberDto>>;
+        GroupMemberRole? Role = null,
+        Guid? ViewerUserId = null) : IQuery<PagedList<GroupMemberDto>>;
 }

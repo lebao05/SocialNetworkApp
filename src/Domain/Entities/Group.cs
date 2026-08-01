@@ -17,16 +17,16 @@ namespace Domain.Entities
         public bool IsPostApprovalRequired { get; private set; }
         /// <summary>When true joining the group requires approval.</summary>
         public bool IsGroupJoinApprovalRequired { get; private set; }
-    /// <summary>When true members may post/comment anonymously.</summary>
-    public bool AllowAnonymousPost { get; private set; }
+        /// <summary>When true members may post/comment anonymously.</summary>
+        public bool AllowAnonymousPost { get; private set; }
 
-    // True when an admin has locked the group. Locked groups are still
-    // visible (so members can see why) but new posts are rejected by the
-    // moderation check at the application layer.
-    public bool IsLocked { get; private set; }
+        // True when an admin has locked the group. Locked groups are still
+        // visible (so members can see why) but new posts are rejected by the
+        // moderation check at the application layer.
+        public bool IsLocked { get; private set; }
 
-    public void Lock()   => IsLocked = true;
-    public void Unlock() => IsLocked = false;
+        public void Lock()   => IsLocked = true;
+        public void Unlock() => IsLocked = false;
 
     // Navigation Property
         public User Owner { get; private set; } = null!;
@@ -148,6 +148,20 @@ namespace Domain.Entities
             request.Reject();
         }
 
+        public bool CancelPendingRequest(Guid userId)
+        {
+            var request = _requests.FirstOrDefault(
+                r => r.UserId == userId && r.Status == GroupRequestStatus.Pending);
+
+            if (request is null)
+            {
+                return false;
+            }
+
+            _requests.Remove(request);
+            return true;
+        }
+
         public void AddRule(string title, string description)
         {
             if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(description))
@@ -165,13 +179,28 @@ namespace Domain.Entities
             }
         }
 
-        public void RemoveRule(long ruleId)
+    public void RemoveRule(long ruleId)
+    {
+        var rule = _rules.FirstOrDefault(r => r.Id == ruleId);
+        if (rule != null)
         {
-            var rule = _rules.FirstOrDefault(r => r.Id == ruleId);
-            if (rule != null)
-            {
-                _rules.Remove(rule);
-            }
+            _rules.Remove(rule);
         }
     }
+
+    /// <summary>
+    /// Soft-deletes the group. After this call the group is hidden from queries
+    /// that filter on <c>DeletedAt</c> and <see cref="GroupGuard.EnsureActive"/>
+    /// will reject any further mutation.
+    /// </summary>
+    public void MarkDeleted()
+    {
+        if (DeletedAt is not null)
+        {
+            return;
+        }
+
+        DeletedAt = DateTime.UtcNow;
+    }
+}
 }

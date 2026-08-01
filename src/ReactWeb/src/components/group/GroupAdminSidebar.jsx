@@ -23,6 +23,13 @@ import {
 } from "lucide-react";
 import { adminSidebarSections, groupInfo } from "../../data/groupMockData";
 
+// Views that only admins may see. Moderators get these items filtered out of
+// the admin sidebar because they govern promotion/demotion and overall group
+// configuration, which are admin responsibilities.
+const ADMIN_ONLY_VIEWS = new Set(["community-roles", "group-settings"]);
+
+const isModerator = (role) => String(role || "").trim().toLowerCase() === "moderator";
+
 const iconMap = {
   Badge,
   BadgeCheck,
@@ -46,19 +53,58 @@ const iconMap = {
   Users,
 };
 
-export default function GroupAdminSidebar({ activeView, onViewChange }) {
+const DEFAULT_GROUP_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+
+const formatPrivacy = (groupDetail) => {
+  if (!groupDetail) return groupInfo.adminPrivacy;
+  const privacyRaw = groupDetail.privacyType ?? groupDetail.PrivacyType;
+  const numeric = typeof privacyRaw === "number" ? privacyRaw : Number(privacyRaw);
+  if (numeric === 1 || String(privacyRaw).toLowerCase() === "private") {
+    return "Private group";
+  }
+  return "Public group";
+};
+
+const formatMemberCount = (groupDetail) => {
+  if (!groupDetail) return groupInfo.adminMembers;
+  const count = groupDetail.memberCount ?? groupDetail.MemberCount ?? 0;
+  return `${count} ${count === 1 ? "member" : "members"}`;
+};
+
+const resolveGroupName = (groupDetail) =>
+  groupDetail?.name ?? groupDetail?.Name ?? groupInfo.shortName;
+
+const resolveGroupAvatar = (groupDetail) =>
+  groupDetail?.coverPhotoUrl ?? groupDetail?.CoverPhotoUrl ?? groupInfo.avatar ?? DEFAULT_GROUP_AVATAR;
+
+export default function GroupAdminSidebar({ activeView, onViewChange, groupDetail = null, userRole = null }) {
+  const displayName = resolveGroupName(groupDetail);
+  const avatarUrl = resolveGroupAvatar(groupDetail);
+  const privacyLabel = formatPrivacy(groupDetail);
+  const memberLabel = formatMemberCount(groupDetail);
+
+  // Hide admin-only entries (Community Roles, Group Settings) from moderators.
+  const visibleSections = isModerator(userRole)
+    ? adminSidebarSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => !ADMIN_ONLY_VIEWS.has(item.view)),
+        }))
+        .filter((section) => section.items.length > 0)
+    : adminSidebarSections;
+
   return (
     <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-56px)] w-[292px] overflow-y-auto border-r border-[#d8dadf] bg-white lg:block">
       <div className="flex gap-3 border-b border-[#dddfe2] p-3">
-        <img src={groupInfo.avatar} alt="" className="h-10 w-10 rounded-lg bg-[#e4e6eb]" />
+        <img src={avatarUrl} alt="" className="h-10 w-10 rounded-lg bg-[#e4e6eb] object-cover" />
         <div className="min-w-0">
-          <div className="truncate text-[15px] font-bold">{groupInfo.shortName}</div>
-          <div className="text-[12px] text-[#65676b]">{groupInfo.adminPrivacy} · {groupInfo.adminMembers}</div>
+          <div className="truncate text-[15px] font-bold">{displayName}</div>
+          <div className="text-[12px] text-[#65676b]">{privacyLabel} · {memberLabel}</div>
         </div>
       </div>
 
       <div className="p-2">
-        {adminSidebarSections.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.title} className="border-b border-[#dddfe2] py-2 last:border-b-0">
             <div className="mb-1 flex items-center justify-between px-1 text-[13px] font-semibold text-[#65676b]">
               <span>{section.title}</span>

@@ -45,7 +45,8 @@ const MenuItem = ({ imgUrl, icon: Icon, iconBg, label, to, isActive = false }) =
 
 const ShortcutItem = ({ shortcut }) => {
   const { id, name, avatar, coverPhotoUrl, newPosts } = shortcut;
-  const src = avatar || coverPhotoUrl;
+  const DEFAULT_GROUP_AVATAR = import.meta.env.VITE_DEFAULT_GROUP_AVATAR;
+  const src = avatar || coverPhotoUrl || DEFAULT_GROUP_AVATAR;
   const showBadge = Number.isFinite(newPosts) && newPosts > 0;
 
   return (
@@ -56,6 +57,11 @@ const ShortcutItem = ({ shortcut }) => {
       <img
         src={src}
         alt={name}
+        onError={(e) => {
+          if (DEFAULT_GROUP_AVATAR && e.currentTarget.src !== DEFAULT_GROUP_AVATAR) {
+            e.currentTarget.src = DEFAULT_GROUP_AVATAR;
+          }
+        }}
         className="h-9 w-9 shrink-0 rounded-lg object-cover"
       />
       <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-[#050505]">{name}</span>

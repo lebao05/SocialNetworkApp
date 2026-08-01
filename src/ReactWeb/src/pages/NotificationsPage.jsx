@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import { Heart, MessageCircle, UserPlus, Tag, Users, Bell } from "lucide-react";
 import Navbar from "../components/Navbar/Navbar";
 import { useNotificationContext } from "../contexts/NotificationContext";
@@ -124,12 +124,8 @@ function NotificationItem({ notification, onMarkSeen }) {
 }
 
 export default function NotificationsPage() {
-  const { notifications, loading, fetchNotifications, markAsSeen, markAllAsSeen, unseenCount } =
+  const { notifications, loading, markAsSeen, markAllAsSeen, unseenCount, filter, setFilter } =
     useNotificationContext();
-  const navigate = useNavigate();
-  const [filter, setFilter] = useState("all"); // "all" | "unseen"
-
-  const filtered = filter === "unseen" ? notifications.filter((n) => !n.isSeen) : notifications;
 
   const handleMarkAll = async () => {
     await markAllAsSeen();
@@ -207,16 +203,16 @@ export default function NotificationsPage() {
               </div>
 
               {/* List */}
-              {loading && filtered.length === 0 ? (
+              {loading && notifications.length === 0 ? (
                 <div className="py-20 text-center text-[#65676b]">Loading...</div>
-              ) : filtered.length === 0 ? (
+              ) : notifications.length === 0 ? (
                 <div className="py-20 text-center text-[#65676b]">
-                  No notifications yet.
+                  {filter === "unseen" ? "No unseen notifications." : "No notifications yet."}
                 </div>
               ) : (
                 <div>
                   <div className="divide-y divide-[#f0f2f5]">
-                    {filtered.map((notification) => (
+                    {notifications.map((notification) => (
                       <NotificationItem
                         key={notification.id}
                         notification={notification}

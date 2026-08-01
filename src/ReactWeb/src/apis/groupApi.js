@@ -211,6 +211,16 @@ export async function leaveGroupApi(groupId) {
 }
 
 /**
+ * Permanently removes a group (owner-only). The server performs a soft-delete
+ * so referential integrity is preserved for existing posts, members, and rules.
+ * Maps to DELETE /api/groups/{groupId}.
+ */
+export async function deleteGroupApi(groupId) {
+  const response = await axios.delete(`/groups/${groupId}`);
+  return response.data;
+}
+
+/**
  * Gets group insights (growth, engagement, member stats).
  * Maps to GET /api/groups/{groupId}/insights
  *
@@ -240,7 +250,7 @@ export async function getGroupInsightsApi(groupId, { fromDate = null, toDate = n
 }
 
 /**
- * Gets paginated groups filtered by the user's membership status.
+ * Gets the paginated groups filtered by the user's membership status.
  * Maps to GET /api/groups?isJoining=&page=&pageSize=&searchTerm=
  *
  * @param {{ isJoining: boolean, page?: number, pageSize?: number, searchTerm?: string }} options
@@ -264,5 +274,41 @@ export async function getGroupsApi({ isJoining, page = 1, pageSize = 12, searchT
   const response = await axios.get("/groups", {
     params: { isJoining, page, pageSize, searchTerm },
   });
+  return response.data;
+}
+
+/**
+ * Checks whether the authenticated user is currently a member of the group.
+ * Maps to GET /api/groups/{groupId}/is-member
+ *
+ * @param {number} groupId
+ * @returns {Promise<boolean>} Resolves to `true` when the caller is a member, otherwise `false`.
+ */
+export async function isMemberOfGroupApi(groupId) {
+  const response = await axios.get(`/groups/${groupId}/is-member`);
+  return response.data === true || response.data === "true";
+}
+
+/**
+ * Checks whether the authenticated user has a pending join request for the group.
+ * Maps to GET /api/groups/{groupId}/has-pending-request
+ *
+ * @param {number} groupId
+ * @returns {Promise<boolean>} Resolves to `true` when the caller has a pending request, otherwise `false`.
+ */
+export async function isHavingPendingRequestApi(groupId) {
+  const response = await axios.get(`/groups/${groupId}/has-pending-request`);
+  return response.data === true || response.data === "true";
+}
+
+/**
+ * Cancels the authenticated user's pending join request for the group.
+ * Maps to DELETE /api/groups/{groupId}/join-requests
+ *
+ * @param {number} groupId
+ * @returns {Promise<void>}
+ */
+export async function cancelJoinRequestApi(groupId) {
+  const response = await axios.delete(`/groups/${groupId}/join-requests`);
   return response.data;
 }

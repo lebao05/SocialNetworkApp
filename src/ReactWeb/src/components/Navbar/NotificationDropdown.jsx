@@ -60,7 +60,7 @@ function getNotificationLink(notification) {
 
 export default function NotificationDropdown({ onClose }) {
   const navigate = useNavigate();
-  const { notifications, unseenCount, markAsSeen, markAllAsSeen } = useNotificationContext();
+  const { notifications, unseenCount, filter, setFilter, markAsSeen, markAllAsSeen } = useNotificationContext();
 
   const handleOpenAll = () => {
     navigate("/notifications");
@@ -113,20 +113,29 @@ export default function NotificationDropdown({ onClose }) {
       <div className="flex gap-2 px-4 pb-2">
         {[
           { key: "all", label: "All" },
-          { key: "unread", label: "Unread", badge: unseenCount },
-        ].map((t) => (
-          <button
-            key={t.key}
-            className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors bg-fb-bg text-fb-text hover:bg-fb-hover"
-          >
-            {t.label}
-            {t.badge > 0 && (
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                {t.badge}
-              </span>
-            )}
-          </button>
-        ))}
+          { key: "unseen", label: "Unseen", badge: unseenCount },
+        ].map((t) => {
+          const active = filter === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setFilter(t.key)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                active
+                  ? "bg-blue-100 text-fb-blue"
+                  : "bg-fb-bg text-fb-text hover:bg-fb-hover"
+              }`}
+            >
+              {t.label}
+              {t.badge > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Notification list */}
@@ -134,7 +143,9 @@ export default function NotificationDropdown({ onClose }) {
         {notifications.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 gap-2">
             <Bell size={32} className="text-fb-subtext" />
-            <p className="text-sm text-fb-subtext">No notifications yet</p>
+            <p className="text-sm text-fb-subtext">
+              {filter === "unseen" ? "No unseen notifications" : "No notifications yet"}
+            </p>
           </div>
         )}
         {notifications.slice(0, 15).map((notification) => {

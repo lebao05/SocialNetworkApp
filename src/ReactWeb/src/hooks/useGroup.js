@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   assignGroupRoleApi,
+  cancelJoinRequestApi,
   createGroupApi,
   createGroupRuleApi,
+  deleteGroupApi,
   deleteGroupRuleApi,
   executeReportedContentApi,
   getGroupDetailApi,
@@ -10,6 +12,8 @@ import {
   getGroupMembersApi,
   getGroupRulesApi,
   getReportedContentsApi,
+  isHavingPendingRequestApi,
+  isMemberOfGroupApi,
   joinGroupApi,
   leaveGroupApi,
   reportGroupPostApi,
@@ -19,6 +23,7 @@ import {
   updateGroupRuleApi,
   uploadGroupCoverPhotoApi,
 } from "../apis/groupApi";
+import { reportGroupApi } from "../apis/reportApi";
 
 const getErrorMessage = (err, fallback) =>
   err?.response?.data?.message || err?.response?.data || err?.message || fallback;
@@ -69,6 +74,9 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isMember, setIsMember] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [membershipStatusLoading, setMembershipStatusLoading] = useState(false);
 
   const runAction = useCallback(async (action, fallbackMessage) => {
     try {
@@ -188,17 +196,37 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     }, "Unable to fetch group rules");
   }, [groupId, runAction]);
 
+  const fetchMembershipStatus = useCallback(async () => {
+    if (!groupId) return { isMember: false, hasPendingRequest: false };
+
+    setMembershipStatusLoading(true);
+    try {
+      const [memberFlag, pendingFlag] = await Promise.all([
+        isMemberOfGroupApi(groupId).catch(() => false),
+        isHavingPendingRequestApi(groupId).catch(() => false),
+      ]);
+      setIsMember(Boolean(memberFlag));
+      setHasPendingRequest(Boolean(pendingFlag));
+      return { isMember: Boolean(memberFlag), hasPendingRequest: Boolean(pendingFlag) };
+    } finally {
+      setMembershipStatusLoading(false);
+    }
+  }, [groupId]);
+
   useEffect(() => {
     setInactiveState(null);
     setGroupDetail(null);
     setError(null);
+    setIsMember(false);
+    setHasPendingRequest(false);
   }, [groupId]);
 
   useEffect(() => {
     if (!autoFetch || !groupId) return;
 
     fetchGroupDetail();
-  }, [autoFetch, groupId, fetchGroupDetail]);
+    fetchMembershipStatus();
+  }, [autoFetch, groupId, fetchGroupDetail, fetchMembershipStatus]);
 
   const createGroup = (payload) =>
     runAction(() => createGroupApi(payload), "Unable to create group");
@@ -216,18 +244,38 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     await fetchGroupDetail();
   };
 
-  const joinGroup = (targetGroupId = groupId) => {
+  const joinGroup = async (targetGroupId = groupId) => {
     if (isGroupInactive(inactiveState)) {
       const reason = getInactiveReason(inactiveState);
       setError(reason);
-      return Promise.reject(new Error(reason || "Cannot join a locked or deleted group."));
+      throw new Error(reason || "Cannot join a locked or deleted group.");
     }
-    return runAction(() => joinGroupApi(targetGroupId), "Unable to join group");
+    const data = await runAction(() => joinGroupApi(targetGroupId), "Unable to join group");
+    await fetchMembershipStatus();
+    if (typeof targetGroupId === "number" && targetGroupId !== groupId) {
+      await fetchGroupDetail();
+    } else {
+      await fetchGroupDetail();
+    }
+    return data;
   };
 
-  const leaveGroup = () => {
+  const leaveGroup = async () => {
     guardInactive("leave group");
-    return runAction(() => leaveGroupApi(groupId), "Unable to leave group");
+    const data = await runAction(() => leaveGroupApi(groupId), "Unable to leave group");
+    await fetchMembershipStatus();
+    await fetchGroupDetail();
+    return data;
+  };
+
+  const cancelJoinRequest = async () => {
+    guardInactive("cancel join request");
+    const data = await runAction(
+      () => cancelJoinRequestApi(groupId),
+      "Unable to cancel join request"
+    );
+    await fetchMembershipStatus();
+    return data;
   };
 
   const assignRole = async (userId, role) => {
@@ -258,6 +306,17 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   const reportPost = (postId, payload) => {
     guardInactive("report post");
     return runAction(() => reportGroupPostApi(groupId, postId, payload), "Unable to report group post");
+  };
+
+  const reportGroup = (payload) => {
+    if (!payload || !payload.reason) {
+      throw new Error("A report reason is required.");
+    }
+    const data = runAction(
+      () => reportGroupApi({ groupId, ...payload }),
+      "Unable to submit group report"
+    );
+    return data;
   };
 
   const executeReport = async (reportId, payload) => {
@@ -300,6 +359,19 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     return data;
   };
 
+  const deleteGroup = async () => {
+    const data = await runAction(
+      () => deleteGroupApi(groupId),
+      "Unable to delete group"
+    );
+    setInactiveState({
+      locked: false,
+      deleted: true,
+      reason: "This group has been deleted and is no longer available.",
+    });
+    return data;
+  };
+
     return {
       members,
       admins,
@@ -310,33 +382,40 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
       rules,
       loading,
       error,
+      isMember,
+      hasPendingRequest,
+      membershipStatusLoading,
       isInactive: isGroupInactive(inactiveState),
       inactiveReason: getInactiveReason(inactiveState),
       inactiveState,
       fetchGroupDetail,
-    fetchMembers,
-    fetchJoinRequests,
-    fetchReports,
-    fetchRules,
-    createGroup,
-    updateGroup,
-    uploadCoverPhoto,
-    joinGroup,
-    leaveGroup,
-    assignRole,
-    reviewJoinRequest,
-    reviewPost,
-    reportPost,
-    executeReport,
-    createRule,
-    updateRule,
-    deleteRule,
-    setMembers,
-    setAdmins,
-    setModerators,
-    setGroupDetail,
-    setJoinRequests,
-    setReports,
-    setRules,
-  };
-}
+      fetchMembers,
+      fetchJoinRequests,
+      fetchReports,
+      fetchRules,
+      fetchMembershipStatus,
+      createGroup,
+      updateGroup,
+      uploadCoverPhoto,
+      joinGroup,
+      leaveGroup,
+      cancelJoinRequest,
+      deleteGroup,
+      reportGroup,
+      assignRole,
+      reviewJoinRequest,
+      reviewPost,
+      reportPost,
+      executeReport,
+      createRule,
+      updateRule,
+      deleteRule,
+      setMembers,
+      setAdmins,
+      setModerators,
+      setGroupDetail,
+      setJoinRequests,
+      setReports,
+      setRules,
+    };
+  }

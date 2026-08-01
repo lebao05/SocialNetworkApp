@@ -20,6 +20,7 @@ import { useChat } from "../../contexts/ChatContext";
 import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useSearchEngineContext } from "../../contexts/SearchEngineContext";
 import NotificationDropdown from "./NotificationDropdown";
+import Logo from "../Logo";
 import { getSystemMessagePreview } from "../../utils/systemMessage";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
@@ -251,10 +252,8 @@ export default function Navbar() {
     >
       {/* ── Left ── */}
       <div className="flex items-center gap-2 min-w-[240px]">
-        <Link to="/" className="flex-shrink-0">
-          <svg className="w-10 h-10" viewBox="0 0 36 36" fill="#1877F2">
-            <path d="M36 18C36 8.059 27.941 0 18 0S0 8.059 0 18c0 8.988 6.584 16.436 15.188 17.79V23.25h-4.57V18h4.57v-3.956c0-4.513 2.686-7.006 6.797-7.006 1.97 0 4.03.352 4.03.352v4.43h-2.27c-2.236 0-2.932 1.387-2.932 2.81V18h4.992l-.798 5.25h-4.194V35.79C29.416 34.437 36 26.988 36 18z" />
-          </svg>
+        <Link to="/" className="flex-shrink-0 flex items-center" aria-label="SocialNet home">
+          <Logo iconSize={40} />
         </Link>
         <div
           className={`flex items-center bg-[#F0F2F5] rounded-full px-3 py-2 gap-2 transition-all
@@ -263,7 +262,7 @@ export default function Navbar() {
           <Search size={15} className="text-fb-subtext flex-shrink-0" />
           <input
             className="bg-transparent outline-none text-sm w-44 placeholder-fb-subtext"
-            placeholder="Search on Facebook"
+            placeholder="Search on SocialNet"
             value={searchInputValue}
             onChange={(event) => setSearchInputValue(event.target.value)}
             onKeyDown={handleSearchKeyDown}

@@ -12,7 +12,7 @@ export const groupInfo = {
 
 export const mockGroupRole = "admin";
 
-export const groupTabs = ["About", "Discussion", "Featured", "People", "Media"];
+export const groupTabs = ["About", "Discussion", "People", "Media"];
 
 export const groupAvatarSeeds = [
   "rider-1",

@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Repositories;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Shared;
@@ -14,17 +15,20 @@ internal sealed class CreateReportCommandHandler : ICommandHandler<CreateReportC
     private readonly IReportRepo _reportRepository;
     private readonly IPostRepo _postRepository;
     private readonly IReelRepo _reelRepository;
+    private readonly IGroupRepository _groupRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateReportCommandHandler(
         IReportRepo reportRepository,
         IPostRepo postRepository,
         IReelRepo reelRepository,
+        IGroupRepository groupRepository,
         IUnitOfWork unitOfWork)
     {
         _reportRepository = reportRepository;
         _postRepository = postRepository;
         _reelRepository = reelRepository;
+        _groupRepository = groupRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -86,6 +90,8 @@ internal sealed class CreateReportCommandHandler : ICommandHandler<CreateReportC
                 return (true, reported3);
 
             case ReportType.Group when request.GroupId.HasValue:
+                var group = await _groupRepository.GetByIdAsync(request.GroupId.Value, ct);
+                if (group is null) return (false, false);
                 var reported4 = await _reportRepository.ExistsAsync(
                     request.ReporterId, request.ReportType, default, default, default, request.GroupId);
                 return (true, reported4);

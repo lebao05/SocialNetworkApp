@@ -3,6 +3,7 @@ using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
+using Application.Groups;
 using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
@@ -28,6 +29,18 @@ namespace Application.Posts.Queries.GetPostsByGroup
 
         public async Task<Result<PagedList<PostDto>>> Handle(GetPostsByGroupQuery request, CancellationToken cancellationToken)
         {
+            var group = await _groupRepository.GetByIdAsync(request.GroupId, cancellationToken);
+
+            var accessError = await GroupGuard.EnsureCanViewContentAsync(
+                group,
+                request.UserId,
+                (uid, gid, ct) => _groupRepository.IsUserInGroupAsync(uid, gid, ct),
+                cancellationToken);
+            if (accessError is not null)
+            {
+                return Result.Failure<PagedList<PostDto>>(accessError);
+            }
+
             var page = Math.Max(1, request.Page);
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
 

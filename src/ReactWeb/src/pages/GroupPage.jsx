@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   Bell,
   Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Earth,
@@ -15,8 +16,10 @@ import {
   Plus,
   Search,
   Share2,
+  Trash2,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import { useMedias } from "../hooks/useMedias";
 import { useAllMembers } from "../hooks/useAllMembers";
@@ -32,6 +35,7 @@ import GroupAdminSettings from "../components/group/GroupAdminSettings";
 import GroupAdminSidebar from "../components/group/GroupAdminSidebar";
 import { useAuth } from "../contexts/authContext";
 import { useGroup } from "../hooks/useGroup";
+import { GROUP_REPORT_REASONS } from "../apis/reportApi";
 import {
   groupAvatarSeeds,
   groupInfo,
@@ -82,11 +86,13 @@ function AvatarStack({ count = 12, size = "h-8 w-8" }) {
   );
 }
 
-function HeaderButton({ children, primary = false }) {
+function HeaderButton({ children, primary = false, onClick, disabled = false }) {
   return (
     <button
       type="button"
-      className={`flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-semibold transition-colors ${primary ? "bg-[#0866ff] text-white hover:bg-[#075ce5]" : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${primary ? "bg-[#0866ff] text-white hover:bg-[#075ce5]" : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
         }`}
     >
       {children}
@@ -120,41 +126,6 @@ function SectionCard({ title, subtitle, children }) {
       </div>
       {children}
     </section>
-  );
-}
-
-function FeaturedTab({ contentOffsetClass, posts, onDeletePost, onUpdatePost }) {
-  return (
-    <main className={contentOffsetClass}>
-      <div className="mx-auto grid w-full max-w-[1000px] grid-cols-1 gap-3 px-3 py-3 lg:grid-cols-[minmax(0,580px)_330px]">
-        <div className="space-y-3">
-          {posts.slice(0, 2).map((post) => (
-            <PostCard key={post.id} post={post} onDelete={onDeletePost} onUpdate={onUpdatePost} />
-          ))}
-        </div>
-        <aside className="hidden space-y-3 lg:block">
-          <SectionCard title="About">
-            <p className="mb-3 text-[13px] leading-relaxed text-[#050505]">
-              We can&apos;t talk passion with someone who never had it.
-            </p>
-            <div className="space-y-3">
-              <InfoRow icon={Earth} title="Public">Anyone can see everyone in the group and what they post.</InfoRow>
-              <InfoRow icon={Eye} title="Visible">Anyone can find this group.</InfoRow>
-            </div>
-          </SectionCard>
-          <SectionCard title="Recent media">
-            <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-md">
-              {groupMediaImages.slice(0, 4).map((src) => (
-                <img key={src} src={src} alt="" className="aspect-square w-full object-cover" />
-              ))}
-            </div>
-            <button type="button" className="mt-3 h-9 w-full cursor-pointer rounded-md bg-[#e4e6eb] text-[14px] font-semibold hover:bg-[#d8dadf]">
-              See all
-            </button>
-          </SectionCard>
-        </aside>
-      </div>
-    </main>
   );
 }
 
@@ -476,9 +447,62 @@ function MediaTab({ contentOffsetClass, groupId }) {
   );
 }
 
-function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, isAdmin, uploadCoverPhoto, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter, onDeletePost, onUpdatePost }) {
+function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, isAdmin, isOwner, uploadCoverPhoto, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter, onDeletePost, onUpdatePost, isMember = false, hasPendingRequest = false, membershipStatusLoading = false, onJoinGroup, onLeaveGroup, onCancelJoinRequest, onDeleteGroup, onReportGroup }) {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isJoinMenuOpen, setJoinMenuOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [isReportModalOpen, setReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportState, setReportState] = useState("idle"); // idle | submitting | success | error
+  const [reportError, setReportError] = useState(null);
   const fileInputRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!isJoinMenuOpen) return;
+    const handleClose = () => setJoinMenuOpen(false);
+    document.addEventListener("click", handleClose);
+    return () => document.removeEventListener("click", handleClose);
+  }, [isJoinMenuOpen]);
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteGroup?.();
+      // When the hook marks the group inactive, the parent `GroupPage` renders
+      // the overlay automatically. We don't close the modal here so the user
+      // can see the success state and read the message.
+    } catch (err) {
+      setDeleteError(err?.message || "Unable to delete group.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const closeReportModal = () => {
+    if (reportState === "submitting") return;
+    setReportModalOpen(false);
+    setReportReason("");
+    setReportDetails("");
+    setReportState("idle");
+    setReportError(null);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason || !onReportGroup) return;
+    setReportState("submitting");
+    setReportError(null);
+    try {
+      await onReportGroup({ reason: reportReason, details: reportDetails.trim() || null });
+      setReportState("success");
+    } catch (err) {
+      setReportError(err?.message || "Unable to submit your report. Please try again.");
+      setReportState("idle");
+    }
+  };
 
   const handleUploadCover = async (e) => {
     const file = e.target.files?.[0];
@@ -559,21 +583,88 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
 
             <div className="mt-3 flex flex-col gap-4 border-b border-[#ced0d4] pb-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <HeaderButton>
-                  <Users size={17} fill="currentColor" />
-                  Joined
-                  <ChevronDown size={16} />
-                </HeaderButton>
-                <HeaderButton>
-                  <UserPlus size={17} fill="currentColor" />
-                  Join Group
-                </HeaderButton>
-                <button
-                  className="flex cursor-pointer items-center gap-2 rounded-md border border-red-500 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-                >
-                  <AlertCircle size={17} />
-                  Report
-                </button>
+                {isMember ? (
+                  <div className="relative">
+                    <div onClick={(e) => { e.stopPropagation(); setJoinMenuOpen((prev) => !prev); }}>
+                      <HeaderButton primary type="button">
+                        <Users size={17} fill="currentColor" />
+                        Joined
+                        <ChevronDown size={16} />
+                      </HeaderButton>
+                    </div>
+                    {isJoinMenuOpen && (
+                      <div
+                        className="absolute left-0 top-full z-20 mt-1 w-44 rounded-md border border-[#ced0d4] bg-white py-1 shadow-lg"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setJoinMenuOpen(false);
+                            try { await onLeaveGroup?.(); } catch (err) { console.error("Leave group failed:", err); }
+                          }}
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[14px] text-[#050505] hover:bg-[#f2f2f2]"
+                        >
+                          <History size={15} />
+                          Leave group
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : hasPendingRequest ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try { await onCancelJoinRequest?.(); } catch (err) { console.error("Cancel request failed:", err); }
+                    }}
+                    disabled={membershipStatusLoading}
+                    className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-[#0866ff] bg-white px-3 text-[15px] font-semibold text-[#0866ff] transition-colors hover:bg-[#f0f7ff] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <History size={17} />
+                    {membershipStatusLoading ? "Cancelling..." : "Cancel request"}
+                  </button>
+                ) : (
+                  <HeaderButton
+                    primary
+                    onClick={async () => {
+                      try { await onJoinGroup?.(); } catch (err) { console.error("Join group failed:", err); }
+                    }}
+                    disabled={membershipStatusLoading}
+                  >
+                    <UserPlus size={17} fill="currentColor" />
+                    {membershipStatusLoading ? "Joining..." : "Join Group"}
+                  </HeaderButton>
+                )}
+
+                {isMember && (
+                  <HeaderButton onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus size={17} />
+                    Create Post
+                  </HeaderButton>
+                )}
+
+                {!isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setReportModalOpen(true)}
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-red-500 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  >
+                    <AlertCircle size={17} />
+                    Report
+                  </button>
+                )}
+
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalOpen(true)}
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-red-600 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                    Delete group
+                  </button>
+                )}
               </div>
             </div>
 
@@ -591,14 +682,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
                   </button>
                 ))}
               </nav>
-              <div className="hidden cursor-pointer items-center gap-2 pl-3 sm:flex">
-                <button type="button" className="flex h-9 w-10 cursor-pointer items-center justify-center rounded-md bg-[#e4e6eb] hover:bg-[#d8dadf]">
-                  <Search size={18} />
-                </button>
-                <button type="button" className="flex h-9 w-10 cursor-pointer items-center justify-center rounded-md bg-[#e4e6eb] hover:bg-[#d8dadf]">
-                  <MoreHorizontal size={20} />
-                </button>
-              </div>
+            
             </div>
           </div>
         </div>
@@ -651,8 +735,6 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
             </SectionCard>
           </div>
         </main>
-      ) : activeTab === "Featured" ? (
-        <FeaturedTab contentOffsetClass={contentOffsetClass} posts={posts} onDeletePost={onDeletePost} onUpdatePost={onUpdatePost} />
       ) : activeTab === "People" ? (
         <PeopleTab contentOffsetClass={contentOffsetClass} groupId={groupId} />
       ) : activeTab === "Media" ? (
@@ -660,13 +742,15 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
       ) : (
         <main className={contentOffsetClass}>
           <div className="mx-auto w-full max-w-[580px] space-y-3 px-3 py-3">
-            <CreatePost
-              displayUser={displayUser}
-              setIsCreateModalOpen={setIsCreateModalOpen}
-              isOwnProfile={true}
-              theme={theme}
-              darkMode={false}
-            />
+            {isMember && (
+              <CreatePost
+                displayUser={displayUser}
+                setIsCreateModalOpen={setIsCreateModalOpen}
+                isOwnProfile={true}
+                theme={theme}
+                darkMode={false}
+              />
+            )}
 
 
             <div className="flex items-center justify-between px-1 text-[14px] font-semibold text-[#006d8f]">
@@ -716,6 +800,192 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
           </div>
         </main>
       )}
+
+      {isOwner && isDeleteModalOpen && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-group-title"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+          onClick={() => !isDeleting && setDeleteModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="delete-group-title" className="text-[18px] font-bold text-[#050505]">
+                  Delete this group?
+                </h2>
+                <p className="mt-1 text-[14px] leading-snug text-[#65676b]">
+                  This will permanently remove the group for all members. Posts, comments, and
+                  member activity will no longer be visible.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <p className="mt-3 text-[13px] font-semibold text-red-600">{deleteError}</p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[14px] font-semibold text-[#050505] hover:bg-[#d8dadf] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="h-9 cursor-pointer rounded-md bg-red-600 px-4 text-[14px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting..." : "Delete group"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isReportModalOpen && !isOwner && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="report-group-title"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+          onClick={closeReportModal}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {reportState === "success" ? (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 id="report-group-title" className="text-[16px] font-bold text-[#050505]">
+                    Report submitted
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={closeReportModal}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#65676b] hover:bg-[#f2f2f2] hover:text-[#050505]"
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+                    <CheckCircle2 size={22} />
+                  </span>
+                  <p className="text-[13px] leading-snug text-[#65676b]">
+                    Thank you. We&apos;ll review this group and take appropriate action.
+                  </p>
+                </div>
+                <div className="mt-5 flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={closeReportModal}
+                    className="h-9 cursor-pointer rounded-md bg-[#0866ff] px-6 text-[14px] font-semibold text-white hover:bg-[#075ce5]"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 id="report-group-title" className="text-[16px] font-bold text-[#050505]">
+                    Report this group
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={closeReportModal}
+                    disabled={reportState === "submitting"}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#65676b] hover:bg-[#f2f2f2] hover:text-[#050505] disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p className="mb-3 text-[13px] text-[#65676b]">
+                  Why are you reporting this group?
+                </p>
+                <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                  {GROUP_REPORT_REASONS.map((option) => {
+                    const selected = reportReason === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-[13px] transition-colors ${
+                          selected
+                            ? "bg-blue-50 text-[#0866ff] ring-1 ring-blue-200"
+                            : "text-[#050505] hover:bg-[#f2f2f2]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="report-reason"
+                          value={option.value}
+                          checked={selected}
+                          onChange={(e) => setReportReason(e.target.value)}
+                          className="sr-only"
+                        />
+                        <span
+                          className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-colors ${
+                            selected ? "border-[#0866ff] bg-[#0866ff] text-white" : "border-[#ccd0d5]"
+                          }`}
+                        >
+                          {selected ? "✓" : ""}
+                        </span>
+                        {option.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Additional details (optional)"
+                  rows={2}
+                  className="mt-3 w-full resize-none rounded-md border border-[#dddfe2] bg-[#f0f2f5] px-3 py-2 text-[13px] text-[#050505] outline-none placeholder:text-[#8a8d91] focus:border-[#0866ff]"
+                />
+                {reportError && (
+                  <p className="mt-3 text-[13px] font-semibold text-red-600">{reportError}</p>
+                )}
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeReportModal}
+                    disabled={reportState === "submitting"}
+                    className="h-9 cursor-pointer rounded-md px-4 text-[14px] font-semibold text-[#65676b] hover:bg-[#f2f2f2] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitReport}
+                    disabled={!reportReason || reportState === "submitting"}
+                    className="flex h-9 cursor-pointer items-center gap-2 rounded-md bg-red-600 px-4 text-[14px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {reportState === "submitting" && (
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    )}
+                    {reportState === "submitting" ? "Submitting…" : "Submit Report"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -729,9 +999,10 @@ function AdminContent({ view, groupId }) {
 export default function GroupPage() {
   const { groupId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const numericGroupId = Number(groupId);
   const { user: currentUser } = useAuth();
-  const { groupDetail, loading, error, rules, fetchRules, uploadCoverPhoto, isInactive, inactiveReason, inactiveState } = useGroup(numericGroupId);
+  const { groupDetail, loading, error, rules, fetchRules, uploadCoverPhoto, isInactive, inactiveReason, inactiveState, isMember, hasPendingRequest, joinGroup, leaveGroup, cancelJoinRequest, deleteGroup, reportGroup, membershipStatusLoading } = useGroup(numericGroupId);
   const [activeTab, setActiveTab] = useState("Discussion");
   const [isMineFilter, setIsMineFilter] = useState(false);
   const [fromDateFilter, setFromDateFilter] = useState(null);
@@ -758,6 +1029,8 @@ export default function GroupPage() {
   });
   const currentUserRole = groupDetail?.role ?? groupDetail?.Role;
   const isAdmin = ["admin", "moderator"].includes(normalizeRole(currentUserRole));
+  const isOwner = currentUser?.id != null
+    && (groupDetail?.ownerUserId ?? groupDetail?.OwnerUserId) === currentUser.id;
   const contentOffsetClass = isAdmin ? "lg:pl-[292px]" : "";
   const displayUser = {
     name: currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || "You" : "You",
@@ -774,10 +1047,54 @@ export default function GroupPage() {
     }
   };
 
+  const handleJoinGroup = async () => {
+    if (!numericGroupId) return;
+    try {
+      await joinGroup(numericGroupId);
+    } catch (err) {
+      console.error("Join group failed:", err);
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    try {
+      await leaveGroup();
+    } catch (err) {
+      console.error("Leave group failed:", err);
+    }
+  };
+
+  const handleCancelJoinRequest = async () => {
+    try {
+      await cancelJoinRequest();
+    } catch (err) {
+      console.error("Cancel join request failed:", err);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    try {
+      await deleteGroup();
+    } catch (err) {
+      console.error("Delete group failed:", err);
+      throw err;
+    }
+  };
+
+  const handleReportGroup = async ({ reason, details = null }) => {
+    try {
+      const result = await reportGroup({ reason, details });
+      return result;
+    } catch (err) {
+      console.error("Report group failed:", err);
+      throw err;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f0f2f5] text-[#050505]">
       <Navbar />
-      {isAdmin && <GroupAdminSidebar activeView={adminView} onViewChange={setAdminView} />}
+      {isAdmin && <GroupAdminSidebar activeView={adminView} onViewChange={setAdminView} groupDetail={groupDetail} userRole={currentUserRole} />}
 
       {isInactive && (
         <div
@@ -808,6 +1125,13 @@ export default function GroupPage() {
             <p className="text-[15px] text-[#65676b]">
               {inactiveReason || "This group is currently unavailable."}
             </p>
+            <button
+              type="button"
+              onClick={() => navigate("/groups")}
+              className="mt-5 h-10 cursor-pointer rounded-md bg-[#0866ff] px-5 text-[14px] font-semibold text-white hover:bg-[#075ce5]"
+            >
+              Go to groups
+            </button>
           </div>
         </div>
       )}
@@ -837,6 +1161,7 @@ export default function GroupPage() {
           groupDetail={groupDetail}
           groupId={numericGroupId}
           isAdmin={isAdmin}
+          isOwner={isOwner}
           uploadCoverPhoto={uploadCoverPhoto}
           posts={posts}
           setIsCreateModalOpen={setIsCreateModalOpen}
@@ -851,6 +1176,14 @@ export default function GroupPage() {
           setFromDateFilter={setFromDateFilter}
           onDeletePost={deleteGroupPost}
           onUpdatePost={updateGroupPost}
+          isMember={isMember}
+          hasPendingRequest={hasPendingRequest}
+          membershipStatusLoading={membershipStatusLoading}
+          onJoinGroup={handleJoinGroup}
+          onLeaveGroup={handleLeaveGroup}
+          onCancelJoinRequest={handleCancelJoinRequest}
+          onDeleteGroup={handleDeleteGroup}
+          onReportGroup={handleReportGroup}
         />
       )}
 
