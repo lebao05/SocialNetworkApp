@@ -23,6 +23,35 @@ import {
 const getErrorMessage = (err, fallback) =>
   err?.response?.data?.message || err?.response?.data || err?.message || fallback;
 
+const detectInactiveFromError = (err) => {
+  if (!err) return null;
+  const data = err?.response?.data;
+  if (!data) return null;
+  const code = String(data.type || data.Type || data.code || data.Code || "").toLowerCase();
+  if (code === "group.deleted" || code.includes("group_deleted")) {
+    return {
+      locked: false,
+      deleted: true,
+      reason: data.detail || data.Detail || "This group has been deleted and is no longer available.",
+    };
+  }
+  if (code === "group.locked" || code.includes("group_locked")) {
+    return {
+      locked: true,
+      deleted: false,
+      reason: data.detail || data.Detail || "This group is currently locked. You can view but not interact with it until it is unlocked.",
+    };
+  }
+  return null;
+};
+
+const isGroupInactive = (state) => {
+  if (!state) return false;
+  return Boolean(state.locked || state.deleted);
+};
+
+const getInactiveReason = (state) => state?.reason || null;
+
 const normalizePagedItems = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -31,6 +60,7 @@ const normalizePagedItems = (data) => {
 
 export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {}) {
   const [groupDetail, setGroupDetail] = useState(null);
+  const [inactiveState, setInactiveState] = useState(null);
   const [admins, setAdmins] = useState([]);
   const [members, setMembers] = useState([]);
   const [moderators, setModerators] = useState([]);
@@ -47,12 +77,28 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
       setError(null);
       return data;
     } catch (err) {
-      setError(getErrorMessage(err, fallbackMessage));
+      const inactive = detectInactiveFromError(err);
+      if (inactive) {
+        setInactiveState(inactive);
+      }
+      if (inactive) {
+        setError(inactive.reason);
+      } else {
+        setError(getErrorMessage(err, fallbackMessage));
+      }
       throw err;
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const guardInactive = useCallback((actionName) => {
+    if (isGroupInactive(inactiveState)) {
+      const reason = getInactiveReason(inactiveState);
+      setError(reason);
+      throw new Error(reason || `Cannot ${actionName}: group is locked or deleted.`);
+    }
+  }, [inactiveState]);
 
   const fetchMembers = useCallback(
     async ({ page = 1, searchTerm = null, role = null } = {}) => {
@@ -87,6 +133,19 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     return runAction(async () => {
       const data = await getGroupDetailApi(groupId);
       setGroupDetail(data);
+      const locked = data.isLocked ?? data.IsLocked ?? false;
+      const deleted = data.isDeleted ?? data.IsDeleted ?? false;
+      if (locked || deleted) {
+        setInactiveState({
+          locked,
+          deleted,
+          reason: deleted
+            ? "This group has been deleted and is no longer available."
+            : "This group is currently locked. You can view but not interact with it until it is unlocked.",
+        });
+      } else {
+        setInactiveState(null);
+      }
       return data;
     }, "Unable to fetch group detail");
   }, [groupId, runAction]);
@@ -130,6 +189,12 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   }, [groupId, runAction]);
 
   useEffect(() => {
+    setInactiveState(null);
+    setGroupDetail(null);
+    setError(null);
+  }, [groupId]);
+
+  useEffect(() => {
     if (!autoFetch || !groupId) return;
 
     fetchGroupDetail();
@@ -139,23 +204,34 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     runAction(() => createGroupApi(payload), "Unable to create group");
 
   const updateGroup = async (payload) => {
+    guardInactive("update group");
     const data = await runAction(() => updateGroupApi(groupId, payload), "Unable to update group");
     await fetchGroupDetail();
     return data;
   };
 
   const uploadCoverPhoto = async (file) => {
+    guardInactive("upload cover photo");
     await runAction(() => uploadGroupCoverPhotoApi(groupId, file), "Unable to upload group cover photo");
     await fetchGroupDetail();
   };
 
-  const joinGroup = (targetGroupId = groupId) =>
-    runAction(() => joinGroupApi(targetGroupId), "Unable to join group");
+  const joinGroup = (targetGroupId = groupId) => {
+    if (isGroupInactive(inactiveState)) {
+      const reason = getInactiveReason(inactiveState);
+      setError(reason);
+      return Promise.reject(new Error(reason || "Cannot join a locked or deleted group."));
+    }
+    return runAction(() => joinGroupApi(targetGroupId), "Unable to join group");
+  };
 
-  const leaveGroup = () =>
-    runAction(() => leaveGroupApi(groupId), "Unable to leave group");
+  const leaveGroup = () => {
+    guardInactive("leave group");
+    return runAction(() => leaveGroupApi(groupId), "Unable to leave group");
+  };
 
   const assignRole = async (userId, role) => {
+    guardInactive("assign role");
     const data = await runAction(
       () => assignGroupRoleApi(groupId, userId, role),
       "Unable to assign group role"
@@ -165,6 +241,7 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   };
 
   const reviewJoinRequest = async (requestId, approve) => {
+    guardInactive("review join request");
     const data = await runAction(
       () => reviewGroupJoinRequestApi(groupId, requestId, approve),
       "Unable to review group join request"
@@ -173,13 +250,18 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     return data;
   };
 
-  const reviewPost = (postId, approve) =>
-    runAction(() => reviewGroupPostApi(groupId, postId, approve), "Unable to review group post");
+  const reviewPost = (postId, approve) => {
+    guardInactive("review post");
+    return runAction(() => reviewGroupPostApi(groupId, postId, approve), "Unable to review group post");
+  };
 
-  const reportPost = (postId, payload) =>
-    runAction(() => reportGroupPostApi(groupId, postId, payload), "Unable to report group post");
+  const reportPost = (postId, payload) => {
+    guardInactive("report post");
+    return runAction(() => reportGroupPostApi(groupId, postId, payload), "Unable to report group post");
+  };
 
   const executeReport = async (reportId, payload) => {
+    guardInactive("execute report");
     const data = await runAction(
       () => executeReportedContentApi(groupId, reportId, payload),
       "Unable to execute group report"
@@ -189,6 +271,7 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   };
 
   const createRule = async (payload) => {
+    guardInactive("create rule");
     const data = await runAction(
       () => createGroupRuleApi(groupId, payload),
       "Unable to create group rule"
@@ -198,6 +281,7 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   };
 
   const updateRule = async (ruleId, payload) => {
+    guardInactive("update rule");
     const data = await runAction(
       () => updateGroupRuleApi(groupId, ruleId, payload),
       "Unable to update group rule"
@@ -207,6 +291,7 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
   };
 
   const deleteRule = async (ruleId) => {
+    guardInactive("delete rule");
     const data = await runAction(
       () => deleteGroupRuleApi(groupId, ruleId),
       "Unable to delete group rule"
@@ -215,17 +300,20 @@ export function useGroup(groupId = null, { pageSize = 20, autoFetch = true } = {
     return data;
   };
 
-  return {
-    members,
-    admins,
-    moderators,
-    groupDetail,
-    joinRequests,
-    reports,
-    rules,
-    loading,
-    error,
-    fetchGroupDetail,
+    return {
+      members,
+      admins,
+      moderators,
+      groupDetail,
+      joinRequests,
+      reports,
+      rules,
+      loading,
+      error,
+      isInactive: isGroupInactive(inactiveState),
+      inactiveReason: getInactiveReason(inactiveState),
+      inactiveState,
+      fetchGroupDetail,
     fetchMembers,
     fetchJoinRequests,
     fetchReports,

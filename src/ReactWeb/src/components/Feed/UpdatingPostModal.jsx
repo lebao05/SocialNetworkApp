@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ChevronDown, Smile, Search, ArrowLeft } from "lucide-react";
+import { X, ChevronDown, Smile, Search, ArrowLeft, Loader2 } from "lucide-react";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
 
@@ -75,13 +75,18 @@ export default function UpdatingPostModal({
   const [selectedLocation, setSelectedLocation] = useState(post?.locationTag ?? null);
   const [newFiles, setNewFiles] = useState([]);
   const [removedMediaIds, setRemovedMediaIds] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const [feelingSearch, setFeelingSearch] = useState("");
 
   if (!isOpen) return null;
 
   const handleClose = () => {
+    if (isSubmitting) return;
     setView("main");
+    setNewFiles([]);
+    setRemovedMediaIds([]);
     onClose();
   };
 
@@ -114,21 +119,43 @@ export default function UpdatingPostModal({
     hasChanges &&
     (content.trim() || existingMedia.length > 0 || newFiles.length > 0);
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    if (onSubmit) {
-      onSubmit({
-        content: content.trim() || null,
-        visibility,
-        locationTag: selectedLocation,
-        feelingActivity: selectedFeeling,
-        retainMediaIds: (post?.media ?? [])
-          .map((m) => m.id ?? m.Id)
-          .filter((id) => !removedMediaIds.includes(id)),
-        newFiles,
-      });
+  const handleSubmit = async () => {
+    if (!canSubmit || isSubmitting || !onSubmit) return;
+    setIsSubmitting(true);
+
+    const feelingString = selectedFeeling
+      ? `${selectedFeeling.emoji ?? ""} ${selectedFeeling.label ?? ""}`.trim()
+      : null;
+
+    const payload = {
+      content: content.trim() || null,
+      visibility,
+      locationTag: selectedLocation || null,
+      feelingActivity: feelingString || null,
+      retainMediaIds: (post?.media ?? [])
+        .map((m) => m.id ?? m.Id)
+        .filter((id) => !removedMediaIds.includes(id)),
+      newAttachments: newFiles,
+    };
+
+    try {
+      setSubmitError(null);
+      await onSubmit(payload);
+      handleClose();
+    } catch (err) {
+      const code =
+        err?.response?.data?.error?.code ??
+        err?.response?.data?.Error?.code;
+      const message =
+        err?.response?.data?.error?.message ??
+        err?.response?.data?.Error?.message ??
+        err?.message ??
+        "Update failed";
+      console.error("Failed to update post:", { code, message, data: err?.response?.data });
+      setSubmitError({ code, message });
+    } finally {
+      setIsSubmitting(false);
     }
-    handleClose();
   };
 
   return (
@@ -348,14 +375,26 @@ export default function UpdatingPostModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canSubmit}
-                className={`w-full py-2.5 font-bold rounded-md text-[15px] transition-all text-center mt-2
-                  ${!canSubmit
+                disabled={!canSubmit || isSubmitting}
+                className={`w-full py-2.5 font-bold rounded-md text-[15px] transition-all text-center mt-2 flex items-center justify-center gap-2
+                  ${(!canSubmit || isSubmitting)
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-[#1877F2] text-white hover:bg-blue-600 shadow-sm cursor-pointer"}`}
               >
-                Save
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {isSubmitting ? "Saving..." : "Save"}
               </button>
+
+              {/* Error banner */}
+              {submitError && (
+                <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+                  <div className="font-semibold">
+                    Update failed
+                    {submitError.code ? ` (${submitError.code})` : ""}
+                  </div>
+                  <div className="opacity-80">{submitError.message}</div>
+                </div>
+              )}
             </div>
           </>
         )}

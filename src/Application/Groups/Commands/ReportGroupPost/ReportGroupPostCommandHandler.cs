@@ -2,6 +2,7 @@ using System.Linq;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Entities;
 using Domain.Shared;
 
@@ -29,14 +30,13 @@ namespace Application.Groups.Commands.ReportGroupPost
         public async Task<Result> Handle(ReportGroupPostCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
-            var reporterIsGroupMember = group.OwnerUserId == request.ReporterId
+            var reporterIsGroupMember = group!.OwnerUserId == request.ReporterId
                 || group.Members.Any(member => member.UserId == request.ReporterId);
 
             if (!reporterIsGroupMember)

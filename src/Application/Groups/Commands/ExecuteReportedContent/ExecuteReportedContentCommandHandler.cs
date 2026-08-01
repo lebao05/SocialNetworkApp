@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Enums;
 using Domain.Shared;
 
@@ -28,14 +29,13 @@ namespace Application.Groups.Commands.ExecuteReportedContent
         public async Task<Result> Handle(ExecuteReportedContentCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
-            if (!group.IsModeratorOrAdmin(request.ReviewerUserId))
+            if (!group!.IsModeratorOrAdmin(request.ReviewerUserId))
             {
                 return Result.Failure(new Error(
                     "Group.AccessDenied",

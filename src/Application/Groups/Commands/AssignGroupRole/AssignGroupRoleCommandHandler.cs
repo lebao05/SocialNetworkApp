@@ -2,6 +2,7 @@ using System.Linq;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Enums;
 using Domain.Shared;
 
@@ -23,14 +24,13 @@ namespace Application.Groups.Commands.AssignGroupRole
         public async Task<Result> Handle(AssignGroupRoleCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
-            if (group.OwnerUserId == request.TargetUserId)
+            if (group!.OwnerUserId == request.TargetUserId)
             {
                 return Result.Failure(new Error(
                     "Group.RoleAssignment",

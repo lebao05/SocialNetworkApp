@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Events;
@@ -60,14 +61,13 @@ namespace Application.Posts.Commands.CreatePost
             if (request.GroupId.HasValue)
             {
                 group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId.Value, cancellationToken);
-                if (group is null)
+                var inactive = GroupGuard.EnsureActive(group);
+                if (inactive is not null)
                 {
-                    return Result.Failure<long>(new Error(
-                        "Group.NotFound",
-                        $"Group with id {request.GroupId.Value} was not found."));
+                    return Result.Failure<long>(inactive);
                 }
 
-                var authorIsMember = group.OwnerUserId == request.AuthorId
+                var authorIsMember = group!.OwnerUserId == request.AuthorId
                     || group.Members.Any(m => m.UserId == request.AuthorId);
 
                 if (!authorIsMember)

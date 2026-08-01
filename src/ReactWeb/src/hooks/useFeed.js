@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getFeedPostsApi, generateFeedApi, markLatestAsSeenApi, createPostApi, getPostApi } from "../apis/postApi";
+import { getFeedPostsApi, generateFeedApi, markLatestAsSeenApi, createPostApi, getPostApi, deletePostApi, updatePostApi } from "../apis/postApi";
 
 export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
   const [posts, setPosts] = useState([]);
@@ -21,7 +21,6 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
     setIsLoading(true);
     try {
       const data = await getFeedPostsApi(p, pageSize, isRefresh);
-      console.log("data", data);
       const { items } = normalizeResponse(data);
 
       if (p === 1) {
@@ -117,6 +116,36 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
     }
   }, []);
 
+  const deletePost = async (postId) => {
+    try {
+      await deletePostApi(postId);
+      setPosts((prev) => prev.filter((item) => item.post?.id !== postId));
+      return true;
+    } catch (err) {
+      console.error("Delete feed post failed:", err);
+      throw err;
+    }
+  };
+
+  const updatePost = async (postId, updatePayload) => {
+    try {
+      await updatePostApi(postId, updatePayload);
+      // Backend returns 204 NoContent → refetch single post to sync UI.
+      const fresh = await getPostApi(postId);
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.post?.id === postId
+            ? { ...item, post: fresh, feedCreatedAt: fresh.createdAt ?? item.feedCreatedAt }
+            : item
+        )
+      );
+      return fresh;
+    } catch (err) {
+      console.error("Update feed post failed:", err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
 
     if (hasMore === false && !isGenerating && !isLoading) {
@@ -149,5 +178,7 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
     createPost,
     generateFeed,
     markLatestAsSeen,
+    deletePost,
+    updatePost,
   };
 }

@@ -10,6 +10,7 @@ import {
   reactToPostApi,
   savePostApi,
   unsavePostApi,
+  reportPostApi,
 } from "../../apis/postApi";
 import { reportGroupPostApi } from "../../apis/groupApi";
 import { useAuth } from "../../contexts/authContext";
@@ -228,7 +229,7 @@ const ReactionBtn = ({ icon, label, onClick, active, onMouseEnter, onMouseLeave 
 );
 
 // ─── Main PostCard ───
-export default function PostCard({ post }) {
+export default function PostCard({ post, onDelete, onUpdate }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -275,6 +276,7 @@ export default function PostCard({ post }) {
   const [isReporting, setIsReporting] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("idle"); // 'idle' | 'confirm' | 'deleting'
   const dropdownRef = useRef(null);
 
   const REACTION_VALUE_FROM_NAME = Object.fromEntries(
@@ -477,15 +479,58 @@ export default function PostCard({ post }) {
     if (!reportReason || isReporting) return;
     setIsReporting(true);
     try {
-      await reportGroupPostApi(post.groupId ?? post.GroupId, post.id, {
-        reason: reportReason,
-        additionalDetail: reportDetail || null,
-      });
+      if (post.groupId ?? post.GroupId) {
+        await reportGroupPostApi(post.groupId ?? post.GroupId, post.id, {
+          reason: reportReason,
+          additionalDetail: reportDetail || null,
+        });
+      } else {
+        await reportPostApi({ postId: post.id, reason: reportReason, details: reportDetail || null });
+      }
       setReportSubmitted(true);
     } catch {
       console.error("Failed to submit report");
     } finally {
       setIsReporting(false);
+    }
+  };
+
+  // ─── Delete Post ───────────────────────────────────────────────────────────
+  const handleOpenDelete = () => {
+    setShowOptions(false);
+    setDeleteConfirm("confirm");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) {
+      setDeleteConfirm("idle");
+      return;
+    }
+    setDeleteConfirm("deleting");
+    try {
+      await onDelete(post.id);
+      setDeleteConfirm("idle");
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      setDeleteConfirm("idle");
+    }
+  };
+
+  const handleUpdateSubmit = async (payload) => {
+    if (!onUpdate) {
+      // No update handler provided by parent — close modal silently.
+      setOpenUpdateModal(false);
+      return;
+    }
+    try {
+      await onUpdate(post.id, payload);
+      setOpenUpdateModal(false);
+    } catch (err) {
+      console.error("Failed to update post:", err);
+      console.error("Status:", err?.response?.status);
+      console.error("ErrorCode:", err?.response?.data?.error?.code ?? err?.response?.data?.Error?.code);
+      console.error("ErrorMessage:", err?.response?.data?.error?.message ?? err?.response?.data?.Error?.message);
+      console.error("FullData:", err?.response?.data);
     }
   };
 
@@ -713,16 +758,39 @@ export default function PostCard({ post }) {
           {showOptions && (
             <div className="absolute right-0 top-full mt-1 z-30 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
               {(post.authorId === user?.id || post.AuthorId === user?.id) && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOptions(false); setOpenUpdateModal(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-600">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Edit post
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenDelete}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                    </svg>
+                    Delete post
+                  </button>
+                </>
+              )}
+              {!(post.authorId === user?.id || post.AuthorId === user?.id) && (
                 <button
                   type="button"
-                  onClick={() => { setShowOptions(false); setOpenUpdateModal(true); }}
+                  onClick={handleOpenReport}
                   className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-600">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Edit post
+                  <Flag size={18} className="text-gray-600" />
+                  Report post to admin
                 </button>
               )}
               <button
@@ -733,14 +801,6 @@ export default function PostCard({ post }) {
               >
                 <Bookmark size={18} className={isSaved ? "text-blue-600 fill-blue-600" : "text-gray-600"} />
                 {isSaving ? "..." : isSaved ? "Unsave post" : "Save post"}
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenReport}
-                className="w-full flex items-center gap-3 px-4 py-3 text-[15px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                <Flag size={18} className="text-gray-600" />
-                Report post to admin
               </button>
             </div>
           )}
@@ -919,6 +979,7 @@ export default function PostCard({ post }) {
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
         currentUserAvatar={currentUserAvatar}
+        onDelete={onDelete}
       />
 
       {/* Edit post modal */}
@@ -930,6 +991,7 @@ export default function PostCard({ post }) {
           name: authorName,
           avatar: authorAvatar || DEFAULT_AVATAR,
         }}
+        onSubmit={handleUpdateSubmit}
       />
 
       {/* Report to Admin Modal */}
@@ -955,7 +1017,7 @@ export default function PostCard({ post }) {
                 </div>
                 <p className="text-[15px] font-bold text-gray-900">Report submitted</p>
                 <p className="text-[13px] text-gray-500">
-                  Thank you. Group admins will review this post.
+                  Thank you. We&apos;ll review this post and take appropriate action.
                 </p>
                 <button
                   type="button"
@@ -1032,6 +1094,47 @@ export default function PostCard({ post }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm !== "idle" && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="flex flex-col items-center gap-3 p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc3545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Delete this post?</h3>
+              <p className="text-[13px] text-gray-500 leading-snug">
+                This post will be permanently removed and cannot be recovered.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 pb-6">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm("idle")}
+                disabled={deleteConfirm === "deleting"}
+                className="px-4 py-2 text-[14px] font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteConfirm === "deleting"}
+                className="flex items-center gap-2 px-4 py-2 text-[14px] font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-60 cursor-pointer"
+              >
+                {deleteConfirm === "deleting" && (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                )}
+                {deleteConfirm === "deleting" ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

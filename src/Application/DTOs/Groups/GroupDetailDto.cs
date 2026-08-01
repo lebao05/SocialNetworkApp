@@ -16,5 +16,7 @@ namespace Application.DTOs.Groups
         string? Role,
         bool IsOwner,
         bool IsMember,
+        bool IsLocked,
+        bool IsDeleted,
         DateTime CreatedAt);
 }

@@ -47,19 +47,6 @@ const FEELINGS_LIST = [
   { emoji: "😔", label: "lonely" }
 ];
 
-const LOCATIONS_LIST = [
-  "Xom Cho",
-  "Di An",
-  "Tan Binh, Di An, Binh Duong",
-  "Bien Hoa, Dong Nai",
-  "Khu Pho Tan Phuoc, Tan Binh, Di An, Binh Duong",
-  "Thu Dau Mot",
-  "Di An City, Binh Duong Province",
-  "Tan Phuoc, Tan Binh, Di An",
-  "An Phu Roundabout, Thuan An",
-  "Long Mach Mang Pool"
-];
-
 export default function CreatePostModal({ isOpen, onClose, displayUser = { name: "Le Bao", avatar: DEFAULT_AVATAR }, onSubmit, groupId = null, allowAnonymousPost = false }) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
@@ -570,49 +557,39 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <button
                 type="button"
-                onClick={() => { setCreatePostModalView("main"); setLocationSearchQuery(""); }}
+                onClick={() => setCreatePostModalView("main")}
                 className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 text-gray-700 cursor-pointer"
               >
                 <ArrowLeft size={22} />
               </button>
-              <h2 className="text-lg font-bold text-gray-900 text-center flex-1">Search for location</h2>
+              <h2 className="text-lg font-bold text-gray-900 text-center flex-1">Check in</h2>
               <div className="w-9" />
             </div>
 
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="px-3 py-2 bg-gray-100 rounded-full flex items-center gap-2 mx-4 my-3 border border-gray-200">
-                <Search size={20} className="text-gray-400" />
-                <input
-                  type="text"
-                  value={locationSearchQuery}
-                  onChange={(e) => setLocationSearchQuery(e.target.value)}
-                  placeholder="Where are you?"
-                  className="bg-transparent text-[15px] w-full outline-none text-gray-900 focus:ring-0"
-                  autoFocus
-                />
-              </div>
-
-              <div className="overflow-y-auto flex-1 p-2">
-                {LOCATIONS_LIST.filter(loc =>
-                  loc.toLowerCase().includes(locationSearchQuery.toLowerCase())
-                ).map((loc, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setSelectedLocation(loc);
-                      setCreatePostModalView("main");
-                      setLocationSearchQuery("");
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-all cursor-pointer text-left"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">
-                      📍
-                    </div>
-                    <span className="text-[15px] font-semibold text-gray-800">{loc}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-col flex-1 overflow-hidden p-4 gap-4">
+              <label className="text-sm font-semibold text-gray-700" htmlFor="create-post-location-input">
+                Where are you?
+              </label>
+              <input
+                id="create-post-location-input"
+                type="text"
+                value={selectedLocation ?? ""}
+                onChange={(e) => setSelectedLocation(e.target.value || null)}
+                placeholder="Enter a location"
+                className="w-full px-4 py-2.5 bg-gray-100 rounded-full text-[15px] outline-none text-gray-900 border border-gray-200 focus:border-blue-400 focus:bg-white transition-colors"
+                autoFocus
+              />
+              <button
+                type="button"
+                disabled={!selectedLocation?.trim()}
+                onClick={() => setCreatePostModalView("main")}
+                className={`w-full py-2.5 font-bold rounded-md text-[15px] transition-all text-center
+                  ${selectedLocation?.trim()
+                    ? "bg-[#1877F2] text-white hover:bg-blue-600 shadow-sm cursor-pointer"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+              >
+                Save
+              </button>
             </div>
           </>
         )}

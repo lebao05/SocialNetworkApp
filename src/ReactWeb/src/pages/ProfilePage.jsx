@@ -6,7 +6,7 @@ import { usePersonalInfo } from "../hooks/usePersonalInfo";
 import { useUserPosts } from "../hooks/useUserPosts";
 import { useUserMedias } from "../hooks/useUserMedias";
 import { useSchools } from "../hooks/useSchools";
-import { updateUserInfoApi, uploadAvatarApi, uploadCoverPhotoApi } from "../apis/userApi";
+import { updateUserInfoApi, uploadAvatarApi, uploadCoverPhotoApi, reportUserApi } from "../apis/userApi";
 import { Loader2 } from "lucide-react";
 import AboutTab from "../components/Profile/AboutTab";
 import FriendsTab from "../components/Profile/FriendsTab";
@@ -49,6 +49,7 @@ import { useProfileStories } from "../hooks/useProfileStories";
 import ImageLightbox from "../components/Common/ImageLightbox";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+const DEFAULT_COVER_PHOTO = import.meta.env.VITE_DEFAULT_COVER_PHOTO || "";
 
 function formatCompactCount(value) {
   const num = Number(value || 0);
@@ -73,11 +74,15 @@ export default function ProfilePage() {
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
+  const postsSentinelRef = useRef(null);
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [lightboxAlt, setLightboxAlt] = useState("");
+  const [reportState, setReportState] = useState("idle"); // 'idle' | 'open' | 'submitting' | 'success'
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
 
   // Theme state: defaults to white theme (light mode) as requested!
   const [darkMode, setDarkMode] = useState(false);
@@ -94,7 +99,7 @@ export default function ProfilePage() {
   const [profileName, setProfileName] = useState(personalInfo ? `${personalInfo.firstName} ${personalInfo.lastName}` : "");
 
   // Posts loaded from server for this profile
-  const { posts: postsList, isLoading: postsLoading, refresh: refreshPosts, createPost: createUserPost } = useUserPosts(viewUserId, { initialPage: 1, pageSize: 10 });
+  const { posts: postsList, isLoading: postsLoading, hasMore: postsHasMore, loadMore: loadMorePosts, refresh: refreshPosts, createPost: createUserPost, deletePost: deleteUserPost, updatePost: updateUserPost } = useUserPosts(viewUserId, { initialPage: 1, pageSize: 10 });
 
   useEffect(() => {
     if (!viewUserId) return;
@@ -347,6 +352,39 @@ export default function ProfilePage() {
     document.title = `${displayUser.name} | Facebook Profile`;
   }, [displayUser.name]);
 
+  // Auto-load more posts when sentinel scrolls into view
+  useEffect(() => {
+    const node = postsSentinelRef.current;
+    if (!node || !postsHasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !postsLoading) {
+          loadMorePosts();
+        }
+      },
+      { rootMargin: "400px 0px" }
+    );
+    observer.observe(node);
+
+    // Fallback: also trigger when window near bottom (in case observer fails
+    // or sentinel is far down outside viewport with long post payloads).
+    const onScroll = () => {
+      if (!postsHasMore || postsLoading) return;
+      const scrolled = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.scrollHeight - 400;
+      if (scrolled >= threshold) {
+        console.log("[ProfilePage] scroll fallback → loadMorePosts()");
+        loadMorePosts();
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [postsHasMore, postsLoading, loadMorePosts]);
+
   // Color tokens depending on light/dark mode
   const theme = {
     bg: darkMode ? "bg-[#18191a]" : "bg-[#f0f2f5]",
@@ -555,6 +593,17 @@ export default function ProfilePage() {
                   isDarkMode={darkMode}
                   onUpdate={(updates) => setPersonalInfo((prev) => prev ? { ...prev, ...updates } : prev)}
                 />
+                <button
+                  type="button"
+                  onClick={() => { setReportReason(""); setReportDetails(""); setReportState("open"); }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  Report
+                </button>
               </div>
             )}
 
@@ -843,8 +892,25 @@ export default function ProfilePage() {
                           authorName: post.authorName || displayUser.name,
                           authorAvatarUrl: post.authorAvatarUrl || displayUser.avatar,
                         }}
+                        onDelete={deleteUserPost}
+                        onUpdate={updateUserPost}
                       />
                     ))}
+                    {postsHasMore && (
+                      <div ref={postsSentinelRef} className="flex justify-center py-6">
+                        {postsLoading ? (
+                          <Loader2 className={`w-6 h-6 animate-spin ${theme.subText}`} />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={loadMorePosts}
+                            className={`px-4 py-2 rounded-lg text-sm font-semibold ${theme.buttonSecondary}`}
+                          >
+                            Load more posts
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -905,6 +971,150 @@ export default function ProfilePage() {
               displayUser={displayUser}
               onSubmit={handleCreateReel}
             />
+
+            {/* Report User Modal */}
+            {reportState !== "idle" && (
+              <div
+                className={`fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm ${darkMode ? "bg-black/60" : "bg-black/40"}`}
+                onClick={() => reportState !== "submitting" && setReportState("idle")}
+              >
+                <div
+                  className={`mx-4 w-full max-w-sm rounded-2xl ${darkMode ? "bg-[#242526]" : "bg-white"} p-6 shadow-2xl`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {reportState === "success" ? (
+                    <>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className={`text-base font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Report submitted</h3>
+                        <button
+                          type="button"
+                          onClick={() => setReportState("idle")}
+                          className={`flex h-8 w-8 items-center justify-center rounded-full ${darkMode ? "text-white/60 hover:bg-white/10 hover:text-white" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        <span className={`flex h-12 w-12 items-center justify-center rounded-full ${darkMode ? "bg-green-500/15 text-green-400" : "bg-green-100 text-green-600"}`}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </span>
+                        <p className={`text-[13px] leading-snug ${darkMode ? "text-white/70" : "text-gray-500"}`}>
+                          Thank you. We&apos;ll review this profile and take appropriate action.
+                        </p>
+                      </div>
+                      <div className="mt-5 flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setReportState("idle")}
+                          className="rounded-full bg-[#1877f2] px-6 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#166fe5]"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className={`text-base font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Report this profile</h3>
+                        <button
+                          type="button"
+                          onClick={() => setReportState("idle")}
+                          className={`flex h-8 w-8 items-center justify-center rounded-full ${darkMode ? "text-white/60 hover:bg-white/10 hover:text-white" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <p className={`mb-3 text-[13px] ${darkMode ? "text-white/60" : "text-gray-500"}`}>Why are you reporting this profile?</p>
+                      <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                        {[
+                          { value: "Harassment", label: "Harassment" },
+                          { value: "HateSpeech", label: "Hate speech" },
+                          { value: "Impersonation", label: "Impersonation" },
+                          { value: "Spam", label: "Spam or misleading" },
+                          { value: "Violence", label: "Violence or dangerous organizations" },
+                          { value: "NudityOrSexual", label: "Nudity or sexual content" },
+                          { value: "IntellectualProperty", label: "Intellectual property violation" },
+                          { value: "Other", label: "Other" },
+                        ].map((option) => (
+                          <label
+                            key={option.value}
+                            className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-colors ${
+                              reportReason === option.value
+                                ? `${darkMode ? "bg-[#1877f2]/20 text-white ring-1 ring-[#1877f2]/60" : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"}`
+                                : `${darkMode ? "bg-white/5 text-white/80 hover:bg-white/10" : "bg-gray-50 text-gray-700 hover:bg-gray-100"}`
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="report-reason"
+                              value={option.value}
+                              checked={reportReason === option.value}
+                              onChange={(e) => setReportReason(e.target.value)}
+                              className="sr-only"
+                            />
+                            <span
+                              className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-colors ${
+                                reportReason === option.value
+                                  ? "border-[#1877f2] bg-[#1877f2] text-white"
+                                  : `${darkMode ? "border-white/30" : "border-gray-300"}`
+                              }`}
+                            >
+                              {reportReason === option.value && "✓"}
+                            </span>
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                      <textarea
+                        value={reportDetails}
+                        onChange={(e) => setReportDetails(e.target.value)}
+                        placeholder="Additional details (optional)"
+                        rows={2}
+                        className={`mt-3 w-full resize-none rounded-lg border px-3 py-2 text-[13px] placeholder-white/30 outline-none focus:ring-1 focus:ring-[#1877f2]/40 ${
+                          darkMode
+                            ? "border-white/10 bg-white/5 text-white focus:border-[#1877f2]/60"
+                            : "border-gray-200 bg-gray-50 text-gray-900 focus:border-[#1877f2]/60"
+                        }`}
+                      />
+                      <div className="mt-4 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setReportState("idle")}
+                          disabled={reportState === "submitting"}
+                          className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
+                            darkMode ? "text-white/80 hover:bg-white/10" : "text-gray-500 hover:bg-gray-100"
+                          }`}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!reportReason.trim() || !viewUserId) return;
+                            setReportState("submitting");
+                            try {
+                              await reportUserApi({ userId: viewUserId, reason: reportReason, details: reportDetails || null });
+                              setReportState("success");
+                            } catch {
+                              setReportState("idle");
+                            }
+                          }}
+                          disabled={!reportReason.trim() || reportState === "submitting"}
+                          className="flex items-center gap-2 rounded-full bg-red-500 px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                        >
+                          {reportState === "submitting" && (
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                          )}
+                          {reportState === "submitting" ? "Submitting…" : "Submit Report"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             <ImageLightbox
               src={lightboxSrc}

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Enums;
 using Domain.Shared;
 
@@ -28,11 +29,10 @@ namespace Application.Groups.Commands.JoinGroup
         public async Task<Result> Handle(JoinGroupCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
             var userExists = await _userRepository.ExistsAsync(request.UserId, cancellationToken);
@@ -44,7 +44,7 @@ namespace Application.Groups.Commands.JoinGroup
             }
 
             // Check if already a member
-            if (group.Members.Any(m => m.UserId == request.UserId))
+            if (group!.Members.Any(m => m.UserId == request.UserId))
             {
                 return Result.Failure(new Error(
                     "Group.AlreadyMember",

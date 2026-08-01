@@ -204,7 +204,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(post => post.Reactions)
                 .Include(post => post.Comments)
                 .Include(post => post.Tags)
-                .Where(post => post.AuthorId == authorId)
+                .Where(post => post.AuthorId == authorId && post.GroupId == null)
                 .OrderByDescending(post => post.CreatedAt);
 
             return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);

@@ -86,6 +86,30 @@ public class ReportRepository : IReportRepository
 
     public void Update(Report report) => _db.Reports.Update(report);
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _db.SaveChangesAsync(cancellationToken);
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await _db.SaveChangesAsync(cancellationToken);
+
+    public async Task<bool> ExistsAsync(
+        Guid reporterId,
+        ReportType reportType,
+        long? postId = null,
+        long? reelId = null,
+        Guid? userId = null,
+        long? groupId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _db.Reports
+            .AsNoTracking()
+            .Where(r => r.ReporterId == reporterId && r.ReportType == reportType);
+
+        if (postId.HasValue)       query = query.Where(r => r.PostId   == postId);
+        else if (reelId.HasValue)  query = query.Where(r => r.ReelId   == reelId);
+        else if (userId.HasValue)  query = query.Where(r => r.UserId   == userId);
+        else if (groupId.HasValue) query = query.Where(r => r.GroupId  == groupId);
+
+        return await query.AnyAsync(cancellationToken);
+    }
+
+    public async Task AddAsync(Report report, CancellationToken cancellationToken = default)
+        => await _db.Reports.AddAsync(report, cancellationToken);
 }

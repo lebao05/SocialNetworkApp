@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
+  AlertCircle,
   Bell,
   Camera,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
 import { useMedias } from "../hooks/useMedias";
 import { useAllMembers } from "../hooks/useAllMembers";
 import { useGroupPosts } from "../hooks/useGroupPosts";
+import { createPostApi } from "../apis/postApi";
 import Navbar from "../components/Navbar/Navbar";
 import CreatePost from "../components/Feed/CreatePost";
 import CreatePostModal from "../components/Profile/CreatePostModal";
@@ -35,7 +37,6 @@ import {
   groupInfo,
   groupMediaImages,
   groupTabs,
-  mockGroupRole,
 } from "../data/groupMockData";
 
 const settingsViews = ["group-settings", "features"];
@@ -85,9 +86,8 @@ function HeaderButton({ children, primary = false }) {
   return (
     <button
       type="button"
-      className={`flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-semibold transition-colors ${
-        primary ? "bg-[#0866ff] text-white hover:bg-[#075ce5]" : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
-      }`}
+      className={`flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-semibold transition-colors ${primary ? "bg-[#0866ff] text-white hover:bg-[#075ce5]" : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
+        }`}
     >
       {children}
     </button>
@@ -123,13 +123,13 @@ function SectionCard({ title, subtitle, children }) {
   );
 }
 
-function FeaturedTab({ contentOffsetClass, posts }) {
+function FeaturedTab({ contentOffsetClass, posts, onDeletePost, onUpdatePost }) {
   return (
     <main className={contentOffsetClass}>
       <div className="mx-auto grid w-full max-w-[1000px] grid-cols-1 gap-3 px-3 py-3 lg:grid-cols-[minmax(0,580px)_330px]">
         <div className="space-y-3">
           {posts.slice(0, 2).map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} onDelete={onDeletePost} onUpdate={onUpdatePost} />
           ))}
         </div>
         <aside className="hidden space-y-3 lg:block">
@@ -218,11 +218,10 @@ function PeopleTab({ contentOffsetClass, groupId }) {
                 key={tab}
                 type="button"
                 onClick={() => setPeopleTab(tab)}
-                className={`h-8 cursor-pointer rounded-full px-3 text-[13px] font-semibold transition-colors ${
-                  peopleTab === tab
-                    ? "bg-[#0866ff] text-white"
-                    : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
-                }`}
+                className={`h-8 cursor-pointer rounded-full px-3 text-[13px] font-semibold transition-colors ${peopleTab === tab
+                  ? "bg-[#0866ff] text-white"
+                  : "bg-[#e4e6eb] text-[#050505] hover:bg-[#d8dadf]"
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -395,89 +394,89 @@ function MediaTab({ contentOffsetClass, groupId }) {
       <main className={contentOffsetClass}>
         <div className="mx-auto w-full max-w-[900px] px-3 py-3">
           <section className="rounded-lg border border-[#dddfe2] bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[18px] font-bold">Media</h2>
-          </div>
-          <div className="mt-4 flex gap-5 border-b border-[#ced0d4] text-[14px] font-semibold">
-            <button
-              type="button"
-              onClick={() => setActiveMediaType("image")}
-              className={`cursor-pointer pb-3 ${activeMediaType === "image" ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "text-[#65676b]"}`}
-            >
-              Photos
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveMediaType("video")}
-              className={`cursor-pointer pb-3 ${activeMediaType === "video" ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "text-[#65676b]"}`}
-            >
-              Video
-            </button>
-          </div>
-
-          {error && (
-            <p className="mt-3 text-[13px] font-semibold text-red-600">{error}</p>
-          )}
-
-          {isLoading && medias.length === 0 ? (
-            <div className="mt-3 py-10 text-center text-[14px] text-[#65676b]">Loading...</div>
-          ) : medias.length === 0 ? (
-            <div className="mt-3 py-10 text-center text-[14px] text-[#65676b]">
-              {isVideoTab ? "No videos yet." : "No photos yet."}
+            <div className="flex items-center justify-between">
+              <h2 className="text-[18px] font-bold">Media</h2>
             </div>
-          ) : (
-            <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-6">
-              {medias.map((item, index) =>
-                isVideoTab ? (
-                  <div
-                    key={item.id}
-                    onClick={() => setViewerIndex(index)}
-                    className="relative aspect-square w-full overflow-hidden bg-black cursor-pointer"
-                  >
-                    <img
-                      src={item.thumbnailUrl || item.mediaUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white">
-                        <Play size={18} fill="currentColor" />
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    key={item.id}
-                    onClick={() => setViewerIndex(index)}
-                    src={item.mediaUrl}
-                    alt=""
-                    className="aspect-square w-full cursor-pointer object-cover"
-                  />
-                )
-              )}
-            </div>
-          )}
-
-          {hasMore && medias.length > 0 && (
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex gap-5 border-b border-[#ced0d4] text-[14px] font-semibold">
               <button
                 type="button"
-                onClick={loadMore}
-                disabled={isLoading}
-                className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[14px] font-semibold hover:bg-[#d8dadf] disabled:opacity-60"
+                onClick={() => setActiveMediaType("image")}
+                className={`cursor-pointer pb-3 ${activeMediaType === "image" ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "text-[#65676b]"}`}
               >
-                {isLoading ? "Loading..." : "See more"}
+                Photos
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMediaType("video")}
+                className={`cursor-pointer pb-3 ${activeMediaType === "video" ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "text-[#65676b]"}`}
+              >
+                Video
               </button>
             </div>
-          )}
-        </section>
-      </div>
-    </main>
+
+            {error && (
+              <p className="mt-3 text-[13px] font-semibold text-red-600">{error}</p>
+            )}
+
+            {isLoading && medias.length === 0 ? (
+              <div className="mt-3 py-10 text-center text-[14px] text-[#65676b]">Loading...</div>
+            ) : medias.length === 0 ? (
+              <div className="mt-3 py-10 text-center text-[14px] text-[#65676b]">
+                {isVideoTab ? "No videos yet." : "No photos yet."}
+              </div>
+            ) : (
+              <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-6">
+                {medias.map((item, index) =>
+                  isVideoTab ? (
+                    <div
+                      key={item.id}
+                      onClick={() => setViewerIndex(index)}
+                      className="relative aspect-square w-full overflow-hidden bg-black cursor-pointer"
+                    >
+                      <img
+                        src={item.thumbnailUrl || item.mediaUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white">
+                          <Play size={18} fill="currentColor" />
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      key={item.id}
+                      onClick={() => setViewerIndex(index)}
+                      src={item.mediaUrl}
+                      alt=""
+                      className="aspect-square w-full cursor-pointer object-cover"
+                    />
+                  )
+                )}
+              </div>
+            )}
+
+            {hasMore && medias.length > 0 && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={isLoading}
+                  className="h-9 cursor-pointer rounded-md bg-[#e4e6eb] px-4 text-[14px] font-semibold hover:bg-[#d8dadf] disabled:opacity-60"
+                >
+                  {isLoading ? "Loading..." : "See more"}
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
     </>
   );
 }
 
-function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, isAdmin, uploadCoverPhoto, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter }) {
+function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, groupDetail, groupId, isAdmin, uploadCoverPhoto, posts, setIsCreateModalOpen, rules, fetchRules, postsLoading, postsHasNext, loadMorePosts, isMineFilter, setIsMineFilter, fromDateFilter, setFromDateFilter, onDeletePost, onUpdatePost }) {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = React.useRef(null);
 
@@ -514,10 +513,10 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
 
   const formattedCreatedDate = groupDetail?.createdAt || groupDetail?.CreatedAt
     ? new Date(groupDetail.createdAt || groupDetail.CreatedAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      })
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })
     : "March 17, 2018";
 
   return (
@@ -559,23 +558,21 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
             </div>
 
             <div className="mt-3 flex flex-col gap-4 border-b border-[#ced0d4] pb-5 lg:flex-row lg:items-end lg:justify-between">
-              <AvatarStack />
               <div className="flex flex-wrap items-center gap-2">
-                <HeaderButton primary>
-                  <Plus size={18} />
-                  Invite
-                </HeaderButton>
-                <HeaderButton>
-                  <Share2 size={17} fill="currentColor" />
-                  Share
-                </HeaderButton>
                 <HeaderButton>
                   <Users size={17} fill="currentColor" />
                   Joined
                   <ChevronDown size={16} />
                 </HeaderButton>
-                <button type="button" className="flex h-9 w-10 cursor-pointer items-center justify-center rounded-md bg-[#e4e6eb] hover:bg-[#d8dadf]">
-                  <ChevronDown size={18} />
+                <HeaderButton>
+                  <UserPlus size={17} fill="currentColor" />
+                  Join Group
+                </HeaderButton>
+                <button
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-red-500 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <AlertCircle size={17} />
+                  Report
                 </button>
               </div>
             </div>
@@ -587,9 +584,8 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`h-12 cursor-pointer shrink-0 px-3 text-[14px] font-semibold ${
-                      activeTab === tab ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "rounded-md text-[#65676b] hover:bg-[#f2f2f2]"
-                    }`}
+                    className={`h-12 cursor-pointer shrink-0 px-3 text-[14px] font-semibold ${activeTab === tab ? "border-b-2 border-[#0866ff] text-[#0866ff]" : "rounded-md text-[#65676b] hover:bg-[#f2f2f2]"
+                      }`}
                   >
                     {tab}
                   </button>
@@ -656,7 +652,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
           </div>
         </main>
       ) : activeTab === "Featured" ? (
-        <FeaturedTab contentOffsetClass={contentOffsetClass} posts={posts} />
+        <FeaturedTab contentOffsetClass={contentOffsetClass} posts={posts} onDeletePost={onDeletePost} onUpdatePost={onUpdatePost} />
       ) : activeTab === "People" ? (
         <PeopleTab contentOffsetClass={contentOffsetClass} groupId={groupId} />
       ) : activeTab === "Media" ? (
@@ -672,17 +668,6 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
               darkMode={false}
             />
 
-            <section className="rounded-lg border border-[#dddfe2] bg-white p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-[15px] font-bold">Recent activity <Bell size={14} className="text-[#65676b]" /></div>
-                  <button type="button" className="mt-1 cursor-pointer text-[13px] font-semibold text-[#0866ff] hover:underline">
-                    3 new items
-                  </button>
-                </div>
-                <ChevronDown size={18} className="cursor-pointer text-[#050505]" />
-              </div>
-            </section>
 
             <div className="flex items-center justify-between px-1 text-[14px] font-semibold text-[#006d8f]">
               <button
@@ -699,9 +684,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
                   onChange={(e) => setFromDateFilter(e.target.value || null)}
                   className="cursor-pointer text-[13px] font-semibold text-[#006d8f] underline"
                 />
-                <button type="button" className="flex cursor-pointer items-center gap-1 hover:underline">
-                  All topics <ChevronDown size={14} />
-                </button>
+
               </div>
             </div>
 
@@ -711,7 +694,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
               </div>
             ) : posts.length > 0 ? (
               <>
-                {posts.map((post) => <PostCard key={post.id} post={post} />)}
+                {posts.map((post) => <PostCard key={post.id} post={post} onDelete={onDeletePost} onUpdate={onUpdatePost} />)}
                 {postsHasNext && (
                   <div className="flex justify-center">
                     <button
@@ -748,10 +731,11 @@ export default function GroupPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const numericGroupId = Number(groupId);
   const { user: currentUser } = useAuth();
-  const { groupDetail, loading, error, rules, fetchRules, uploadCoverPhoto } = useGroup(numericGroupId);
+  const { groupDetail, loading, error, rules, fetchRules, uploadCoverPhoto, isInactive, inactiveReason, inactiveState } = useGroup(numericGroupId);
   const [activeTab, setActiveTab] = useState("Discussion");
   const [isMineFilter, setIsMineFilter] = useState(false);
   const [fromDateFilter, setFromDateFilter] = useState(null);
+  const groupDeleted = inactiveState?.deleted ?? groupDetail?.isDeleted ?? groupDetail?.IsDeleted ?? false;
   const adminView = searchParams.get("tab") || "home";
 
   const setAdminView = (view) => {
@@ -765,6 +749,8 @@ export default function GroupPage() {
     hasNextPage: postsHasNext,
     loadMore: loadMorePosts,
     refresh: refreshPosts,
+    deletePost: deleteGroupPost,
+    updatePost: updateGroupPost,
   } = useGroupPosts(numericGroupId, {
     isMine: isMineFilter,
     pageSize: 20,
@@ -779,13 +765,54 @@ export default function GroupPage() {
   };
 
   const handleCreatePost = async (payload) => {
-    await refreshPosts();
+    try {
+      await createPostApi(payload);
+      await refreshPosts();
+    } catch (err) {
+      console.error("Create group post failed:", err);
+      throw err;
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] text-[#050505]">
       <Navbar />
       {isAdmin && <GroupAdminSidebar activeView={adminView} onViewChange={setAdminView} />}
+
+      {isInactive && (
+        <div
+          role="alert"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md"
+        >
+          <div className="mx-4 max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-8 w-8 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                />
+              </svg>
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-[#050505]">
+              {groupDeleted ? "Group deleted" : "Group locked"}
+            </h2>
+            <p className="text-[15px] text-[#65676b]">
+              {inactiveReason || "This group is currently unavailable."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className={isInactive ? "pointer-events-none select-none opacity-0" : ""}>
 
       {loading && !groupDetail ? (
         <main className="pt-20">
@@ -822,6 +849,8 @@ export default function GroupPage() {
           setIsMineFilter={setIsMineFilter}
           fromDateFilter={fromDateFilter}
           setFromDateFilter={setFromDateFilter}
+          onDeletePost={deleteGroupPost}
+          onUpdatePost={updateGroupPost}
         />
       )}
 
@@ -840,6 +869,7 @@ export default function GroupPage() {
       >
         <FileText size={20} />
       </button>
+      </div>
     </div>
   );
 }

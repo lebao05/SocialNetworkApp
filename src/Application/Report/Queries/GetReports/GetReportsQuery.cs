@@ -2,12 +2,12 @@ using Application.Abstractions.Messaging;
 using Application.DTOs.Admin;
 using Domain.Enums;
 
-namespace Application.Admin.Queries.GetModerationReports;
+namespace Application.Report.Queries.GetReports;
 
 /// <summary>
 /// Filter options for the admin moderation page.
 /// </summary>
-public sealed record GetModerationReportsQuery(
+public sealed record GetReportsQuery(
     ReportType? ReportType,
     ReportStatus? Status,
     DateTime? FromDate,

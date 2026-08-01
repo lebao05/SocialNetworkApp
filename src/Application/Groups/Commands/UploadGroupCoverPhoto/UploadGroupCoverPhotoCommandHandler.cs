@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Shared;
 using System;
 using System.IO;
@@ -28,14 +29,13 @@ namespace Application.Groups.Commands.UploadGroupCoverPhoto
         public async Task<Result<string>> Handle(UploadGroupCoverPhotoCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure<string>(new Error(
-                    "Group.NotFound",
-                    $"The group with Id {request.GroupId} was not found."));
+                return Result.Failure<string>(inactive);
             }
 
-            if (group.OwnerUserId != request.OwnerUserId)
+            if (group!.OwnerUserId != request.OwnerUserId)
             {
                 return Result.Failure<string>(new Error(
                     "Group.AccessDenied",

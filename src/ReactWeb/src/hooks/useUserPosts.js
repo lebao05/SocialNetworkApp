@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../contexts/authContext";
-import { getUserPostsApi, createPostApi, updatePostApi } from "../apis/postApi";
+import { getUserPostsApi, createPostApi, updatePostApi, getPostApi, deletePostApi } from "../apis/postApi";
 
 export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } = {}) {
   const { user: currentUser } = useAuth();
@@ -9,7 +9,6 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  console.log("posts", posts);
   const isOwner = Boolean(currentUser && profileUserId && String(currentUser.id) === String(profileUserId));
 
   const loadPage = useCallback(async (p = 1) => {
@@ -19,7 +18,6 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
       const data = await getUserPostsApi(profileUserId, p, pageSize);
       // support both array or { items, totalCount }
       const items = Array.isArray(data) ? data : (data.items || []);
-      console.log("items", items);
       if (p === 1) setPosts(items);
       else setPosts((prev) => [...prev, ...items]);
 
@@ -53,16 +51,7 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
   const createPost = async (postPayload) => {
     try {
       const created = await createPostApi(postPayload);
-
-      // optimistic: if creating for this profile, refresh
-      if (!postPayload.groupId && (!postPayload.sharePostId || postPayload.sharePostId === null)) {
-        // assume it's a user post; refresh list to include new post
-        await refresh();
-      } else {
-        // still refresh to reflect changes
-        await refresh();
-      }
-
+      await refresh();
       return created;
     } catch (err) {
       console.error("Create user post failed:", err);
@@ -72,12 +61,24 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
 
   const updatePost = async (postId, updatePayload) => {
     try {
-      const updated = await updatePostApi(postId, updatePayload);
-      // update local cache
-      setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
-      return updated;
+      await updatePostApi(postId, updatePayload);
+      // Backend returns 204 NoContent → re-fetch single post to sync UI.
+      const fresh = await getPostApi(postId);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? fresh : p)));
+      return fresh;
     } catch (err) {
       console.error("Update post failed:", err);
+      throw err;
+    }
+  };
+
+  const deletePost = async (postId) => {
+    try {
+      await deletePostApi(postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      return true;
+    } catch (err) {
+      console.error("Delete post failed:", err);
       throw err;
     }
   };
@@ -93,5 +94,6 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
     refresh,
     createPost,
     updatePost,
+    deletePost,
   };
 }

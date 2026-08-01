@@ -73,8 +73,6 @@ export default function MediaGallery({ media, compact = false, disableInteractio
   const [lightboxIdx, setLightboxIdx] = useState(null);
   const [lightboxPlaying, setLightboxPlaying] = useState(false);
 
-  if (count === 0) return null;
-
   const openLightbox = (idx) => {
     if (disableInteraction) return;
     setLightboxIdx(idx);
@@ -102,6 +100,8 @@ export default function MediaGallery({ media, compact = false, disableInteractio
       setLightboxPlaying(isVideo(allMedia[newIdx]));
     }
   }, [lightboxIdx, allMedia, count]);
+
+  if (count === 0) return null;
 
   const current = lightboxIdx !== null ? allMedia[lightboxIdx] : null;
   const isCurrentVideo = current ? isVideo(current) : false;

@@ -1,7 +1,7 @@
 using Application.Abstractions.Messaging;
 using Domain.Enums;
 
-namespace Application.Admin.Commands.ReviewReport;
+namespace Application.Report.Commands.ReviewReport;
 
 /// <summary>
 /// Reviews a report: marks it as Reviewed or Dismissed, and optionally locks
@@ -15,18 +15,6 @@ namespace Application.Admin.Commands.ReviewReport;
 /// After the content action (if any), the report itself is marked Reviewed
 /// or Dismissed, completing the moderation flow.
 /// </summary>
-/// <param name="ReportId">The report being reviewed.</param>
-/// <param name="ReviewerId">The admin performing the review (from cookie principal).</param>
-/// <param name="Action">
-///   Nothing = no content change (just close the report).
-///   Lock   = lock the content.
-///   Unlock = unlock the content (for post/reel; ignored for user reports).
-/// </param>
-/// <param name="IsDismissed">
-///   false → mark report as Reviewed.
-///   true  → mark report as Dismissed.
-/// </param>
-/// <param name="ReviewNote">Optional admin note for the audit trail.</param>
 public sealed record ReviewReportCommand(
     long ReportId,
     Guid ReviewerId,

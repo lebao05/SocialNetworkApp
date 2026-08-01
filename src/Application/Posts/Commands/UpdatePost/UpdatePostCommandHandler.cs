@@ -41,7 +41,7 @@ namespace Application.Posts.Commands.UpdatePost
                     "You do not have permission to update this post."));
             }
 
-            if (request.Visibility.HasValue)
+            if (request.Visibility.HasValue && !(post.Visibility == PostVisibility.Group && request.Visibility.Value == PostVisibility.Group))
             {
                 if (post.Visibility == PostVisibility.Group)
                 {
@@ -69,6 +69,7 @@ namespace Application.Posts.Commands.UpdatePost
             }
 
             var uploadedUrls = new List<string>();
+            Console.WriteLine(request.NewAttachments?.Count() ?? 0);
             try
             {
                 foreach (var attachment in request.NewAttachments ?? Array.Empty<PostAttachment>())

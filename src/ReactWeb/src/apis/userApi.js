@@ -55,3 +55,13 @@ export async function uploadCoverPhotoApi(file) {
 
     return response.data;
 }
+
+export async function reportUserApi({ userId, reason, details = null }) {
+    const response = await axios.post("/reports", {
+        reportType: "User",
+        reason,
+        details,
+        userId,
+    });
+    return response.data;
+}

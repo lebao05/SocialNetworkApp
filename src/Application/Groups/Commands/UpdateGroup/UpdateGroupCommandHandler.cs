@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Shared;
 
 namespace Application.Groups.Commands.UpdateGroup
@@ -28,14 +29,13 @@ namespace Application.Groups.Commands.UpdateGroup
             }
 
             var group = await _groupRepository.GetByIdAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
-            if (group.OwnerUserId != request.RequesterUserId)
+            if (group!.OwnerUserId != request.RequesterUserId)
             {
                 return Result.Failure(new Error(
                     "Group.Authorization",

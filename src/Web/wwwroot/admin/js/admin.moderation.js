@@ -34,7 +34,7 @@
     if (filters.from)   params.set('from',   filters.from);
     if (filters.to)     params.set('to',     filters.to);
 
-    fetch('/admin/moderation/reports?' + params.toString())
+    fetch('/api/reports?' + params.toString())
       .then(function (r) { return r.json(); })
       .then(function (data) {
         renderRows(tbody, data.items);
@@ -340,7 +340,7 @@
       reviewNote:  note || null
     });
 
-    fetch('/admin/moderation/reports/' + reportId + '/review', {
+    fetch('/api/reports/' + reportId + '/review', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

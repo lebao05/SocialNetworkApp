@@ -84,3 +84,13 @@ export async function recordReelViewApi(reelId) {
   const response = await axios.post(`/reels/${reelId}/view`);
   return response.data;
 }
+
+export async function reportReelApi({ reelId, reason, details = null }) {
+  const response = await axios.post("/reports", {
+    reportType: "Reel",
+    reason,
+    details,
+    reelId,
+  });
+  return response.data;
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getPostsByGroupApi } from "../apis/postApi";
+import { getPostsByGroupApi, deletePostApi, updatePostApi, getPostApi } from "../apis/postApi";
 
 const normalizePaged = (data, pageSize) => {
   if (!data) return { items: [], hasNextPage: false, totalCount: 0, pageNumber: 1 };
@@ -109,6 +109,30 @@ export function useGroupPosts(
     }
   };
 
+  const deletePost = async (postId) => {
+    try {
+      await deletePostApi(postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      return true;
+    } catch (err) {
+      console.error("Delete group post failed:", err);
+      throw err;
+    }
+  };
+
+  const updatePost = async (postId, updatePayload) => {
+    try {
+      await updatePostApi(postId, updatePayload);
+      // Backend returns 204 NoContent → refetch single post to sync UI.
+      const fresh = await getPostApi(postId);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? fresh : p)));
+      return fresh;
+    } catch (err) {
+      console.error("Update group post failed:", err);
+      throw err;
+    }
+  };
+
   return {
     posts,
     isLoading,
@@ -119,5 +143,7 @@ export function useGroupPosts(
     error,
     loadMore,
     refresh,
+    deletePost,
+    updatePost,
   };
 }

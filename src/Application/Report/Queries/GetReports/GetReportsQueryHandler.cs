@@ -1,24 +1,20 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Admin;
-using Application.Shared;
 using Domain.Enums;
 using Domain.Shared;
 
-namespace Application.Admin.Queries.GetModerationReports;
+namespace Application.Report.Queries.GetReports;
 
-internal sealed class GetModerationReportsQueryHandler
-    : IQueryHandler<GetModerationReportsQuery, ModerationReportsResult>
+internal sealed class GetReportsQueryHandler
+    : IQueryHandler<GetReportsQuery, ModerationReportsResult>
 {
     private readonly IReportRepository _reports;
 
-    public GetModerationReportsQueryHandler(IReportRepository reports)
-    {
-        _reports = reports;
-    }
+    public GetReportsQueryHandler(IReportRepository reports) => _reports = reports;
 
     public async Task<Result<ModerationReportsResult>> Handle(
-        GetModerationReportsQuery request,
+        GetReportsQuery request,
         CancellationToken cancellationToken)
     {
         var page = Math.Max(1, request.Page);

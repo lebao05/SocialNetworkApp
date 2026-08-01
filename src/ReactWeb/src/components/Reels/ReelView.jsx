@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useReelComments } from "../../hooks/useReelComments";
-import { recordReelViewApi } from "../../apis/reelApi";
+import { recordReelViewApi, reportReelApi } from "../../apis/reelApi";
 import { useAuth } from "../../contexts/authContext";
 import ReelCommentModal from "./ReelCommentModal";
 
@@ -39,6 +39,9 @@ export default function ReelView({
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [deleteState, setDeleteState] = useState("idle"); // 'idle' | 'asking' | 'submitting'
+  const [reportState, setReportState] = useState("idle"); // 'idle' | 'open' | 'submitting' | 'success'
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
   const directionHintRef = useRef(null);
   const viewedRef = useRef(false);
 
@@ -152,14 +155,38 @@ export default function ReelView({
     setDeleteState("submitting");
     try {
       await onDelete(reel.id);
-      // Parent is responsible for unmounting / navigating away.
-      // Reset state defensively in case the parent keeps this mounted for any reason.
       setDeleteState("idle");
     } catch (err) {
       console.error("[ReelView] delete failed:", err);
       setDeleteState("idle");
     }
   }, [reel, canShowDelete, onDelete]);
+
+  // ── Report ────────────────────────────────────────────────────────────────
+
+  const handleOpenReport = useCallback(() => {
+    if (!reel || isAuthor) return;
+    setReportReason("");
+    setReportDetails("");
+    setReportState("open");
+  }, [reel, isAuthor]);
+
+  const handleCloseReport = useCallback(() => {
+    if (reportState === "submitting") return;
+    setReportState("idle");
+  }, [reportState]);
+
+  const handleSubmitReport = useCallback(async () => {
+    if (!reel || !reportReason.trim()) return;
+    setReportState("submitting");
+    try {
+      await reportReelApi({ reelId: reel.id, reason: reportReason, details: reportDetails || null });
+      setReportState("success");
+    } catch (err) {
+      console.error("[ReelView] report failed:", err);
+      setReportState("idle");
+    }
+  }, [reel, reportReason, reportDetails]);
 
   const handleOpenComments = useCallback(() => {
     setIsCommentModalOpen(true);
@@ -379,6 +406,23 @@ export default function ReelView({
           </span>
         </button> */}
 
+        {/* Report — only shown when user is NOT the reel author */}
+        {!isAuthor && (
+          <button
+            type="button"
+            onClick={handleOpenReport}
+            className="flex flex-col items-center gap-0.5 text-white"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 hover:scale-110 hover:bg-orange-500/20 hover:text-orange-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+            </span>
+            <span className="text-[11px] font-semibold">Report</span>
+          </button>
+        )}
+
         {/* Delete */}
         {canShowDelete && (
           <button type="button" onClick={handleDelete} className="flex flex-col items-center gap-0.5 text-white">
@@ -467,6 +511,135 @@ export default function ReelView({
                 {deleteState === "submitting" ? "Deleting…" : "Delete"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report modal */}
+      {reportState !== "idle" && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={handleCloseReport}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reel-report-title"
+        >
+          <div
+            className="mx-4 w-full max-w-sm rounded-2xl bg-zinc-900 p-6 text-white shadow-2xl ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {reportState === "success" ? (
+              <>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/15 text-green-400">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </span>
+                  <h3 id="reel-report-title" className="text-base font-semibold">Report submitted</h3>
+                  <p className="text-[13px] leading-snug text-white/70">
+                    Thank you. We&apos;ll review this reel and take appropriate action.
+                  </p>
+                </div>
+                <div className="mt-5 flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={handleCloseReport}
+                    className="rounded-full bg-[#1877f2] px-6 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#166fe5]"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 id="reel-report-title" className="text-base font-semibold">Report this reel</h3>
+                  <button
+                    type="button"
+                    onClick={handleCloseReport}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p className="mb-3 text-[13px] text-white/60">Why are you reporting this reel?</p>
+
+                <div className="flex flex-col gap-1.5">
+                  {[
+                    { value: "Spam", label: "Spam" },
+                    { value: "Harassment", label: "Harassment" },
+                    { value: "HateSpeech", label: "Hate speech" },
+                    { value: "Violence", label: "Violence or dangerous organizations" },
+                    { value: "Misinformation", label: "Misinformation" },
+                    { value: "NudityOrSexual", label: "Nudity or sexual content" },
+                    { value: "IntellectualProperty", label: "Intellectual property violation" },
+                    { value: "SpamOrMisleading", label: "Spam or misleading" },
+                    { value: "Impersonation", label: "Impersonation" },
+                    { value: "Other", label: "Other" },
+                  ].map((option) => (
+                    <label
+                      key={option.value}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-colors ${
+                        reportReason === option.value
+                          ? "bg-[#1877f2]/20 text-white ring-1 ring-[#1877f2]/60"
+                          : "bg-white/5 text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="report-reason"
+                        value={option.value}
+                        checked={reportReason === option.value}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-colors ${
+                          reportReason === option.value
+                            ? "border-[#1877f2] bg-[#1877f2] text-white"
+                            : "border-white/30"
+                        }`}
+                      >
+                        {reportReason === option.value && "✓"}
+                      </span>
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Additional details (optional)"
+                  rows={2}
+                  className="mt-3 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-white/30 outline-none focus:border-[#1877f2]/60 focus:ring-1 focus:ring-[#1877f2]/40"
+                />
+
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseReport}
+                    disabled={reportState === "submitting"}
+                    className="rounded-full px-4 py-1.5 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitReport}
+                    disabled={!reportReason.trim() || reportState === "submitting"}
+                    className="flex items-center gap-2 rounded-full bg-red-500 px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                  >
+                    {reportState === "submitting" && (
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    )}
+                    {reportState === "submitting" ? "Submitting…" : "Submit Report"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

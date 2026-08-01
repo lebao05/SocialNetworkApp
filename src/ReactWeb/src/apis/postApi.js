@@ -99,16 +99,49 @@ export async function getPostMediasByUserApi(userId, type, page = 1, pageSize = 
 }
 
 /**
- * Update a post: PUT /api/posts/{id}
+ * Update a post.
+ * - When `newAttachments` is empty: PUT /api/posts/{id} with JSON body
+ *   (handles content/visibility/location/feeling/retainMediaIds only)
+ * - When `newAttachments` is non-empty: PUT /api/posts/{id}/attachments
+ *   with multipart/form-data (also accepts new files)
  */
-export async function updatePostApi(postId, { content, visibility, locationTag = null, feelingActivity = null }) {
-  const response = await axios.put(`/posts/${postId}`, {
-    content,
-    visibility,
-    locationTag,
-    feelingActivity,
-  });
+export async function updatePostApi(postId, { content = null, visibility = null, locationTag = null, feelingActivity = null, retainMediaIds = null, newAttachments = null }) {
+  const formData = new FormData();
+  if (content !== null) formData.append("Content", content);
+  if (visibility !== null) formData.append("Visibility", visibility);
+  if (locationTag !== null) formData.append("LocationTag", locationTag);
+  if (feelingActivity !== null) formData.append("FeelingActivity", feelingActivity);
+  if (retainMediaIds !== null) {
+    retainMediaIds.forEach(id => formData.append("RetainMediaIds", id));
+  }
+  newAttachments.forEach(file => formData.append("NewAttachments", file));
 
+  const response = await axios.put(`/posts/${postId}/attachments`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+
+  return response.data;
+}
+
+/**
+ * Delete a post (soft delete): DELETE /api/posts/{id}
+ */
+export async function deletePostApi(postId) {
+  const response = await axios.delete(`/posts/${postId}`);
+  return response.data;
+}
+
+/**
+ * Report a post: POST /api/reports
+ */
+export async function reportPostApi({ postId, reason, details = null }) {
+  const response = await axios.post("/reports", {
+    reportType: "Post",
+    reason,
+    details,
+    postId,
+  });
   return response.data;
 }
 

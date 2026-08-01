@@ -4,6 +4,7 @@ using Application.Posts.Commands.CreatePost;
 using Application.Posts.Commands.ReactToComment;
 using Application.Posts.Commands.ReactToPost;
 using Application.Posts.Commands.SavePost;
+using Application.Posts.Commands.DeletePost;
 using Application.Posts.Commands.UnsavePost;
 using Application.Posts.Commands.UpdatePost;
 using Application.Posts.Queries.GetComments;
@@ -236,7 +237,7 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var attachments = request.NewAttachments
+            var attachments = (request.NewAttachments ?? [])
                 .Where(file => file.Length > 0)
                 .Select(file => new PostAttachment(
                     file.OpenReadStream(),
@@ -390,6 +391,21 @@ namespace Presentation.Controllers
             }
 
             var command = new UnsavePostCommand(id, userId);
+            var result = await _sender.Send(command, cancellationToken);
+            return result.IsSuccess ? Ok() : HandleFailure(result);
+        }
+
+        /// <summary>DELETE /api/posts/{id}</summary>
+        [HttpDelete("{id:long}")]
+        public async Task<IActionResult> DeletePost(
+            long id,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var command = new DeletePostCommand(userId, id);
             var result = await _sender.Send(command, cancellationToken);
             return result.IsSuccess ? Ok() : HandleFailure(result);
         }

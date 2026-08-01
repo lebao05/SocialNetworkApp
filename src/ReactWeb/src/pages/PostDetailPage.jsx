@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PostModal from "../components/Feed/PostModal";
-import { getPostApi, getCommentsApi, createCommentApi, reactToPostApi, reactToCommentApi } from "../apis/postApi";
+import { getCommentsApi, createCommentApi, reactToPostApi, reactToCommentApi } from "../apis/postApi";
+import { usePost } from "../hooks/usePost";
 import { useAuth } from "../contexts/authContext";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
@@ -117,45 +118,12 @@ function normalizePagedItems(data) {
   };
 }
 
-function normalizePost(raw) {
-  return {
-    id: raw.id,
-    authorId: raw.authorId ?? raw.AuthorId ?? null,
-    authorName: raw.authorName ?? raw.AuthorName ?? null,
-    authorAvatarUrl: raw.authorAvatarUrl ?? raw.AuthorAvatarUrl ?? null,
-    groupId: raw.groupId ?? raw.GroupId ?? null,
-    content: raw.content ?? raw.Content ?? null,
-    visibility: raw.visibility ?? raw.Visibility ?? 0,
-    sharePostId: raw.sharePostId ?? raw.SharePostId ?? null,
-    locationTag: raw.locationTag ?? raw.LocationTag ?? null,
-    feelingActivity: raw.feelingActivity ?? raw.FeelingActivity ?? null,
-    createdAt: raw.createdAt ?? raw.CreatedAt ?? null,
-    updatedAt: raw.updatedAt ?? raw.UpdatedAt ?? null,
-    deletedAt: raw.deletedAt ?? raw.DeletedAt ?? null,
-    media: Array.isArray(raw.media) ? raw.media : (Array.isArray(raw.Media) ? raw.Media : []),
-    reactionCounts: Array.isArray(raw.reactionCounts)
-      ? raw.reactionCounts
-      : Array.isArray(raw.ReactionCounts) ? raw.ReactionCounts : [],
-    commentCount: raw.commentCount ?? raw.CommentCount ?? 0,
-    group: raw.group ?? raw.Group ?? null,
-    sharePost: raw.sharePost ?? raw.SharePost ?? null,
-    userReaction: raw.userReaction ?? raw.UserReaction ?? null,
-    isHiddenFromGroup: raw.isHiddenFromGroup ?? raw.IsHiddenFromGroup ?? false,
-    hiddenAt: raw.hiddenAt ?? raw.HiddenAt ?? null,
-    hideReason: raw.hideReason ?? raw.HideReason ?? null,
-    approvalStatus: raw.approvalStatus ?? raw.ApprovalStatus ?? null,
-    isAnonymous: raw.isAnonymous ?? raw.IsAnonymous ?? false,
-  };
-}
-
-export default function PostDetailPage({backgroundLocation}) {
+export default function PostDetailPage({ backgroundLocation }) {
   const { postId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [post, setPost] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { post, isLoading, error, updatePost, deletePost } = usePost(postId);
 
   const [liked, setLiked] = useState(false);
   const [reactionCounts, setReactionCounts] = useState([]);
@@ -178,36 +146,22 @@ export default function PostDetailPage({backgroundLocation}) {
   const hoverTimerRef = useRef(null);
   const leaveTimerRef = useRef(null);
 
-  // ─── Fetch post on mount ──────────────────────────────────────────────────
+  // ─── Sync derived state from hook post ────────────────────────────────────
   useEffect(() => {
-    if (!postId) {
-      setError("Missing post ID.");
-      setIsLoading(false);
+    if (!post) {
+      setReactionCounts([]);
+      setLikes(0);
+      setLiked(false);
+      setReaction("");
+      setCommentCount(0);
       return;
     }
-
-    const loadPost = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const raw = await getPostApi(postId);
-        const normalized = normalizePost(raw);
-        setPost(normalized);
-        setReactionCounts(normalized.reactionCounts);
-        setLikes(getReactionTotal(normalized.reactionCounts));
-        setLiked(normalized.userReaction != null);
-        setReaction(getReactionIcon(normalized.userReaction));
-        setCommentCount(normalized.commentCount);
-      } catch (err) {
-        console.error("Failed to load post:", err);
-        setError("Could not load post. It may not exist or you don't have permission to view it.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadPost();
-  }, [postId]);
+    setReactionCounts(post.reactionCounts || []);
+    setLikes(getReactionTotal(post.reactionCounts));
+    setLiked(post.userReaction != null);
+    setReaction(getReactionIcon(post.userReaction));
+    setCommentCount(post.commentCount || 0);
+  }, [post]);
 
   // ─── Comment loading ──────────────────────────────────────────────────────
   const mergeComments = (prev, incoming) => {
@@ -215,72 +169,81 @@ export default function PostDetailPage({backgroundLocation}) {
     return [...prev, ...incoming.filter((c) => !existingIds.has(c.id))];
   };
 
-  const loadComments = useCallback(async (pageToLoad = 1) => {
-    if (!post || isLoadingComments) return;
-    setIsLoadingComments(true);
-    setCommentError("");
-    try {
-      const data = await getCommentsApi(post.id, { page: pageToLoad, pageSize: 10 });
-      const { items, hasNextPage } = normalizePagedItems(data);
-      setComments((prev) => {
-        const repliesAndTemps = prev.filter((c) => c.parentId || String(c.id).startsWith("temp-"));
-        return pageToLoad === 1 ? [...items, ...repliesAndTemps] : mergeComments(prev, items);
-      });
-      setCommentPage(pageToLoad);
-      setHasMoreComments(hasNextPage);
-      setCommentsLoaded(true);
-    } catch (error) {
-      setCommentError("Could not load comments. Try again.");
-      console.error("Failed to load comments", error);
-    } finally {
-      setIsLoadingComments(false);
-    }
-  }, [post, isLoadingComments]);
+  const loadComments = useCallback(
+    async (pageToLoad = 1) => {
+      if (!post || isLoadingComments) return;
+      setIsLoadingComments(true);
+      setCommentError("");
+      try {
+        const data = await getCommentsApi(post.id, { page: pageToLoad, pageSize: 10 });
+        const { items, hasNextPage } = normalizePagedItems(data);
+        setComments((prev) => {
+          const repliesAndTemps = prev.filter((c) => c.parentId || String(c.id).startsWith("temp-"));
+          return pageToLoad === 1 ? [...items, ...repliesAndTemps] : mergeComments(prev, items);
+        });
+        setCommentPage(pageToLoad);
+        setHasMoreComments(hasNextPage);
+        setCommentsLoaded(true);
+      } catch (error) {
+        setCommentError("Could not load comments. Try again.");
+        console.error("Failed to load comments", error);
+      } finally {
+        setIsLoadingComments(false);
+      }
+    },
+    [post, isLoadingComments]
+  );
 
   const loadMoreComments = useCallback(() => {
     if (!hasMoreComments || isLoadingComments) return;
     loadComments(commentPage + 1);
   }, [hasMoreComments, isLoadingComments, commentPage, loadComments]);
 
-  const loadReplies = useCallback(async (parentCommentId) => {
-    if (!post || !parentCommentId || loadingReplyParentIds.includes(parentCommentId)) return;
-    const loadedReplyCount = comments.filter((c) => c.parentId === parentCommentId).length;
-    const nextPage = Math.floor(loadedReplyCount / 10) + 1;
-    setLoadingReplyParentIds((prev) => [...prev, parentCommentId]);
-    setCommentError("");
-    try {
-      const data = await getCommentsApi(post.id, { parentCommentId, page: nextPage, pageSize: 10 });
-      const { items } = normalizePagedItems(data);
-      setComments((prev) => mergeComments(prev, items));
-    } catch (error) {
-      setCommentError("Could not load replies. Try again.");
-      console.error("Failed to load replies", error);
-    } finally {
-      setLoadingReplyParentIds((prev) => prev.filter((id) => id !== parentCommentId));
-    }
-  }, [post, loadingReplyParentIds, comments]);
+  const loadReplies = useCallback(
+    async (parentCommentId) => {
+      if (!post || !parentCommentId || loadingReplyParentIds.includes(parentCommentId)) return;
+      const loadedReplyCount = comments.filter((c) => c.parentId === parentCommentId).length;
+      const nextPage = Math.floor(loadedReplyCount / 10) + 1;
+      setLoadingReplyParentIds((prev) => [...prev, parentCommentId]);
+      setCommentError("");
+      try {
+        const data = await getCommentsApi(post.id, { parentCommentId, page: nextPage, pageSize: 10 });
+        const { items } = normalizePagedItems(data);
+        setComments((prev) => mergeComments(prev, items));
+      } catch (error) {
+        setCommentError("Could not load replies. Try again.");
+        console.error("Failed to load replies", error);
+      } finally {
+        setLoadingReplyParentIds((prev) => prev.filter((id) => id !== parentCommentId));
+      }
+    },
+    [post, loadingReplyParentIds, comments]
+  );
 
   // ─── Like / reaction ─────────────────────────────────────────────────────
-  const updateReactionCounts = useCallback((oldReaction, newReaction) => {
-    const oldName = getReactionName(oldReaction);
-    const newName = getReactionName(newReaction);
-    if (oldName === newName) return reactionCounts;
-    const next = reactionCounts.map((item) => ({ ...item }));
-    const adjustCount = (reactionName, delta) => {
-      if (!reactionName) return;
-      const reactionType = REACTION_VALUE_FROM_NAME[reactionName];
-      if (reactionType == null) return;
-      const existing = next.find((item) => item.reactionType === reactionType);
-      if (existing) {
-        existing.count = Math.max(0, existing.count + delta);
-      } else if (delta > 0) {
-        next.push({ reactionType, count: delta });
-      }
-    };
-    if (oldName) adjustCount(oldName, -1);
-    if (newName) adjustCount(newName, 1);
-    return next.filter((item) => item.count > 0);
-  }, [reactionCounts]);
+  const updateReactionCounts = useCallback(
+    (oldReaction, newReaction) => {
+      const oldName = getReactionName(oldReaction);
+      const newName = getReactionName(newReaction);
+      if (oldName === newName) return reactionCounts;
+      const next = reactionCounts.map((item) => ({ ...item }));
+      const adjustCount = (reactionName, delta) => {
+        if (!reactionName) return;
+        const reactionType = REACTION_VALUE_FROM_NAME[reactionName];
+        if (reactionType == null) return;
+        const existing = next.find((item) => item.reactionType === reactionType);
+        if (existing) {
+          existing.count = Math.max(0, existing.count + delta);
+        } else if (delta > 0) {
+          next.push({ reactionType, count: delta });
+        }
+      };
+      if (oldName) adjustCount(oldName, -1);
+      if (newName) adjustCount(newName, 1);
+      return next.filter((item) => item.count > 0);
+    },
+    [reactionCounts]
+  );
 
   const handleMouseEnter = () => {
     if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
@@ -432,6 +395,31 @@ export default function PostDetailPage({backgroundLocation}) {
 
   const handleCancelReply = () => setReplyToCommentId(null);
 
+  // ─── Update / Delete callbacks (delegate to usePost hook) ────────────────
+  const handleUpdatePost = useCallback(
+    async (updatePayload) => {
+      if (!post?.id) return;
+      await updatePost(post.id, {
+        content: updatePayload.content,
+        visibility: updatePayload.visibility,
+        locationTag: updatePayload.locationTag,
+        feelingActivity: updatePayload.feelingActivity,
+        retainMediaIds: updatePayload.retainMediaIds,
+        newAttachments: updatePayload.newAttachments,
+      });
+    },
+    [post, updatePost]
+  );
+
+  const handleDeletePost = useCallback(
+    async (id) => {
+      await deletePost(id ?? post?.id);
+      // close detail page after delete
+      navigate(backgroundLocation ?? -1, { replace: true });
+    },
+    [post, deletePost, navigate, backgroundLocation]
+  );
+
   // ─── Modal open/close ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!commentsLoaded && post) {
@@ -444,12 +432,8 @@ export default function PostDetailPage({backgroundLocation}) {
   }, [backgroundLocation, navigate]);
 
   // ─── Derived values ─────────────────────────────────────────────────────
-  const authorName = post
-    ? `${post.authorName ?? ""}`
-    : "";
-
+  const authorName = post ? `${post.authorName ?? ""}` : "";
   const authorAvatar = post?.authorAvatarUrl || DEFAULT_AVATAR;
-
   const topReactionIcon = getTopReactionIcon(reactionCounts);
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -512,6 +496,8 @@ export default function PostDetailPage({backgroundLocation}) {
       handleReactionSelect={handleReactionSelect}
       handleMouseEnter={handleMouseEnter}
       handleMouseLeave={handleMouseLeave}
+      onUpdate={handleUpdatePost}
+      onDelete={handleDeletePost}
       transparentOverlay={true}
     />
   );

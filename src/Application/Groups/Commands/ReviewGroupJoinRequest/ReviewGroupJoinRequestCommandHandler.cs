@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Enums;
 using Domain.Events;
 using Domain.Shared;
@@ -30,15 +31,14 @@ namespace Application.Groups.Commands.ReviewGroupJoinRequest
         public async Task<Result> Handle(ReviewGroupJoinRequestCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
             // Check if requester has admin/moderator permissions in the group
-            if (!group.IsModeratorOrAdmin(request.RequesterUserId))
+            if (!group!.IsModeratorOrAdmin(request.RequesterUserId))
             {
                 return Result.Failure(new Error(
                     "Group.AccessDenied",

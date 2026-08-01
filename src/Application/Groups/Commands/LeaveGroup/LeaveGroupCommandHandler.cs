@@ -2,6 +2,7 @@ using System.Linq;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Groups;
 using Domain.Shared;
 
 namespace Application.Groups.Commands.LeaveGroup
@@ -22,14 +23,13 @@ namespace Application.Groups.Commands.LeaveGroup
         public async Task<Result> Handle(LeaveGroupCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            var inactive = GroupGuard.EnsureActive(group);
+            if (inactive is not null)
             {
-                return Result.Failure(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                return Result.Failure(inactive);
             }
 
-            if (group.OwnerUserId == request.UserId)
+            if (group!.OwnerUserId == request.UserId)
             {
                 return Result.Failure(new Error(
                     "Group.OwnerCannotLeave",

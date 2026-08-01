@@ -1,10 +1,10 @@
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
-using Domain.Entities;
 using Domain.Enums;
 using Domain.Shared;
+using ReportEntity = Domain.Entities.Report;
 
-namespace Application.Admin.Commands.ReviewReport;
+namespace Application.Report.Commands.ReviewReport;
 
 internal sealed class ReviewReportCommandHandler : ICommandHandler<ReviewReportCommand, ReviewReportResult>
 {
@@ -29,13 +29,11 @@ internal sealed class ReviewReportCommandHandler : ICommandHandler<ReviewReportC
         ReviewReportCommand request,
         CancellationToken cancellationToken)
     {
-        // Load report with its content
         var report = await _reports.GetByIdWithContentAsync(request.ReportId, cancellationToken);
         if (report is null)
             return Result.Failure<ReviewReportResult>(
                 new Error("Admin.ReportNotFound", "Report not found."));
 
-        // ── Step 1: optionally act on the underlying content ──────────────────
         switch (request.Action)
         {
             case ReportReviewAction.Lock:
@@ -46,7 +44,6 @@ internal sealed class ReviewReportCommandHandler : ICommandHandler<ReviewReportC
                 break;
         }
 
-        // ── Step 2: mark report as Reviewed or Dismissed ────────────────────
         if (request.IsDismissed)
             report.Dismiss(request.ReviewerId, request.ReviewNote);
         else
@@ -62,7 +59,7 @@ internal sealed class ReviewReportCommandHandler : ICommandHandler<ReviewReportC
             report.ReportType.ToString()));
     }
 
-    private async Task ApplyLockAsync(Report report, bool shouldLock, CancellationToken ct)
+    private async Task ApplyLockAsync(Domain.Entities.Report report, bool shouldLock, CancellationToken ct)
     {
         switch (report.ReportType)
         {
@@ -78,7 +75,7 @@ internal sealed class ReviewReportCommandHandler : ICommandHandler<ReviewReportC
         }
     }
 
-    private static long? GetContentId(Report report) => report.ReportType switch
+    private static long? GetContentId(ReportEntity report) => report.ReportType switch
     {
         ReportType.Post  => report.PostId,
         ReportType.Reel => report.ReelId,

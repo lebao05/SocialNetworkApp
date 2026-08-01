@@ -1,10 +1,8 @@
-using Application.Admin.Commands.ReviewReport;
 using Application.Admin.Commands.SetGroupLock;
 using Application.Admin.Commands.SetUserLock;
 using Application.Admin.Commands.SetUserRole;
 using Application.Admin.Commands.SetPostLock;
 using Application.Admin.Commands.SetReelLock;
-using Application.Admin.Queries.GetModerationReports;
 using Application.Admin.Queries.SearchAdminGroups;
 using Application.Admin.Queries.SearchAdminUsers;
 using Application.Auth.Commands.AdminLogin;
@@ -455,67 +453,6 @@ namespace Presentation.Controllers
 
         // ── Moderation endpoints ────────────────────────────────────────────────
 
-        /// <summary>GET /admin/moderation/reports?type=&status=&from=&to=&page=&pageSize=</summary>
-        [HttpGet("moderation/reports")]
-        [Authorize(Roles = AdminRole)]
-        public async Task<IActionResult> ModerationReports(
-            [FromQuery] string? type,
-            [FromQuery] string? status,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? to,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            CancellationToken ct = default)
-        {
-            Domain.Enums.ReportType? reportType = null;
-            Domain.Enums.ReportStatus? reportStatus = null;
-
-            if (!string.IsNullOrEmpty(type) && Enum.TryParse<Domain.Enums.ReportType>(type, ignoreCase: true, out var rt))
-                reportType = rt;
-
-            if (!string.IsNullOrEmpty(status) && Enum.TryParse<Domain.Enums.ReportStatus>(status, ignoreCase: true, out var rs))
-                reportStatus = rs;
-
-            var result = await _sender.Send(
-                new GetModerationReportsQuery(reportType, reportStatus, from, to, page, pageSize), ct);
-
-            if (result.IsFailure)
-                return StatusCode(500, new { error = result.Error.Message });
-
-            var payload = result.Value;
-            return Ok(new
-            {
-                items      = payload.Items,
-                page       = payload.Page,
-                pageSize   = payload.PageSize,
-                totalCount = payload.TotalCount,
-                totalPages = (int)Math.Ceiling((double)payload.TotalCount / payload.PageSize),
-                hasNext    = payload.Page * payload.PageSize < payload.TotalCount,
-                hasPrev    = payload.Page > 1,
-            });
-        }
-
-        /// <summary>POST /admin/moderation/reports/{id}/review</summary>
-        [HttpPost("moderation/reports/{id:long}/review")]
-        [Authorize(Roles = AdminRole)]
-        public async Task<IActionResult> ReviewReport(
-            long id,
-            [FromBody] ReviewReportRequest body,
-            CancellationToken ct = default)
-        {
-            var reviewerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                is { Value: var uid } && Guid.TryParse(uid, out var rid)
-                ? rid
-                : Guid.Empty;
-
-            var result = await _sender.Send(new ReviewReportCommand(
-                id, reviewerId, body.Action, body.IsDismissed, body.ReviewNote), ct);
-
-            return result.IsSuccess
-                ? Ok(result.Value)
-                : NotFound(new { error = result.Error.Message });
-        }
-
         /// <summary>POST /admin/moderation/posts/{id}/lock</summary>
         [HttpPost("moderation/posts/{id:long}/lock")]
         [Authorize(Roles = AdminRole)]
@@ -581,11 +518,4 @@ namespace Presentation.Controllers
                 || HttpContext.Session.GetString("AdminName") != null;
         }
     }
-
-    // Simple body DTO for the review endpoint so ASP.NET can bind [FromBody].
-    public record ReviewReportRequest(
-        ReportReviewAction Action,
-        bool IsDismissed,
-        string? ReviewNote = null
-    );
 }

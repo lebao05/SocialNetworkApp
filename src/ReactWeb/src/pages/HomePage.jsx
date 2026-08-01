@@ -21,7 +21,9 @@ export default function HomePage() {
     posts,
     isLoading,
     createPost,
-    markLatestAsSeen
+    markLatestAsSeen,
+    deletePost: deleteFeedPost,
+    updatePost: updateFeedPost,
   } = useFeed();
 
   const markUnseenFeedItems = useCallback(() => {
@@ -98,7 +100,12 @@ export default function HomePage() {
 
             {posts.length > 0 ? (
               posts.map((feedItem) => (
-                <PostCard key={feedItem.feedId || feedItem.id || feedItem.post?.id} post={feedItem.post} />
+                <PostCard
+                  key={feedItem.feedId || feedItem.id || feedItem.post?.id}
+                  post={feedItem.post}
+                  onDelete={deleteFeedPost}
+                  onUpdate={updateFeedPost}
+                />
               ))
             ) : isLoading ? (
               <div className="flex flex-col gap-4">

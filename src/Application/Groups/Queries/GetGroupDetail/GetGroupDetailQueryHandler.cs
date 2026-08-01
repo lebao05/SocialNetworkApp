@@ -18,11 +18,11 @@ namespace Application.Groups.Queries.GetGroupDetail
         public async Task<Result<GroupDetailDto>> Handle(GetGroupDetailQuery request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdWithMembersAsync(request.GroupId, cancellationToken);
-            if (group is null)
+            if (group is null || group.DeletedAt is not null)
             {
                 return Result.Failure<GroupDetailDto>(new Error(
-                    "Group.NotFound",
-                    $"Group with id {request.GroupId} was not found."));
+                    "Group.Deleted",
+                    "This group has been deleted and is no longer available."));
             }
 
             var requesterMember = group.Members.FirstOrDefault(member => member.UserId == request.RequesterUserId);
@@ -48,6 +48,8 @@ namespace Application.Groups.Queries.GetGroupDetail
                 role,
                 isOwner,
                 requesterMember is not null || isOwner,
+                group.IsLocked,
+                group.DeletedAt is not null,
                 group.CreatedAt);
 
             return Result.Success(response);
