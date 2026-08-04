@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./authContext";
 import {
     getFriendsApi,
     getIncomingFriendRequestsApi,
@@ -15,6 +16,7 @@ import {
 const FriendContext = createContext(null);
 
 export function FriendProvider({ children }) {
+    const { user } = useAuth();
     const [friends, setFriends] = useState([]);
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [recommendations, setRecommendations] = useState([]);
@@ -26,9 +28,10 @@ export function FriendProvider({ children }) {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        if (!user) return;
         fetchFriends(1, false);
         fetchIncomingFriendRequests(1, false);
-    }, []);
+    }, [user]);
 
     const handleApiError = (err, fallbackMessage) => {
         const message = err?.message || fallbackMessage;

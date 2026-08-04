@@ -30,7 +30,7 @@ namespace Infrastructure.Persistence.Repositories
             // 1. Build the base query over the RAW database entities (UserFeed)
             var baseQuery = _context.UserFeeds
                 .AsNoTracking()
-                .AsSplitQuery() // Resolves performance warning regarding multiple collection includes
+                .AsSplitQuery()
                 .Where(f => f.SourceUserId == userId)
                 .Where(f => !f.Post.IsHiddenFromGroup && f.Post.ApprovalStatus == PostApprovalStatus.Approved)
                 // ====== VISIBILITY SECURITY ======
@@ -73,83 +73,13 @@ namespace Infrastructure.Persistence.Repositories
                     cancellationToken);
             }
 
-            // 4. The EF projection can't run Guid.TryParse, so Tags was emitted
-            //    as Array.Empty. Hydrate from PostTag rows in a single query
-            //    before returning.
-            await HydrateTagsAsync(feeds.Items, cancellationToken);
-
+            // 4. Tags are projected directly from the DB via EF Include — no
+            //    post-processing round-trip required.
             return feeds;
         }
 
         /// <summary>
-        /// Loads <see cref="Domain.Entities.PostTag"/> rows for every feed post
-        /// (top-level + any nested SharePost) and rebuilds the
-        /// <see cref="PostDto.Tags"/> / SharePost.Tags collections. Used because
-        /// the EF projection in <see cref="ApplySelect"/> cannot translate
-        /// Guid.TryParse and so sets Tags to Array.Empty.
-        /// </summary>
-        private async Task HydrateTagsAsync(List<FeedPostDto> feeds, CancellationToken cancellationToken)
-        {
-            if (feeds.Count == 0) return;
-
-            var topIds = new HashSet<long>();
-            var shareIds = new HashSet<long>();
-            foreach (var f in feeds)
-            {
-                if (f.Post.Id != 0) topIds.Add(f.Post.Id);
-                if (f.Post.SharePost is not null && f.Post.SharePost.Id != 0) shareIds.Add(f.Post.SharePost.Id);
-            }
-            var allIds = new List<long>(topIds.Count + shareIds.Count);
-            allIds.AddRange(topIds);
-            allIds.AddRange(shareIds);
-            if (allIds.Count == 0) return;
-
-            var rows = await _context.PostTags
-                .AsNoTracking()
-                .Where(t => allIds.Contains(t.PostId))
-                .Select(t => new { t.PostId, t.TagName })
-                .ToListAsync(cancellationToken);
-
-            var byPostId = rows
-                .GroupBy(r => r.PostId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(x => x.TagName).ToList());
-
-            for (var i = 0; i < feeds.Count; i++)
-            {
-                var feed = feeds[i];
-                var post = feed.Post;
-
-                var topTags = topIds.Contains(post.Id) && byPostId.TryGetValue(post.Id, out var topNames)
-                    ? (IReadOnlyCollection<TagDto>)topNames.Select(TagDto.FromTagName).ToList()
-                    : Array.Empty<TagDto>();
-
-                if (post.SharePost is not null && shareIds.Contains(post.SharePost.Id)
-                    && byPostId.TryGetValue(post.SharePost.Id, out var shareNames))
-                {
-                    feeds[i] = feed with
-                    {
-                        Post = post with
-                        {
-                            Tags = topTags,
-                            SharePost = post.SharePost with
-                            {
-                                Tags = shareNames.Select(TagDto.FromTagName).ToList()
-                            }
-                        }
-                    };
-                }
-                else
-                {
-                    feeds[i] = feed with
-                    {
-                        Post = post with { Tags = topTags }
-                    };
-                }
-            }
-        }
-
-        /// <summary>
-        /// Projects a UserFeed query into FeedPostDto. 
+        /// Projects a UserFeed query into FeedPostDto.
         /// Operates directly on IQueryable to preserve database translation.
         /// </summary>
         private IQueryable<FeedPostDto> ApplySelect(IQueryable<UserFeed> query, Guid userId)
@@ -213,7 +143,7 @@ namespace Infrastructure.Persistence.Repositories
                                    && feed.Post.SharePost.GroupId != null
                                    && ((feed.Post.SharePost.Group != null && feed.Post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
                                        || _context.GroupMembers.Any(gm => gm.GroupId == feed.Post.SharePost.GroupId && gm.UserId == userId)))))
-                                ? null // Returns null if SharePost doesn't exist OR visibility checks fail
+                                ? null
                                 : new PostDto(
                                     feed.Post.SharePost.Id,
                                     feed.Post.SharePost.AuthorId,
@@ -256,9 +186,13 @@ namespace Infrastructure.Persistence.Repositories
                                             feed.Post.SharePost.Group.PrivacyType,
                                             feed.Post.SharePost.Group.CoverPhotoUrl),
 
-                                    null, // Stop recursive mapping (no nested SharePost)
+                                    null,
 
-                                    Array.Empty<TagDto>(), // hydrated after materialization
+                                    feed.Post.SharePost.Tags
+                                        .Select(t => new TagDto(
+                                            t.UserId,
+                                            t.User != null ? t.User.FirstName + " " + t.User.LastName : ""))
+                                        .ToList(),
 
                                     feed.Post.SharePost.Reactions
                                         .Where(r => r.UserId == userId)
@@ -273,7 +207,11 @@ namespace Infrastructure.Persistence.Repositories
                                     feed.Post.SharePost.IsAnonymous
                                 ),
 
-                            Array.Empty<TagDto>(), // hydrated after materialization
+                            feed.Post.Tags
+                                .Select(t => new TagDto(
+                                    t.UserId,
+                                    t.User != null ? t.User.FirstName + " " + t.User.LastName : ""))
+                                .ToList(),
 
                             feed.Post.Reactions
                         .Where(r => r.UserId == userId)

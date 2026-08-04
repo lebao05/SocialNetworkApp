@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
+using Application.Users;
 using Domain.Entities;
 using Domain.Events;
 using Domain.Shared;
@@ -38,6 +39,13 @@ namespace Application.Posts.Commands.CreateComment
                 return Result.Failure<long>(new Error(
                     "User.NotFound",
                     $"The user with Id {request.UserId} was not found."));
+            }
+
+            // Reject the mutation if the actor is currently locked by an admin.
+            var lockError = UserGuard.EnsureNotLocked(user);
+            if (lockError is not null)
+            {
+                return Result.Failure<long>(lockError);
             }
 
             var post = await _postRepository.GetByIdAsync(request.PostId, cancellationToken);

@@ -14,17 +14,20 @@ internal sealed class PostCreatedDomainEventHandler
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IPostRepository _postRepository;
     private readonly INotificationHubNotifier _notificationHubNotifier;
     private readonly ILogger<PostCreatedDomainEventHandler> _logger;
 
     public PostCreatedDomainEventHandler(
         INotificationRepository notificationRepository,
         IUserRepository userRepository,
+        IPostRepository postRepository,
         INotificationHubNotifier notificationHubNotifier,
         ILogger<PostCreatedDomainEventHandler> logger)
     {
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
+        _postRepository = postRepository;
         _notificationHubNotifier = notificationHubNotifier;
         _logger = logger;
     }
@@ -43,6 +46,15 @@ internal sealed class PostCreatedDomainEventHandler
             return;
         }
 
+        var post = await _postRepository.GetByIdAsync(notification.PostId, cancellationToken);
+        if (post is null)
+        {
+            _logger.LogWarning(
+                "Post {PostId} no longer exists, skipping tag notifications",
+                notification.PostId);
+            return;
+        }
+
         var author = await _userRepository.GetByIdAsync(notification.AuthorId, cancellationToken);
 
         foreach (var taggedUserId in notification.TaggedUserIds)
@@ -51,7 +63,6 @@ internal sealed class PostCreatedDomainEventHandler
             {
                 continue;
             }
-            Console.WriteLine(taggedUserId);
             var notificationEntity = new Notification(
                 id: 0,
                 recipientUserId: taggedUserId,

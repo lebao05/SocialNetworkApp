@@ -9,12 +9,10 @@ namespace Application.Posts.Queries.SearchPosts
     internal sealed class SearchPostsQueryHandler : IQueryHandler<SearchPostsQuery, PagedList<PostDto>>
     {
         private readonly IPostRepository _postRepository;
-        private readonly IUserRepository _userRepository;
 
-        public SearchPostsQueryHandler(IPostRepository postRepository, IUserRepository userRepository)
+        public SearchPostsQueryHandler(IPostRepository postRepository)
         {
             _postRepository = postRepository;
-            _userRepository = userRepository;
         }
 
         public async Task<Result<PagedList<PostDto>>> Handle(SearchPostsQuery request, CancellationToken cancellationToken)
@@ -24,12 +22,9 @@ namespace Application.Posts.Queries.SearchPosts
 
             var posts = await _postRepository.SearchAsync(request.userId, request.SearchQuery, page, pageSize, cancellationToken);
 
-            // Resolve tagged-user display names in a single batched call
-            // across the whole paged result.
-            await TagResolver.ResolveAllAsync(posts.Items, _userRepository, cancellationToken);
-
+            // Tags are already projected from the DB via EF Include — no
+            // post-processing round-trip required.
             return Result.Success(posts);
         }
-
     }
 }

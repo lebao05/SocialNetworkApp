@@ -22,6 +22,8 @@ import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryPage from "./pages/StoryPage";
 import PostDetailPage from "./pages/PostDetailPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SearchEngineProvider } from "./contexts/SearchEngineContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -38,6 +40,7 @@ export default function App() {
         pathname: "/",
       }
       : location);
+
   return (
     <SearchEngineProvider>
       <NotificationProvider>
@@ -45,6 +48,8 @@ export default function App() {
       <Routes location={backgroundLocation || location}>
         <Route path="/sign-in" element={<SigninPage />} />
         <Route path="/sign-up" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />

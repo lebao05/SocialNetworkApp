@@ -10,7 +10,7 @@ export function useUserPosts(profileUserId, { initialPage = 1, pageSize = 10 } =
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isOwner = Boolean(currentUser && profileUserId && String(currentUser.id) === String(profileUserId));
-
+  console.log(posts);
   const loadPage = useCallback(async (p = 1) => {
     if (!profileUserId) return;
     setIsLoading(true);

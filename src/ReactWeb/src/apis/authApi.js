@@ -33,3 +33,27 @@ export async function signupApi({
     });
     return response.data;
 }
+
+/**
+ * Starts the password-reset flow. The backend returns 200 with the
+ * same payload whether or not the email exists, so callers don't have
+ * to special-case "unknown address".
+ */
+export async function forgotPasswordApi(email) {
+    const response = await axios.post("/auth/forgot-password", { email });
+    return response.data;
+}
+
+/**
+ * Consumes a password-reset token delivered to the user's inbox.
+ * Returns the server's JSON payload on success; throws on a
+ * ProblemDetails 4xx (token expired, new-password too weak, ...).
+ */
+export async function resetPasswordApi({ email, token, newPassword }) {
+    const response = await axios.post("/auth/reset-password", {
+        email,
+        token,
+        newPassword
+    });
+    return response.data;
+}

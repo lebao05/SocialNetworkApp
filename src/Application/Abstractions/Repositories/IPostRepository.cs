@@ -14,7 +14,7 @@ namespace Application.Abstractions.Repositories
         Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, Guid? authorId = null, CancellationToken cancellationToken = default);
         Task<PagedList<Post>> GetByGroupIdPagedAsync(long groupId, int page, int pageSize, PostApprovalStatus approvalStatus, CancellationToken cancellationToken = default);
         Task<IEnumerable<Post>> GetByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default);
-        Task<PagedList<Post>> GetByAuthorIdPagedAsync(Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedList<PostDto>> GetByAuthorIdPagedAsync(Guid authorId, Guid? viewerId, int page, int pageSize, CancellationToken cancellationToken = default);
         Task<PagedList<PostMedia>> GetMediasByGroupIdPagedAsync(long groupId, int page, int pageSize, string? mediaType = null, CancellationToken cancellationToken = default);
         Task<PagedList<PostMedia>> GetMediasByAuthorIdPagedAsync(Guid authorId, int page, int pageSize, string? mediaType = null, CancellationToken cancellationToken = default);
         void Add(Post post);

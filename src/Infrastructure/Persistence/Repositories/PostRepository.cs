@@ -46,26 +46,16 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<PostDto?> GetDetailPostAsync(long id, Guid? viewerId, CancellationToken cancellationToken = default)
         {
-            // 1. Start with the root post query matching the target ID
             var query = _context.Posts
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(p => p.Id == id && p.DeletedAt == null && p.ApprovalStatus == PostApprovalStatus.Approved
-                );
+                .Where(p => p.Id == id && p.DeletedAt == null && p.ApprovalStatus == PostApprovalStatus.Approved);
 
-            // 2. Apply the updated visibility engine (handles anonymous/null viewers safely)
             query = ApplyPostVisibility(query, viewerId);
 
-            // 3. Project directly into PostDto using our single-source projection rules
             var projectedQuery = ApplySelect(query, viewerId);
 
-            // 4. Return the calculated detail object or null if unauthorized/not found
-            var dto = await projectedQuery.FirstOrDefaultAsync(cancellationToken);
-            if (dto is not null)
-            {
-                await HydrateTagsAsync(new List<PostDto> { dto }, cancellationToken);
-            }
-            return dto;
+            return await projectedQuery.FirstOrDefaultAsync(cancellationToken);
         }
 
 
@@ -184,30 +174,17 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<PagedList<Post>> GetByAuthorIdPagedAsync(Guid authorId, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<PagedList<PostDto>> GetByAuthorIdPagedAsync(Guid authorId, Guid? viewerId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.Posts
                 .AsNoTracking()
-                .Include(post => post.Author)
-                .Include(post => post.Group)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sharedPost => sharedPost!.Group)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sharedPost => sharedPost!.Author)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sharedPost => sharedPost!.Media)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sharedPost => sharedPost!.Reactions)
-                .Include(post => post.SharePost)
-                    .ThenInclude(sharedPost => sharedPost!.Comments)
-                .Include(post => post.Media)
-                .Include(post => post.Reactions)
-                .Include(post => post.Comments)
-                .Include(post => post.Tags)
-                .Where(post => post.AuthorId == authorId && post.GroupId == null)
-                .OrderByDescending(post => post.CreatedAt);
+                .Where(post => post.AuthorId == authorId && post.GroupId == null);
 
-            return await PagedList<Post>.CreateAsync(query, page, pageSize, cancellationToken);
+            query = ApplyPostVisibility(query, viewerId).OrderByDescending(p => p.CreatedAt);
+
+            var projectedQuery = ApplySelect(query, viewerId);
+
+            return await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
         }
 
         public async Task<PagedList<PostMedia>> GetMediasByGroupIdPagedAsync(long groupId, int page, int pageSize, string? mediaType = null, CancellationToken cancellationToken = default)
@@ -447,302 +424,233 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<PagedList<PostDto>> SearchAsync(Guid userId, string? searchQuery, int page, int pageSize, CancellationToken cancellationToken = default)
         {
-            // 1. Initialize root filter query
             var query = _context.Posts
                 .AsNoTracking()
                 .Where(post => post.DeletedAt == null && post.ApprovalStatus == PostApprovalStatus.Approved);
 
-            // 2. Apply Full-Text Search Vector rule if query parameter exists
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 query = query.Where(post => EF.Property<NpgsqlTsVector>(post, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
             }
 
-            // 3. Order and apply identical visibility logic used in GetDetailPostAsync
             query = ApplyPostVisibility(query, userId);
 
-            // 4. Project into IQueryable<PostDto> using your established projection rule method
             var projectedQuery = ApplySelect(query, userId);
 
-            // 5. Build and return the specialized PagedList utilizing the projected query
-            var result = await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
-
-            // 6. Tag projection is emitted as Array.Empty in EF (Guid.TryParse isn't
-            //    translatable). Hydrate from PostTag rows in a single round-trip.
-            await HydrateTagsAsync(result.Items, cancellationToken);
-            return result;
+            return await PagedList<PostDto>.CreateAsync(projectedQuery, page, pageSize, cancellationToken);
         }
 
-        /// <summary>
-        /// Loads <see cref="Domain.Entities.PostTag"/> rows for every supplied
-        /// post (top-level and any nested SharePost) and rebuilds the
-        /// <see cref="PostDto.Tags"/> / SharePost.Tags collections in memory.
-        /// The EF projection can't run Guid.TryParse, so we set Tags to
-        /// Array.Empty and patch it back here with one batched query.
-        /// </summary>
-        private async Task HydrateTagsAsync(List<PostDto> posts, CancellationToken cancellationToken)
+        // ---- Admin dashboard aggregates ----
+
+        public Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default)
         {
-            if (posts.Count == 0) return;
-
-            var topIds = new HashSet<long>();
-            var shareIds = new HashSet<long>();
-            foreach (var p in posts)
-            {
-                if (p.Id != 0) topIds.Add(p.Id);
-                if (p.SharePost is not null && p.SharePost.Id != 0) shareIds.Add(p.SharePost.Id);
-            }
-            var allIds = new List<long>(topIds.Count + shareIds.Count);
-            allIds.AddRange(topIds);
-            allIds.AddRange(shareIds);
-            if (allIds.Count == 0) return;
-
-            var rows = await _context.PostTags
-                .AsNoTracking()
-                .Where(t => allIds.Contains(t.PostId))
-                .Select(t => new { t.PostId, t.TagName })
-                .ToListAsync(cancellationToken);
-
-            var byPostId = rows
-                .GroupBy(r => r.PostId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(x => x.TagName).ToList());
-
-            for (var i = 0; i < posts.Count; i++)
-            {
-                var post = posts[i];
-                var topTags = topIds.Contains(post.Id) && byPostId.TryGetValue(post.Id, out var topNames)
-                    ? (IReadOnlyCollection<TagDto>)topNames.Select(TagDto.FromTagName).ToList()
-                    : Array.Empty<TagDto>();
-
-                if (post.SharePost is not null && shareIds.Contains(post.SharePost.Id)
-                    && byPostId.TryGetValue(post.SharePost.Id, out var shareNames))
-                {
-                    posts[i] = post with
-                    {
-                        Tags = topTags,
-                        SharePost = post.SharePost with
-                        {
-                            Tags = shareNames.Select(TagDto.FromTagName).ToList()
-                        }
-                    };
-                }
-                else
-                {
-                    posts[i] = post with { Tags = topTags };
-                }
-            }
+            return _context.Posts.AsNoTracking().LongCountAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<DailyCountDto>> GetPostSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Posts
+                .AsNoTracking()
+                .Where(p => p.CreatedAt >= fromUtc && p.CreatedAt < toUtc)
+                .GroupBy(p => p.CreatedAt.Date)
+                .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<DailyCountDto>> GetCommentSeriesAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.PostComments
+                .AsNoTracking()
+                .Where(c => c.CreatedAt >= fromUtc && c.CreatedAt < toUtc)
+                .GroupBy(c => c.CreatedAt.Date)
+                .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<bool> SetLockedAsync(
+            long postId,
+            bool isLocked,
+            CancellationToken cancellationToken = default)
+        {
+            var affected = await _context.Posts
+                .Where(p => p.Id == postId)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsLocked, isLocked), cancellationToken);
+            return affected > 0;
+        }
 
         /// <summary>
         /// Applies visibility rules directly onto an IQueryable of Posts.
         /// </summary>
         private IQueryable<Post> ApplyPostVisibility(IQueryable<Post> query, Guid? viewerId)
         {
-            // If viewerId is null, we treat them as an unauthenticated/guest user (can only see Public content)
             return query.Where(p =>
                 p.Visibility == PostVisibility.Public
                 || (viewerId != null && (
-                    (p.Visibility == PostVisibility.Private 
+                    (p.Visibility == PostVisibility.Private
                         && p.AuthorId == viewerId)
-                    || (p.Visibility == PostVisibility.Friends 
-                        && (p.AuthorId == viewerId 
+                    || (p.Visibility == PostVisibility.Friends
+                        && (p.AuthorId == viewerId
                             || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == p.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == p.AuthorId))))
-                    || (p.Visibility == PostVisibility.Group 
-                        && p.GroupId != null 
-                        && ((p.Group != null && p.Group.PrivacyType == GroupPrivacyType.Public) 
+                    || (p.Visibility == PostVisibility.Group
+                        && p.GroupId != null
+                        && ((p.Group != null && p.Group.PrivacyType == GroupPrivacyType.Public)
                             || _context.GroupMembers.Any(gm => gm.GroupId == p.GroupId && gm.UserId == viewerId)))
                 ))
             );
         }
-    /// <summary>
-    /// Projects an IQueryable of Posts into PostDto while handling the nested SharePost authorization safely.
-    /// </summary>
-    private IQueryable<PostDto> ApplySelect(IQueryable<Post> query, Guid? viewerId)
-    {
-        return query.Select(post => new PostDto(
-            post.Id,
-            post.AuthorId,
-            post.Author.FirstName + " " + post.Author.LastName,
-            post.Author.AvatarUrl,
-            post.GroupId,
-            post.Content,
-            post.Visibility,
-            post.SharePostId,
-            post.LocationTag,
-            post.FeelingActivity,
-            post.CreatedAt,
-            post.UpdatedAt,
-            post.DeletedAt,
 
-            post.Media
-                .Select(m => new PostMediaDto(
-                    m.Id,
-                    m.MediaType,
-                    m.MediaUrl,
-                    m.ThumbnailUrl,
-                    m.Metadata,
-                    m.UploadedAt))
-                .ToList(),
+        /// <summary>
+        /// Projects an IQueryable of Posts into PostDto while handling the nested SharePost authorization safely.
+        /// </summary>
+        private IQueryable<PostDto> ApplySelect(IQueryable<Post> query, Guid? viewerId)
+        {
+            return query.Select(post => new PostDto(
+                post.Id,
+                post.AuthorId,
+                post.Author.FirstName + " " + post.Author.LastName,
+                post.Author.AvatarUrl,
+                post.GroupId,
+                post.Content,
+                post.Visibility,
+                post.SharePostId,
+                post.LocationTag,
+                post.FeelingActivity,
+                post.CreatedAt,
+                post.UpdatedAt,
+                post.DeletedAt,
 
-            post.Reactions
-                .GroupBy(r => r.ReactionType)
-                .Select(g => new ReactionCountDto(g.Key, g.Count()))
-                .ToList(),
+                post.Media
+                    .Select(m => new PostMediaDto(
+                        m.Id,
+                        m.MediaType,
+                        m.MediaUrl,
+                        m.ThumbnailUrl,
+                        m.Metadata,
+                        m.UploadedAt))
+                    .ToList(),
 
-            post.Comments.Count(c => c.DeletedAt == null),
+                post.Reactions
+                    .GroupBy(r => r.ReactionType)
+                    .Select(g => new ReactionCountDto(g.Key, g.Count()))
+                    .ToList(),
 
-            post.Group == null
-                ? null
-                : new GroupDto(
-                    post.Group.Id,
-                    post.Group.OwnerUserId,
-                    post.Group.Name,
-                    post.Group.Description,
-                    post.Group.PrivacyType,
-                    post.Group.CoverPhotoUrl),
+                post.Comments.Count(c => c.DeletedAt == null),
 
-            // ====== NESTED SHAREPOST INLINE VISIBILITY CHECK ======
-            (post.SharePost == null ||
-            !(post.SharePost.Visibility == PostVisibility.Public
-            || (viewerId != null && (
-                (post.SharePost.Visibility == PostVisibility.Private
-                    && post.SharePost.AuthorId == viewerId)
-                || (post.SharePost.Visibility == PostVisibility.Friends
-                    && (post.SharePost.AuthorId == viewerId
-                        || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == post.SharePost.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == post.SharePost.AuthorId))))
-                || (post.SharePost.Visibility == PostVisibility.Group
-                    && post.SharePost.GroupId != null
-                    && ((post.SharePost.Group != null && post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
-                        || _context.GroupMembers.Any(gm => gm.GroupId == post.SharePost.GroupId && gm.UserId == viewerId)))
-            ))))
-                ? null // If nested validation fails or entity is absent, shared block is explicitly hidden
-                : new PostDto(
-                    post.SharePost.Id,
-                    post.SharePost.AuthorId,
-                    post.SharePost.Author.FirstName + " " + post.SharePost.Author.LastName,
-                    post.SharePost.Author.AvatarUrl,
-                    post.SharePost.GroupId,
-                    post.SharePost.Content,
-                    post.SharePost.Visibility,
-                    post.SharePost.SharePostId,
-                    post.SharePost.LocationTag,
-                    post.SharePost.FeelingActivity,
-                    post.SharePost.CreatedAt,
-                    post.SharePost.UpdatedAt,
-                    post.SharePost.DeletedAt,
+                post.Group == null
+                    ? null
+                    : new GroupDto(
+                        post.Group.Id,
+                        post.Group.OwnerUserId,
+                        post.Group.Name,
+                        post.Group.Description,
+                        post.Group.PrivacyType,
+                        post.Group.CoverPhotoUrl),
 
-                    post.SharePost.Media
-                        .Select(m => new PostMediaDto(
-                            m.Id,
-                            m.MediaType,
-                            m.MediaUrl,
-                            m.ThumbnailUrl,
-                            m.Metadata,
-                            m.UploadedAt))
-                        .ToList(),
+                (post.SharePost == null ||
+                !(post.SharePost.Visibility == PostVisibility.Public
+                || (viewerId != null && (
+                    (post.SharePost.Visibility == PostVisibility.Private
+                        && post.SharePost.AuthorId == viewerId)
+                    || (post.SharePost.Visibility == PostVisibility.Friends
+                        && (post.SharePost.AuthorId == viewerId
+                            || _context.Friendships.Any(fr => (fr.User1Id == viewerId && fr.User2Id == post.SharePost.AuthorId) || (fr.User2Id == viewerId && fr.User1Id == post.SharePost.AuthorId))))
+                    || (post.SharePost.Visibility == PostVisibility.Group
+                        && post.SharePost.GroupId != null
+                        && ((post.SharePost.Group != null && post.SharePost.Group.PrivacyType == GroupPrivacyType.Public)
+                            || _context.GroupMembers.Any(gm => gm.GroupId == post.SharePost.GroupId && gm.UserId == viewerId)))
+                ))))
+                    ? null
+                    : new PostDto(
+                        post.SharePost.Id,
+                        post.SharePost.AuthorId,
+                        post.SharePost.Author.FirstName + " " + post.SharePost.Author.LastName,
+                        post.SharePost.Author.AvatarUrl,
+                        post.SharePost.GroupId,
+                        post.SharePost.Content,
+                        post.SharePost.Visibility,
+                        post.SharePost.SharePostId,
+                        post.SharePost.LocationTag,
+                        post.SharePost.FeelingActivity,
+                        post.SharePost.CreatedAt,
+                        post.SharePost.UpdatedAt,
+                        post.SharePost.DeletedAt,
 
-                    post.SharePost.Reactions
-                        .GroupBy(r => r.ReactionType)
-                        .Select(g => new ReactionCountDto(g.Key, g.Count()))
-                        .ToList(),
+                        post.SharePost.Media
+                            .Select(m => new PostMediaDto(
+                                m.Id,
+                                m.MediaType,
+                                m.MediaUrl,
+                                m.ThumbnailUrl,
+                                m.Metadata,
+                                m.UploadedAt))
+                            .ToList(),
 
-                    post.SharePost.Comments.Count(c => c.DeletedAt == null),
+                        post.SharePost.Reactions
+                            .GroupBy(r => r.ReactionType)
+                            .Select(g => new ReactionCountDto(g.Key, g.Count()))
+                            .ToList(),
 
-                    post.SharePost.Group == null
-                        ? null
-                        : new GroupDto(
-                            post.SharePost.Group.Id,
-                            post.SharePost.Group.OwnerUserId,
-                            post.SharePost.Group.Name,
-                            post.SharePost.Group.Description,
-                            post.SharePost.Group.PrivacyType,
-                            post.SharePost.Group.CoverPhotoUrl),
+                        post.SharePost.Comments.Count(c => c.DeletedAt == null),
 
-                    null, // Terminate nested lookups here (no nested SharePost)
+                        post.SharePost.Group == null
+                            ? null
+                            : new GroupDto(
+                                post.SharePost.Group.Id,
+                                post.SharePost.Group.OwnerUserId,
+                                post.SharePost.Group.Name,
+                                post.SharePost.Group.Description,
+                                post.SharePost.Group.PrivacyType,
+                                post.SharePost.Group.CoverPhotoUrl),
 
-                    Array.Empty<TagDto>(), // Tags
+                        null,
 
-                    viewerId == null
-                        ? null
-                        : post.SharePost.Reactions
-                            .Where(r => r.UserId == viewerId)
-                            .Select(r => (ReactionType?)r.ReactionType)
-                            .FirstOrDefault(),
+                        post.SharePost.Tags
+                            .Select(t => new TagDto(
+                                t.UserId,
+                                t.User != null ? t.User.FirstName + " " + t.User.LastName : ""))
+                            .ToList(),
 
-                    post.SharePost.IsHiddenFromGroup,
-                    post.SharePost.HiddenAt,
-                    post.SharePost.HideReason,
-                    post.SharePost.ApprovalStatus,
-                    post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
-                    post.SharePost.IsAnonymous
-                ),
+                        viewerId == null
+                            ? null
+                            : post.SharePost.Reactions
+                                .Where(r => r.UserId == viewerId)
+                                .Select(r => (ReactionType?)r.ReactionType)
+                                .FirstOrDefault(),
 
-                    Array.Empty<TagDto>(), // hydrated after materialization
+                        post.SharePost.IsHiddenFromGroup,
+                        post.SharePost.HiddenAt,
+                        post.SharePost.HideReason,
+                        post.SharePost.ApprovalStatus,
+                        post.SharePost.ApprovalStatus == PostApprovalStatus.Pending,
+                        post.SharePost.IsAnonymous
+                    ),
 
-            viewerId == null
-                ? null
-                : post.Reactions
-                    .Where(r => r.UserId == viewerId)
-                    .Select(r => (ReactionType?)r.ReactionType)
-                    .FirstOrDefault(),
+                post.Tags
+                    .Select(t => new TagDto(
+                        t.UserId,
+                        t.User != null ? t.User.FirstName + " " + t.User.LastName : ""))
+                    .ToList(),
 
-            post.IsHiddenFromGroup,
-            post.HiddenAt,
-            post.HideReason,
-            post.ApprovalStatus,
-            post.ApprovalStatus == PostApprovalStatus.Pending,
-            post.IsAnonymous
-        ));
+                viewerId == null
+                    ? null
+                    : post.Reactions
+                        .Where(r => r.UserId == viewerId)
+                        .Select(r => (ReactionType?)r.ReactionType)
+                        .FirstOrDefault(),
+
+                post.IsHiddenFromGroup,
+                post.HiddenAt,
+                post.HideReason,
+                post.ApprovalStatus,
+                post.ApprovalStatus == PostApprovalStatus.Pending,
+                post.IsAnonymous
+            ));
+        }
     }
-
-    // ---- Admin dashboard aggregates ----
-
-    public Task<long> GetTotalCountAsync(CancellationToken cancellationToken = default)
-    {
-        // HasQueryFilter(p => p.DeletedAt == null) is applied automatically.
-        return _context.Posts.AsNoTracking().LongCountAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<DailyCountDto>> GetPostSeriesAsync(
-        DateTime fromUtc,
-        DateTime toUtc,
-        CancellationToken cancellationToken = default)
-    {
-        // Soft-deleted posts are excluded by the global query filter in
-        // PostConfiguration. The Posts table has a default index on CreatedAt
-        // added in the initial migration.
-        return await _context.Posts
-            .AsNoTracking()
-            .Where(p => p.CreatedAt >= fromUtc && p.CreatedAt < toUtc)
-            .GroupBy(p => p.CreatedAt.Date)
-            .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<DailyCountDto>> GetCommentSeriesAsync(
-        DateTime fromUtc,
-        DateTime toUtc,
-        CancellationToken cancellationToken = default)
-    {
-        // PostComments has its own CreatedAt column (BaseEntity) and a
-        // HasQueryFilter(DeletedAt == null) on PostCommentConfiguration.
-        return await _context.PostComments
-            .AsNoTracking()
-            .Where(c => c.CreatedAt >= fromUtc && c.CreatedAt < toUtc)
-            .GroupBy(c => c.CreatedAt.Date)
-            .Select(g => new DailyCountDto(DateOnly.FromDateTime(g.Key), g.Count()))
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<bool> SetLockedAsync(
-        long postId,
-        bool isLocked,
-        CancellationToken cancellationToken = default)
-    {
-        var affected = await _context.Posts
-            .Where(p => p.Id == postId)
-            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsLocked, isLocked), cancellationToken);
-        return affected > 0;
-    }
-}
 }

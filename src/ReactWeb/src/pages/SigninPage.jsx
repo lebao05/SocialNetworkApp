@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/authContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 // Hook to track window size for responsiveness
 const useWindowSize = () => {
@@ -30,7 +30,6 @@ export default function SigninPage() {
   const isMobile = width < 1024;
 
   const [showPassword, setShowPassword] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(""); // 1. Added error state
@@ -134,7 +133,7 @@ export default function SigninPage() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
-                <a href="#" style={{ fontSize: "13px", color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Forgot?</a>
+                <Link to="/forgot-password" style={{ fontSize: "13px", color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Forgot?</Link>
               </div>
               <div style={{ position: "relative" }}>
                 <input
@@ -162,19 +161,7 @@ export default function SigninPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                id="keep"
-                checked={keepLoggedIn}
-                onChange={e => setKeepLoggedIn(e.target.checked)}
-                style={{ width: "16px", height: "16px", accentColor: "#2563eb", cursor: "pointer" }}
-                disabled={isSubmitting}
-              />
-              <label htmlFor="keep" style={{ fontSize: "14px", color: "#475569", cursor: "pointer", userSelect: "none" }}>
-                Keep me logged in
-              </label>
-            </div>
+        
 
             {/* 3. Render Error Message Box */}
             {error && (

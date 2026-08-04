@@ -15,16 +15,13 @@ namespace Application.Posts.Queries.GetPostsByGroup
     {
         private readonly IPostRepository _postRepository;
         private readonly IGroupRepository _groupRepository;
-        private readonly IUserRepository _userRepository;
 
         public GetPostsByGroupQueryHandler(
             IPostRepository postRepository,
-            IGroupRepository groupRepository,
-            IUserRepository userRepository)
+            IGroupRepository groupRepository)
         {
             _postRepository = postRepository;
             _groupRepository = groupRepository;
-            _userRepository = userRepository;
         }
 
         public async Task<Result<PagedList<PostDto>>> Handle(GetPostsByGroupQuery request, CancellationToken cancellationToken)
@@ -64,10 +61,7 @@ namespace Application.Posts.Queries.GetPostsByGroup
 
             var viewerCanSeeAuthor = await CanSeeAuthorAsync(request.GroupId, request.UserId, cancellationToken);
 
-            // Single batched name lookup for every tagged user on this page.
-            var nameMap = await ResolveTaggedUserNamesAsync(posts.Items, cancellationToken);
-
-            var items = posts.Items.Select(post => Map(post, reactionMap.TryGetValue(post.Id, out var reaction) ? reaction : null, viewerCanSeeAuthor, nameMap)).ToList();
+            var items = posts.Items.Select(post => Map(post, reactionMap.TryGetValue(post.Id, out var reaction) ? reaction : null, viewerCanSeeAuthor)).ToList();
 
             return Result.Success(new PagedList<PostDto>(
                 items,
@@ -89,7 +83,7 @@ namespace Application.Posts.Queries.GetPostsByGroup
             return member?.Role is GroupMemberRole.Admin or GroupMemberRole.Moderator;
         }
 
-        private static PostDto Map(Post post, ReactionType? userReaction, bool canSeeAuthor, IReadOnlyDictionary<Guid, string> nameMap)
+        private static PostDto Map(Post post, ReactionType? userReaction, bool canSeeAuthor)
         {
             var shouldReveal = !post.IsAnonymous || canSeeAuthor;
             var authorId     = shouldReveal ? post.AuthorId : (Guid?)null;
@@ -122,7 +116,7 @@ namespace Application.Posts.Queries.GetPostsByGroup
                 post.Comments.Count,
                 MapGroup(post.Group),
                 post.SharePost is null ? null : MapSharedPost(post.SharePost, canSeeAuthor),
-                MapTags(post.Tags, nameMap),
+                MapTags(post.Tags),
                 userReaction,
                 post.IsHiddenFromGroup,
                 post.HiddenAt,
@@ -198,25 +192,7 @@ namespace Application.Posts.Queries.GetPostsByGroup
 
         // Forwards to the shared TagResolver — kept as a private shim so the
         // call sites stay readable.
-        private static IReadOnlyCollection<TagDto> MapTags(
-            IEnumerable<PostTag> tags,
-            IReadOnlyDictionary<Guid, string> nameMap)
-            => TagResolver.MapTags(tags, nameMap);
-
-        private async Task<IReadOnlyDictionary<Guid, string>> ResolveTaggedUserNamesAsync(
-            IEnumerable<Post> posts,
-            CancellationToken cancellationToken)
-        {
-            var ids = new List<Guid>();
-            foreach (var post in posts)
-            {
-                foreach (var tag in post.Tags)
-                {
-                    if (Guid.TryParse(tag.TagName, out var userId))
-                        ids.Add(userId);
-                }
-            }
-            return await _userRepository.GetDisplayNamesByIdsAsync(ids, cancellationToken);
-        }
+        private static IReadOnlyCollection<TagDto> MapTags(IEnumerable<PostTag> tags)
+            => TagResolver.MapTags(tags);
     }
 }

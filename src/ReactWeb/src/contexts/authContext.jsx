@@ -1,9 +1,42 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { signinApi, signupApi } from "../apis/authApi";
 import { getUserProfileApi } from "../apis/userApi";
+import AuthContext from "./authContextObject";
+// We re-export `useAuth` here for backwards compatibility with the ~30
+// components that already `import { useAuth } from "../contexts/authContext"`.
+// The hook itself lives in ./useAuth.js so fast-refresh keeps working for
+// AuthProvider; re-exporting it from this file is the path of least change
+// for the rest of the app.
+/* eslint-disable react-refresh/only-export-components */
+export { useAuth } from "./useAuth";
 
-const AuthContext = createContext(null);
+/**
+ * Walks the axios error response looking for the ProblemDetails-style
+ * "type" field used by every Result.Failure in the C# API. Returns
+ * `true` only when the type matches the lock middleware's contract.
+ */
+function isLockedError(err) {
+    const data = err?.response?.data;
+    if (!data || typeof data !== "object") return false;
+    // The middleware serialises the ProblemDetails "type" field with
+    // camelCase PropertyNamingPolicy, but we accept the PascalCase variant
+    // too in case the host ever changes the serializer.
+    return data.type === "User.Locked" || data.Type === "User.Locked";
+}
+
+/**
+ * Strip any token we may have written before discovering the user is
+ * locked, and reset auth state. After this returns the user has no
+ * session, so ProtectedRoute will bounce them to /sign-in. We do NOT
+ * keep the token around because (a) the user explicitly failed the
+ * lock check and (b) retrying any call would keep returning 403.
+ */
+function clearLockedSession({ setUser, setToken }) {
+    localStorage.removeItem("token");
+    setUser(null);
+    setToken(null);
+}
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -24,15 +57,20 @@ export function AuthProvider({ children }) {
 
             setToken(savedToken);
 
-
             try {
                 const profile = await getUserProfileApi();
                 setUser(profile);
-                // Fetch profile using the saved token
-
             } catch (err) {
-                console.error("Auth bootstrap failed:", err);
-                logout();
+                if (isLockedError(err)) {
+                    // Lock middleware rejected the account — wipe the
+                    // session and let the user land on /sign-in via
+                    // ProtectedRoute's normal redirect.
+                    console.warn("Stored session belongs to a locked account; clearing token.");
+                    clearLockedSession({ setUser, setToken });
+                } else {
+                    console.error("Auth bootstrap failed:", err);
+                    clearLockedSession({ setUser, setToken });
+                }
             } finally {
                 setLoading(false);
             }
@@ -50,9 +88,6 @@ export function AuthProvider({ children }) {
         try {
             const jwt = await signinApi(email, password);
 
-            // Log it to see what you're actually getting
-            console.log("JWT Received:", jwt);
-
             if (!jwt || typeof jwt !== "string") {
                 throw new Error("Invalid token received from server");
             }
@@ -60,16 +95,27 @@ export function AuthProvider({ children }) {
             localStorage.setItem("token", jwt);
             setToken(jwt);
 
-            // IMPORTANT: Manually set the header for the next call 
-            // if your axios config doesn't do it dynamically
-            // axios.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
-
-            const profile = await getUserProfileApi();
-            setUser(profile);
-
-            return { success: true };
+            try {
+                const profile = await getUserProfileApi();
+                setUser(profile);
+                return { success: true };
+            } catch (err) {
+                // The token was issued but the account is locked. Tear down
+                // the partial session so the user lands back on /sign-in
+                // without ever seeing the protected app.
+                if (isLockedError(err)) {
+                    clearLockedSession({ setUser, setToken });
+                    return { success: false, locked: true };
+                }
+                throw err;
+            }
         } catch (err) {
             console.error("Login logic failed:", err);
+
+            if (isLockedError(err)) {
+                clearLockedSession({ setUser, setToken });
+                return { success: false, locked: true };
+            }
 
             let errorMessage = "Login failed";
             if (err.response?.data) {
@@ -103,7 +149,6 @@ export function AuthProvider({ children }) {
     const signup = async (payload) => {
         setLoading(true);
         try {
-            // Payload: { firstName, lastName, dateOfBirth, gender, email, password }
             const jwt = await signupApi(payload);
 
             if (!jwt || typeof jwt !== "string") {
@@ -113,13 +158,25 @@ export function AuthProvider({ children }) {
             localStorage.setItem("token", jwt);
             setToken(jwt);
 
-            const profile = await getUserProfileApi();
-            setUser(profile);
-
-            return { success: true };
+            try {
+                const profile = await getUserProfileApi();
+                setUser(profile);
+                return { success: true };
+            } catch (err) {
+                if (isLockedError(err)) {
+                    clearLockedSession({ setUser, setToken });
+                    return { success: false, locked: true };
+                }
+                throw err;
+            }
         } catch (err) {
             console.error("Signup logic failed:", err);
-            
+
+            if (isLockedError(err)) {
+                clearLockedSession({ setUser, setToken });
+                return { success: false, locked: true };
+            }
+
             let errorMessage = "Registration failed";
             if (err.response?.data) {
                 const data = err.response.data;
@@ -130,7 +187,6 @@ export function AuthProvider({ children }) {
                 } else if (data.Detail) {
                     errorMessage = data.Detail;
                 } else if (data.errors) {
-                    // If it's a validation problem with an 'errors' object
                     errorMessage = Object.values(data.errors).flat().join(". ");
                 } else if (data.message) {
                     errorMessage = data.message;
@@ -174,13 +230,4 @@ export function AuthProvider({ children }) {
             {children}
         </AuthContext.Provider>
     );
-}
-
-/* ===========================
-   CUSTOM HOOK
-   =========================== */
-export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
-    return ctx;
 }

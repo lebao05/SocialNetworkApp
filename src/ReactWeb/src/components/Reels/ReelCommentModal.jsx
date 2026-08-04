@@ -1,48 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import PostComment from "../Feed/PostComment";
-
-function timeAgo(dateStr) {
-  if (!dateStr) return "";
-  const now = new Date();
-  const d = new Date(dateStr);
-  const diffMs = now - d;
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-// Normalize ReelCommentDto fields to PostComment's expected shape
-function normalizeForPostComment(comments) {
-  return comments.map((c) => ({
-    id: c.id,
-    parentId: c.parentCommentId ?? null,
-    user: c.userName,
-    avatar: c.userAvatarUrl ?? `https://i.pravatar.cc/40?u=${c.userId}`,
-    text: c.content,
-    time: timeAgo(c.createdAt),
-    replyCount: c.replyCount ?? 0,
-    replies: (c.replies ?? []).map((r) => ({
-      id: r.id,
-      user: r.userName,
-      avatar: r.userAvatarUrl ?? `https://i.pravatar.cc/40?u=${r.userId}`,
-      text: r.content,
-      time: timeAgo(r.createdAt),
-      repliedUserName: r.repliedUserName ?? null,
-      repliedAvatarUrl: r.repliedAvatarUrl ?? null,
-    })),
-    reactedUserName: c.reactedUserName ?? null,
-    userReaction: c.userReaction ?? null,
-    likes: c.reactionCount ?? null,
-  }));
-}
 
 export default function ReelCommentModal({
   isOpen,
@@ -83,8 +42,6 @@ export default function ReelCommentModal({
   }, [isOpen]);
 
   if (!isOpen || !reel) return null;
-
-  const normalizedComments = normalizeForPostComment(comments);
 
   return (
     <div className="fixed inset-0 z-[10000] flex bg-black/80">
@@ -135,10 +92,11 @@ export default function ReelCommentModal({
           </button>
         </div>
 
-        {/* Comments list — scrollable */}
+        {/* Comments list — scrollable. PostComment consumes the same flat
+            {id, parentId, user, avatar, text, ...} shape produced by useReelComments. */}
         <div className="flex-1 overflow-y-auto p-5">
           <PostComment
-            comments={normalizedComments}
+            comments={comments}
             newComment={newComment}
             onNewCommentChange={onNewCommentChange}
             onSubmitComment={onSubmitComment}

@@ -15,9 +15,8 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(pt => pt.Id)
                 .HasColumnName("PostTagId");
 
-            builder.Property(pt => pt.TagName)
-                .IsRequired()
-                .HasMaxLength(100);
+            builder.Property(pt => pt.UserId)
+                .IsRequired();
 
             builder.Property(pt => pt.CreatedAt)
                 .IsRequired();
@@ -26,6 +25,12 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasOne(pt => pt.Post)
                 .WithMany(p => p.Tags)
                 .HasForeignKey(pt => pt.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship: PostTag -> User
+            builder.HasOne(pt => pt.User)
+                .WithMany()
+                .HasForeignKey(pt => pt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

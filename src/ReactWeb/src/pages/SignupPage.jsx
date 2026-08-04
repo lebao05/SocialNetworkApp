@@ -88,12 +88,12 @@ export default function SignupPage() {
       dateOfBirth: form.dateOfBirth,
       gender: parseInt(form.gender),
     });
-
+    console.log(result);
+    setIsSubmitting(false);
     if (result.success) {
       navigate("/");
     } else {
       setError(result.error);
-      setIsSubmitting(false);
     }
   };
 

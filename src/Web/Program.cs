@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Presentation;
+using Presentation.Middleware;
 using Serilog;
 using System.Text;
 using System.Text.Json;
@@ -129,6 +130,24 @@ builder.Services.AddIdentityCore<User>(options =>
 .AddEntityFrameworkStores<AppDbContext>() // EF Core store
 .AddDefaultTokenProviders();
 
+// Override the lifetime of Identity's password-reset / email-confirm tokens.
+// The default is 1 day, which is too long for a one-shot reset link — we
+// want it short so a leaked token can't sit around waiting to be used.
+// Lifespan is configurable via "Identity:ResetTokenLifespanMinutes" so
+// ops can extend it in dev without a rebuild.
+var resetMinutes = builder.Configuration.GetValue<int?>("Identity:ResetTokenLifespanMinutes") ?? 10;
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    options.TokenLifespan = TimeSpan.FromMinutes(resetMinutes);
+});
+
+// Bind SMTP options for the email service. The service itself falls
+// back to log-only when the host is empty (dev / CI), so the app still
+// boots without a configured mail provider.
+builder.Services.Configure<Infrastructure.Services.SmtpOptions>(
+    builder.Configuration.GetSection("Email:Smtp"));
+builder.Services.AddScoped<Application.Abstractions.IEmailService, Infrastructure.Services.SmtpEmailService>();
+
 
 
 // Add controllers (including external assembly)
@@ -205,17 +224,6 @@ builder.Services.AddApplicationDependencies()
                 .AddPresentationDependencies();
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        await RoleSeeder.SeedAsync(scope.ServiceProvider);
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Role seeding failed. Continuing without seeded roles.");
-    }
-}
 app.UseCors("AllowLocalhost");
 
 
@@ -256,6 +264,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthorization();
+app.UseUserLock();
 app.MapStaticAssets(); // if you have static assets
 
 app.MapHub<ChatHub>("hubs/chat");
