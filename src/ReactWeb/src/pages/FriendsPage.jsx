@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Users, UserPlus, ChevronRight, Check, X } from "lucide-react";
+import { Search, Users, UserPlus, Sparkles, ChevronRight, Check, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useFriendContext } from "../contexts/friendContext";
 import Navbar from "../components/Navbar/Navbar";
@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar/Navbar";
 const tabs = [
   { id: "requests", label: "Friend Requests", icon: UserPlus },
   { id: "friends", label: "Friends", icon: Users },
+  { id: "recommendations", label: "Recommendations", icon: Sparkles },
 ];
 
 function getDisplayName(item) {
@@ -15,13 +16,21 @@ function getDisplayName(item) {
 }
 
 function getSubtitle(item, tab) {
-  return tab === "friends" ? "Friend" : "Incoming request";
+  if (tab === "friends") return "Friend";
+  if (tab === "requests") return "Incoming request";
+  if (tab === "recommendations") {
+    return item.mutualFriendsCount > 0 
+      ? `${item.mutualFriendsCount} mutual friend${item.mutualFriendsCount > 1 ? "s" : ""}`
+      : "Recommended for you";
+  }
+  return "";
 }
 
 export default function FriendsPage() {
   const {
     friends,
     incomingRequests,
+    recommendations,
     loading,
     error,
     fetchFriends,
@@ -32,12 +41,18 @@ export default function FriendsPage() {
     loadMoreIncomingFriendRequests,
     hasMoreFriends,
     hasMoreIncomingRequests,
+    loadMoreRecommendations,
+    hasMoreRecommendations,
+    sendFriendRequest,
+    cancelFriendRequest,
+    setRecommendations,
   } = useFriendContext();
 
   const [activeTab, setActiveTab] = useState("requests");
   const [searchTerm, setSearchTerm] = useState("");
   const [requestStatuses, setRequestStatuses] = useState({});
   const [processingIds, setProcessingIds] = useState({});
+  const [sentRequestIds, setSentRequestIds] = useState({});
 
   // Sync statuses when incomingRequests loads from the API
   useEffect(() => {
@@ -54,12 +69,19 @@ export default function FriendsPage() {
   }, [incomingRequests]);
 
   const items = useMemo(() => {
-    const source = activeTab === "friends" ? friends : incomingRequests;
+    let source = [];
+    if (activeTab === "friends") {
+      source = friends;
+    } else if (activeTab === "requests") {
+      source = incomingRequests;
+    } else if (activeTab === "recommendations") {
+      source = recommendations;
+    }
 
     if (!searchTerm.trim()) return source;
     const lowerTerm = searchTerm.toLowerCase();
     return source.filter((item) => getDisplayName(item).toLowerCase().includes(lowerTerm));
-  }, [activeTab, friends, incomingRequests, searchTerm]);
+  }, [activeTab, friends, incomingRequests, recommendations, searchTerm]);
 
   const handleAccept = async (item) => {
     setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
@@ -79,6 +101,38 @@ export default function FriendsPage() {
     try {
       await rejectFriendRequest(item.id);
       setRequestStatuses((prev) => ({ ...prev, [item.id]: 2 }));
+    } finally {
+      setProcessingIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  const handleAddFriend = async (item) => {
+    setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      await sendFriendRequest(item.id);
+      setSentRequestIds((prev) => ({ ...prev, [item.id]: true }));
+    } finally {
+      setProcessingIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  const handleCancelRequest = async (item) => {
+    setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      await cancelFriendRequest(item.id);
+      setSentRequestIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
     } finally {
       setProcessingIds((prev) => {
         const next = { ...prev };
@@ -143,12 +197,18 @@ export default function FriendsPage() {
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-[#050505]">
-                  {activeTab === "requests" ? "Friend Requests" : "Friends"}
+                  {activeTab === "requests" 
+                    ? "Friend Requests" 
+                    : activeTab === "friends" 
+                    ? "Friends" 
+                    : "Friend Recommendations"}
                 </h2>
                 <p className="text-sm text-[#65676B] mt-1">
                   {activeTab === "requests"
                     ? "Review incoming friend requests."
-                    : "Browse your friends list."}
+                    : activeTab === "friends"
+                    ? "Browse your friends list."
+                    : "People you may know."}
                 </p>
               </div>
             </div>
@@ -170,7 +230,7 @@ export default function FriendsPage() {
                   >
                     <div className="relative aspect-square w-full bg-[#E4E6EB]">
                       <Link
-                        to={`/profile/${item.senderId || item.userId}`}
+                        to={`/profile/${item.senderId || item.userId || item.id}`}
                         onClick={(e) => e.stopPropagation()}
                         className="block w-full h-full"
                       >
@@ -191,7 +251,7 @@ export default function FriendsPage() {
                     <div className="p-4 flex flex-col gap-3">
                       <div className="min-w-0">
                         <Link
-                          to={`/profile/${item.senderId || item.id}`}
+                          to={`/profile/${item.senderId || item.userId || item.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="truncate text-[17px] font-bold text-[#050505] hover:underline block"
                         >
@@ -207,6 +267,45 @@ export default function FriendsPage() {
                           <button className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]">
                             Message
                           </button>
+                        ) : activeTab === "recommendations" ? (
+                          <>
+                            {sentRequestIds[item.id] ? (
+                              <>
+                                <div className="flex items-center justify-center gap-2 rounded-md py-2 text-[15px] font-semibold bg-blue-50 text-[#1877F2]">
+                                  <Check size={15} /> Request sent
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelRequest(item)}
+                                  disabled={!!processingIds[item.id]}
+                                  className="w-full rounded-md cursor-pointer bg-[#E4E6EB] py-2 text-[15px] font-semibold text-red-600 transition hover:bg-[#ff4d4d] hover:text-white disabled:opacity-50"
+                                >
+                                  {processingIds[item.id] ? "Processing..." : "Cancel Request"}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddFriend(item)}
+                                  disabled={!!processingIds[item.id]}
+                                  className="w-full rounded-md cursor-pointer bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5] disabled:opacity-50"
+                                >
+                                  {processingIds[item.id] ? "Processing..." : "Add Friend"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRecommendations((prev) => prev.filter((r) => r.id !== item.id));
+                                  }}
+                                  disabled={!!processingIds[item.id]}
+                                  className="w-full rounded-md cursor-pointer bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf] disabled:opacity-50"
+                                >
+                                  Remove
+                                </button>
+                              </>
+                            )}
+                          </>
                         ) : (
                           <>
                             {requestStatuses[item.id] === 1 || requestStatuses[item.id] === 2 ? (
@@ -254,7 +353,9 @@ export default function FriendsPage() {
               <div className="py-20 text-center text-[#65676B]">
                 {activeTab === "friends"
                   ? "No friends found."
-                  : "No incoming friend requests."}
+                  : activeTab === "requests"
+                  ? "No incoming friend requests."
+                  : "No friend recommendations at this time."}
               </div>
             )}
 
@@ -280,6 +381,16 @@ export default function FriendsPage() {
                   className="w-full sm:w-auto rounded-full bg-[#1877F2] px-5 py-2 text-white transition hover:bg-[#166fe5]"
                 >
                   Load more requests
+                </button>
+              )}
+
+              {activeTab === "recommendations" && hasMoreRecommendations && (
+                <button
+                  type="button"
+                  onClick={loadMoreRecommendations}
+                  className="w-full sm:w-auto rounded-full bg-[#1877F2] px-5 py-2 text-white transition hover:bg-[#166fe5]"
+                >
+                  Load more recommendations
                 </button>
               )}
             </div>

@@ -66,9 +66,9 @@ export async function getIncomingFriendRequestsApi(page = 1) {
  * Fetches friend recommendations for the current user.
  * Maps to GET /api/friend/recommendations.
  */
-export async function getFriendRecommendationsApi(limit = 10) {
+export async function getFriendRecommendationsApi(page = 1, limit = 10) {
     const response = await axios.get("/friend/recommendations", {
-        params: { limit },
+        params: { page, limit },
     });
     return response.data;
 }

@@ -9,7 +9,6 @@ using Application.Friend.Queries.GetFriendRecommendations;
 using Application.Friend.Queries.GetFollowees;
 using Application.Friend.Queries.GetIncomingFriendRequests;
 using Application.Friend.Queries.GetMutualFriends;
-using Application.Friend.Queries.GetShortestPath;
 using Infrastructure.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -110,11 +109,12 @@ namespace Presentation.Controllers
 
         [HttpGet("recommendations")]
         public async Task<IActionResult> GetFriendRecommendations(
+            [FromQuery] int page = 1,
             [FromQuery] int limit = 10,
             CancellationToken ct = default)
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
-            var query = new GetFriendRecommendationsQuery(userId, limit);
+            var query = new GetFriendRecommendationsQuery(userId, page, limit);
             var result = await _sender.Send(query, ct);
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
@@ -140,17 +140,6 @@ namespace Presentation.Controllers
         {
             var userId = ClaimsPrincipalExtensions.GetUserId(User);
             var query = new GetMutualFriendsQuery(userId, otherUserId);
-            var result = await _sender.Send(query, ct);
-            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
-        }
-
-        [HttpGet("shortest-path/{otherUserId:guid}")]
-        public async Task<IActionResult> GetShortestPath(
-            Guid otherUserId,
-            CancellationToken ct = default)
-        {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User);
-            var query = new GetShortestPathQuery(userId, otherUserId);
             var result = await _sender.Send(query, ct);
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }

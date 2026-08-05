@@ -22,8 +22,10 @@ export function FriendProvider({ children }) {
     const [recommendations, setRecommendations] = useState([]);
     const [friendsPage, setFriendsPage] = useState(1);
     const [friendRequestsPage, setFriendRequestsPage] = useState(1);
+    const [recommendationsPage, setRecommendationsPage] = useState(1);
     const [hasMoreFriends, setHasMoreFriends] = useState(true);
     const [hasMoreIncomingRequests, setHasMoreIncomingRequests] = useState(true);
+    const [hasMoreRecommendations, setHasMoreRecommendations] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -31,6 +33,7 @@ export function FriendProvider({ children }) {
         if (!user) return;
         fetchFriends(1, false);
         fetchIncomingFriendRequests(1, false);
+        fetchFriendRecommendations(1, false);
     }, [user]);
 
     const handleApiError = (err, fallbackMessage) => {
@@ -100,11 +103,14 @@ export function FriendProvider({ children }) {
         return fetchIncomingFriendRequests(nextPage, true);
     };
 
-    const fetchFriendRecommendations = async (limit = 10) => {
+    const fetchFriendRecommendations = async (page = 1, append = false) => {
         try {
             setLoading(true);
-            const data = await getFriendRecommendationsApi(limit);
-            setRecommendations(data);
+            const limit = 10;
+            const data = await getFriendRecommendationsApi(page, limit);
+            setRecommendations((prev) => (append ? [...prev, ...data] : data));
+            setRecommendationsPage(page);
+            setHasMoreRecommendations(data.length === limit);
             setError(null);
             return data;
         } catch (err) {
@@ -113,6 +119,12 @@ export function FriendProvider({ children }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    const loadMoreRecommendations = async () => {
+        if (!hasMoreRecommendations || loading) return;
+        const nextPage = recommendationsPage + 1;
+        return fetchFriendRecommendations(nextPage, true);
     };
 
     const sendFriendRequest = async (receiverId) => {
@@ -231,13 +243,16 @@ export function FriendProvider({ children }) {
                 error,
                 friendsPage,
                 friendRequestsPage,
+                recommendationsPage,
                 hasMoreFriends,
                 hasMoreIncomingRequests,
+                hasMoreRecommendations,
                 fetchFriends,
                 fetchIncomingFriendRequests,
                 loadMoreFriends,
                 loadMoreIncomingFriendRequests,
                 fetchFriendRecommendations,
+                loadMoreRecommendations,
                 sendFriendRequest,
                 acceptFriendRequest,
                 rejectFriendRequest,

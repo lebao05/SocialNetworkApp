@@ -83,22 +83,26 @@ namespace Infrastructure.Services
             await ExecuteWriteAsync(query, parameters);
         }
 
-        public async Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int limit = 10)
+        public async Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int page = 1, int limit = 10)
         {
             const string query = @"
-                MATCH (u:User {id: $userId})-[:FRIEND]-(friend)-[:FRIEND]-(foaf:User)
-                WHERE foaf.id <> $userId AND NOT (u)-[:FRIEND]-(foaf)
-                RETURN foaf.id AS Id, 
-                       foaf.userName AS UserName, 
-                       foaf.fullName AS FullName, 
-                       foaf.avatarUrl AS AvatarUrl, 
+                MATCH (u:User {id: $userId})
+                MATCH (other:User)
+                WHERE other.id <> $userId AND NOT (u)-[:FRIEND]-(other)
+                OPTIONAL MATCH (u)-[:FRIEND]-(friend)-[:FRIEND]-(other)
+                RETURN other.id AS Id, 
+                       other.userName AS UserName, 
+                       other.fullName AS FullName, 
+                       other.avatarUrl AS AvatarUrl, 
                        count(friend) AS MutualFriendsCount
-                ORDER BY MutualFriendsCount DESC
+                ORDER BY MutualFriendsCount DESC, other.userName ASC
+                SKIP $skip
                 LIMIT $limit";
 
             var parameters = new Dictionary<string, object?>
             {
                 { "userId", userId.ToString() },
+                { "skip", (page - 1) * limit },
                 { "limit", limit }
             };
 
@@ -114,12 +118,18 @@ namespace Infrastructure.Services
                     var userName = record["UserName"].As<string>();
                     var fullName = record["FullName"].As<string>();
                     var avatarUrl = record["AvatarUrl"].As<string?>();
+                    var mutualFriendsCount = Convert.ToInt32(record["MutualFriendsCount"].As<long>());
 
                     if (Guid.TryParse(idStr, out var id))
                     {
-                        recommendations.Add(new FriendResponse(id, userName, fullName, avatarUrl));
+                        recommendations.Add(new FriendResponse(
+                            id, 
+                            userName, 
+                            fullName, 
+                            avatarUrl, 
+                            mutualFriendsCount));
                     }
-                }
+                }  
 
                 return recommendations;
             });
@@ -186,49 +196,6 @@ namespace Infrastructure.Services
                 }
 
                 return 0;
-            });
-        }
-
-        public async Task<List<FriendResponse>> GetShortestPathAsync(Guid startUserId, Guid endUserId)
-        {
-            const string query = @"
-                MATCH p = shortestPath((u1:User {id: $startUserId})-[:FRIEND*..5]-(u2:User {id: $endUserId}))
-                RETURN [node in nodes(p) | { id: node.id, userName: node.userName, fullName: node.fullName, avatarUrl: node.avatarUrl }] AS pathNodes";
-
-            var parameters = new Dictionary<string, object?>
-            {
-                { "startUserId", startUserId.ToString() },
-                { "endUserId", endUserId.ToString() }
-            };
-
-            return await ExecuteReadAsync(async tx =>
-            {
-                var result = await tx.RunAsync(query, parameters);
-                var path = new List<FriendResponse>();
-
-                if (await result.FetchAsync())
-                {
-                    var record = result.Current;
-                    var nodesList = record["pathNodes"].As<List<object>>();
-
-                    foreach (var nodeObj in nodesList)
-                    {
-                        if (nodeObj is Dictionary<string, object> nodeDict)
-                        {
-                            var idStr = nodeDict.TryGetValue("id", out var idVal) ? idVal?.ToString() : null;
-                            var userName = nodeDict.TryGetValue("userName", out var userVal) ? userVal?.ToString() : string.Empty;
-                            var fullName = nodeDict.TryGetValue("fullName", out var fullVal) ? fullVal?.ToString() : string.Empty;
-                            var avatarUrl = nodeDict.TryGetValue("avatarUrl", out var avVal) ? avVal?.ToString() : null;
-
-                            if (Guid.TryParse(idStr, out var id))
-                            {
-                                path.Add(new FriendResponse(id, userName ?? string.Empty, fullName ?? string.Empty, avatarUrl));
-                            }
-                        }
-                    }
-                }
-
-                return path;
             });
         }
 

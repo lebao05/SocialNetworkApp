@@ -19,7 +19,7 @@ namespace Application.Friend.Queries.GetFriendRecommendations
             GetFriendRecommendationsQuery request,
             CancellationToken cancellationToken)
         {
-            var recommendations = await _friendGraphService.GetFriendRecommendationsAsync(request.UserId, request.Limit);
+            var recommendations = await _friendGraphService.GetFriendRecommendationsAsync(request.UserId, request.Page, request.Limit);
             return Result.Success(recommendations);
         }
     }

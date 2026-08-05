@@ -6,7 +6,6 @@ import {
     sendFriendRequestApi,
     acceptFriendRequestApi,
     getMutualFriendsApi,
-    getShortestPathApi,
     syncAllFriendsApi,
 } from "../apis/friendApi";
 
@@ -48,10 +47,10 @@ export function useFriend() {
         }
     };
 
-    const fetchFriendRecommendations = async (limit = 10) => {
+    const fetchFriendRecommendations = async (page = 1, limit = 10) => {
         try {
             setLoading(true);
-            const data = await getFriendRecommendationsApi(limit);
+            const data = await getFriendRecommendationsApi(page, limit);
             setRecommendations(data);
             setError(null);
         } catch (err) {
@@ -103,19 +102,6 @@ export function useFriend() {
         }
     };
 
-    const getShortestPath = async (otherUserId) => {
-        try {
-            setLoading(true);
-            const data = await getShortestPathApi(otherUserId);
-            setError(null);
-            return data;
-        } catch (err) {
-            setError(err?.message || "Unable to fetch shortest friend path");
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const syncAllFriends = async () => {
         try {
@@ -143,7 +129,6 @@ export function useFriend() {
         sendFriendRequest,
         acceptFriendRequest,
         getMutualFriends,
-        getShortestPath,
         syncAllFriends,
         setFriends,
         setIncomingRequests,

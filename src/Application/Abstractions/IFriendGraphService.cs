@@ -9,9 +9,8 @@ namespace Application.Abstractions
         Task SyncFriendshipAsync(Guid user1Id, Guid user2Id);
         Task DeleteFriendshipAsync(Guid user1Id, Guid user2Id);
         
-        Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int limit = 10);
+        Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int page = 1, int limit = 10);
         Task<List<FriendResponse>> GetMutualFriendsAsync(Guid userId, Guid otherUserId);
         Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId, CancellationToken cancellationToken = default);
-        Task<List<FriendResponse>> GetShortestPathAsync(Guid startUserId, Guid endUserId);
     }
 }
