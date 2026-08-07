@@ -8,7 +8,6 @@ using Application.Friend.Queries.GetFriends;
 using Application.Friend.Queries.GetFriendRecommendations;
 using Application.Friend.Queries.GetFollowees;
 using Application.Friend.Queries.GetIncomingFriendRequests;
-using Application.Friend.Queries.GetMutualFriends;
 using Infrastructure.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -87,7 +86,7 @@ namespace Presentation.Controllers
             // If userId is provided and is not the current user, allow fetching their friends
             var targetUserId = userId ?? currentUserId;
 
-            var query = new GetFriendsQuery(targetUserId, page, searchTerm);
+            var query = new GetFriendsQuery(targetUserId, currentUserId, page, searchTerm);
 
             var result = await _sender.Send(query, ct);
 
@@ -127,20 +126,9 @@ namespace Presentation.Controllers
             var currentUserId = ClaimsPrincipalExtensions.GetUserId(User);
             var targetUserId = userId ?? currentUserId;
 
-            var query = new GetFolloweesQuery(targetUserId);
+            var query = new GetFolloweesQuery(targetUserId, currentUserId);
             var result = await _sender.Send(query, ct);
 
-            return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
-        }
-
-        [HttpGet("mutual/{otherUserId:guid}")]
-        public async Task<IActionResult> GetMutualFriends(
-            Guid otherUserId,
-            CancellationToken ct = default)
-        {
-            var userId = ClaimsPrincipalExtensions.GetUserId(User);
-            var query = new GetMutualFriendsQuery(userId, otherUserId);
-            var result = await _sender.Send(query, ct);
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);
         }
 

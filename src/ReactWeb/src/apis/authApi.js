@@ -35,9 +35,7 @@ export async function signupApi({
 }
 
 /**
- * Starts the password-reset flow. The backend returns 200 with the
- * same payload whether or not the email exists, so callers don't have
- * to special-case "unknown address".
+ * Starts the password-reset flow. Throws if the email is not registered.
  */
 export async function forgotPasswordApi(email) {
     const response = await axios.post("/auth/forgot-password", { email });

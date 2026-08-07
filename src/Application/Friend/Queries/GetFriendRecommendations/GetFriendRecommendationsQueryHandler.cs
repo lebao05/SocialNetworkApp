@@ -6,7 +6,7 @@ using Domain.Shared;
 namespace Application.Friend.Queries.GetFriendRecommendations
 {
     internal sealed class GetFriendRecommendationsQueryHandler
-        : IQueryHandler<GetFriendRecommendationsQuery, List<FriendResponse>>
+        : IQueryHandler<GetFriendRecommendationsQuery, List<GetFriendRecommendationsResponseDto>>
     {
         private readonly IFriendGraphService _friendGraphService;
 
@@ -15,12 +15,21 @@ namespace Application.Friend.Queries.GetFriendRecommendations
             _friendGraphService = friendGraphService;
         }
 
-        public async Task<Result<List<FriendResponse>>> Handle(
+        public async Task<Result<List<GetFriendRecommendationsResponseDto>>> Handle(
             GetFriendRecommendationsQuery request,
             CancellationToken cancellationToken)
         {
-            var recommendations = await _friendGraphService.GetFriendRecommendationsAsync(request.UserId, request.Page, request.Limit);
-            return Result.Success(recommendations);
+            var recommendations = await _friendGraphService.GetFriendRecommendationsAsync(
+                request.UserId, request.Page, request.Limit);
+
+            var items = recommendations.Select(r => new GetFriendRecommendationsResponseDto(
+                r.Id,
+                r.UserName,
+                r.FullName,
+                r.AvatarUrl,
+                r.MutualFriendsCount)).ToList();
+
+            return Result.Success(items);
         }
     }
 }

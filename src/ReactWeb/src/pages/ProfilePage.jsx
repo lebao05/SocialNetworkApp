@@ -592,18 +592,8 @@ export default function ProfilePage() {
                   isOwnProfile={isOwnProfile}
                   isDarkMode={darkMode}
                   onUpdate={(updates) => setPersonalInfo((prev) => prev ? { ...prev, ...updates } : prev)}
+                  onReport={() => { setReportReason(""); setReportDetails(""); setReportState("open"); }}
                 />
-                <button
-                  type="button"
-                  onClick={() => { setReportReason(""); setReportDetails(""); setReportState("open"); }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                    <line x1="4" y1="22" x2="4" y2="15"/>
-                  </svg>
-                  Report
-                </button>
               </div>
             )}
 
@@ -921,7 +911,7 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "friends" && (
-              <FriendsTab userId={viewUserId} theme={theme} />
+              <FriendsTab userId={viewUserId} currentUserId={authUser?.id} theme={theme} />
             )}
 
             {activeTab === "media" && (
@@ -952,7 +942,7 @@ export default function ProfilePage() {
               />
             )}
             {activeTab === "following" && (
-              <FollowingTab theme={theme} userId={viewUserId} />
+              <FollowingTab theme={theme} userId={viewUserId} currentUserId={authUser?.id} />
             )}
             {/* ========================================================
           3. DIALOGS & OVERLAYS (Post Creator, Details Editor)

@@ -19,8 +19,6 @@ export default function ForgotPasswordPage() {
 
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Generic status/error states — we deliberately use the same success
-  // copy whether or not the email exists so we don't leak registration.
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,7 +63,7 @@ export default function ForgotPasswordPage() {
                 <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span style={{ fontWeight: 800, fontSize: 20, color: "#1e293b", letterSpacing: "-0.5px" }}>Community</span>
+            <span style={{ fontWeight: 800, fontSize: 20, color: "#1e293b", letterSpacing: "-0.5px" }}>SocialNet</span>
           </div>
 
           <div style={{ marginBottom: "auto" }}>
@@ -78,7 +76,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           <footer style={{ marginTop: "auto", fontSize: "13px", color: "#94a3b8" }}>
-            © 2026 Community Connect. Secure & Encrypted.
+            © 2026 SocialNet Connect. Secure & Encrypted.
           </footer>
         </div>
       )}

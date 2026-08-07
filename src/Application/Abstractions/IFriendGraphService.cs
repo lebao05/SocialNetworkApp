@@ -12,5 +12,6 @@ namespace Application.Abstractions
         Task<List<FriendResponse>> GetFriendRecommendationsAsync(Guid userId, int page = 1, int limit = 10);
         Task<List<FriendResponse>> GetMutualFriendsAsync(Guid userId, Guid otherUserId);
         Task<int> GetMutualFriendCountAsync(Guid userId, Guid otherUserId, CancellationToken cancellationToken = default);
+        Task<Dictionary<Guid, int>> GetMutualFriendCountsAsync(Guid userId, IEnumerable<Guid> otherUserIds, CancellationToken cancellationToken = default);
     }
 }

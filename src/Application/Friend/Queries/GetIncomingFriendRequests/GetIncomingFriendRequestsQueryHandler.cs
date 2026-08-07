@@ -9,7 +9,7 @@ using Domain.Shared;
 namespace Application.Friend.Queries.GetIncomingFriendRequests
 {
     internal sealed class GetIncomingFriendRequestsQueryHandler
-        : IQueryHandler<GetIncomingFriendRequestsQuery, PagedList<FriendRequestDto>>
+        : IQueryHandler<GetIncomingFriendRequestsQuery, PagedList<GetIncomingFriendRequestsResponseDto>>
     {
         private const int PageSize = 10;
 
@@ -24,7 +24,7 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
             _friendGraphService = friendGraphService;
         }
 
-        public async Task<Result<PagedList<FriendRequestDto>>> Handle(
+        public async Task<Result<PagedList<GetIncomingFriendRequestsResponseDto>>> Handle(
             GetIncomingFriendRequestsQuery request,
             CancellationToken cancellationToken)
         {
@@ -38,21 +38,21 @@ namespace Application.Friend.Queries.GetIncomingFriendRequests
 
             var items = await Task.WhenAll(friendRequests.Items.Select(async fr => await MapAsync(fr, request.ReceiverId, cancellationToken)));
 
-            return Result.Success(new PagedList<FriendRequestDto>(
+            return Result.Success(new PagedList<GetIncomingFriendRequestsResponseDto>(
                 items.ToList(),
                 friendRequests.PageNumber,
                 friendRequests.PageSize,
                 friendRequests.TotalCount));
         }
 
-        private async Task<FriendRequestDto> MapAsync(FriendRequest friendRequest, Guid receiverId, CancellationToken cancellationToken)
+        private async Task<GetIncomingFriendRequestsResponseDto> MapAsync(FriendRequest friendRequest, Guid receiverId, CancellationToken cancellationToken)
         {
             var mutualFriendCount = await _friendGraphService.GetMutualFriendCountAsync(
                 friendRequest.SenderId,
                 receiverId,
                 cancellationToken);
 
-            return new FriendRequestDto(
+            return new GetIncomingFriendRequestsResponseDto(
                 friendRequest.Id,
                 friendRequest.SenderId,
                 friendRequest.Sender.FirstName,

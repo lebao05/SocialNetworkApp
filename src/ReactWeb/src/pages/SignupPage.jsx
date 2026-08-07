@@ -104,7 +104,7 @@ export default function SignupPage() {
         <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)" }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
-        <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.5px", color: "#1e293b" }}>Community</span>
+        <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.5px", color: "#1e293b" }}>SocialNet</span>
       </header>
 
       {/* Main Container */}
@@ -119,7 +119,7 @@ export default function SignupPage() {
             Join a global network of creators and professionals building meaningful connections every day.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "18px", alignItems: isMobile ? "center" : "flex-start" }}>
-            {["Identity verified profiles", "End-to-end encryption", "Zero subscription fees"].map((text) => (
+            {["Identity verified profiles", "Zero subscription fees"].map((text) => (
               <div key={text} style={{ display: "flex", alignItems: "center", gap: 12, color: "#334155", fontWeight: 500 }}>
                 <CheckIcon /> {text}
               </div>
@@ -197,7 +197,7 @@ export default function SignupPage() {
       </main>
 
       <footer style={{ padding: "40px 5%", textAlign: isMobile ? "center" : "left" }}>
-        <p style={{ fontSize: "13px", color: "#94a3b8" }}>© 2026 Community Inc. Built with passion.</p>
+        <p style={{ fontSize: "13px", color: "#94a3b8" }}>© 2026 SocialNet Inc. Built with passion.</p>
       </footer>
     </div>
   );

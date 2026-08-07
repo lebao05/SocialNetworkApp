@@ -11,7 +11,6 @@ using Application.Friend.Queries.GetFriends;
 using Application.Friend.Queries.GetFriendRecommendations;
 using Application.Friend.Queries.GetFollowees;
 using Application.Friend.Queries.GetIncomingFriendRequests;
-using Application.Friend.Queries.GetMutualFriends;
 using Application.Users.Commands.FollowUser;
 using Application.Users.Commands.UnfollowUser;
 using Application.Users.Queries.GetPersonalInfo;

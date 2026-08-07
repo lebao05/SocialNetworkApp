@@ -18,9 +18,9 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<bool> ExistsAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken = default)
         {
             return await _context.Friendships
-                .AnyAsync(f =>
+                .AnyAsync(f => (
                     f.User1Id == user1Id &&
-                    f.User2Id == user2Id, cancellationToken);
+                    f.User2Id == user2Id) || (f.User1Id == user2Id && f.User2Id == user1Id), cancellationToken);
         }
 
         public async Task<bool> ExistsFollowingAsync(Guid followerId, Guid followeeId, CancellationToken cancellationToken)
@@ -130,6 +130,32 @@ namespace Infrastructure.Persistence.Repositories
                 .Select(f => f.Followee)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<HashSet<Guid>> GetFriendIdsAsync(Guid userId, IEnumerable<Guid> otherUserIds, CancellationToken cancellationToken = default)
+        {
+            var idList = otherUserIds.ToList();
+
+            var friendIds = await _context.Friendships
+                .Where(f =>
+                    (f.User1Id == userId && idList.Contains(f.User2Id)) ||
+                    (f.User2Id == userId && idList.Contains(f.User1Id)))
+                .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id)
+                .ToListAsync(cancellationToken);
+
+            return friendIds.ToHashSet();
+        }
+
+        public async Task<HashSet<Guid>> GetFollowingIdsAsync(Guid viewerId, IEnumerable<Guid> candidateIds, CancellationToken cancellationToken = default)
+        {
+            var idList = candidateIds.ToList();
+
+            var followingIds = await _context.Followings
+                .Where(f => f.FollowerId == viewerId && idList.Contains(f.FolloweeId))
+                .Select(f => f.FolloweeId)
+                .ToListAsync(cancellationToken);
+
+            return followingIds.ToHashSet();
         }
 
         public async Task RemoveFriendshipAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken)

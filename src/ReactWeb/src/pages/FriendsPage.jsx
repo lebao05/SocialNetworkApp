@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Users, UserPlus, Sparkles, ChevronRight, Check, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useFriendContext } from "../contexts/friendContext";
 import Navbar from "../components/Navbar/Navbar";
 
@@ -46,6 +46,8 @@ export default function FriendsPage() {
     sendFriendRequest,
     cancelFriendRequest,
     setRecommendations,
+    unfriend,
+    setFriends,
   } = useFriendContext();
 
   const [activeTab, setActiveTab] = useState("requests");
@@ -53,6 +55,9 @@ export default function FriendsPage() {
   const [requestStatuses, setRequestStatuses] = useState({});
   const [processingIds, setProcessingIds] = useState({});
   const [sentRequestIds, setSentRequestIds] = useState({});
+  const [openFriendMenuId, setOpenFriendMenuId] = useState(null);
+  const friendMenuRef = useRef(null);
+  const navigate = useNavigate();
 
   // Sync statuses when incomingRequests loads from the API
   useEffect(() => {
@@ -67,6 +72,18 @@ export default function FriendsPage() {
       return next;
     });
   }, [incomingRequests]);
+
+  // Close any open friend-action dropdown when clicking outside
+  useEffect(() => {
+    if (!openFriendMenuId) return;
+    const handler = (e) => {
+      if (friendMenuRef.current && !friendMenuRef.current.contains(e.target)) {
+        setOpenFriendMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openFriendMenuId]);
 
   const items = useMemo(() => {
     let source = [];
@@ -128,6 +145,26 @@ export default function FriendsPage() {
     setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
     try {
       await cancelFriendRequest(item.id);
+      setSentRequestIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    } finally {
+      setProcessingIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  const handleUnfriend = async (item) => {
+    setProcessingIds((prev) => ({ ...prev, [item.id]: true }));
+    setOpenFriendMenuId(null);
+    try {
+      await unfriend(item.id);
+      // Context already flipped isFriend = false on this item.
       setSentRequestIds((prev) => {
         const next = { ...prev };
         delete next[item.id];
@@ -226,9 +263,9 @@ export default function FriendsPage() {
                 return (
                   <div
                     key={item.id ?? getDisplayName(item)}
-                    className="bg-white rounded-xl overflow-hidden border border-[#ced0d4] shadow-sm transition hover:shadow-md flex flex-col"
+                    className="bg-white rounded-xl border border-[#ced0d4] shadow-sm transition hover:shadow-md flex flex-col"
                   >
-                    <div className="relative aspect-square w-full bg-[#E4E6EB]">
+                    <div className="relative aspect-square w-full bg-[#E4E6EB] rounded-t-xl overflow-hidden">
                       <Link
                         to={`/profile/${item.senderId || item.userId || item.id}`}
                         onClick={(e) => e.stopPropagation()}
@@ -264,9 +301,104 @@ export default function FriendsPage() {
 
                       <div className="flex flex-col gap-2">
                         {activeTab === "friends" ? (
-                          <button className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADf]">
-                            Message
-                          </button>
+                          (() => {
+                            const profileId = item.senderId || item.userId || item.id;
+                            const isFriend = item.isFriend !== undefined ? !!item.isFriend : true;
+                            const isSending = !!item.isSendingFriendRequest || !!sentRequestIds[item.id];
+                            const isMenuOpen = openFriendMenuId === item.id;
+                            const isBusy = !!processingIds[item.id];
+                            const closeMenu = () => setOpenFriendMenuId(null);
+
+                            return (
+                              <>
+                                {/* Primary: Message (blue) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/messenger/t/${profileId}`); }}
+                                  className="w-full cursor-pointer rounded-md bg-[#1877F2] py-2 text-[15px] font-semibold text-white transition hover:bg-[#166fe5]"
+                                >
+                                  Message
+                                </button>
+
+                                {/* Secondary: relationship action with dropdown */}
+                                {isFriend ? (
+                                  <div
+                                    ref={isMenuOpen ? friendMenuRef : null}
+                                    className="relative"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setOpenFriendMenuId(isMenuOpen ? null : item.id); }}
+                                      disabled={isBusy}
+                                      className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADF] disabled:opacity-50"
+                                    >
+                                      {isBusy ? "Processing..." : "Friend"}
+                                    </button>
+                                    {isMenuOpen && (
+                                      <div
+                                        className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-[#ced0d4] bg-white shadow-lg"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => { closeMenu(); navigate(`/profile/${profileId}`); }}
+                                          className="block w-full cursor-pointer px-4 py-2 text-left text-[15px] font-semibold text-[#050505] hover:bg-[#F2F2F2]"
+                                        >
+                                          View Profile
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUnfriend(item)}
+                                          disabled={isBusy}
+                                          className="block w-full cursor-pointer border-t border-[#ced0d4] px-4 py-2 text-left text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                        >
+                                          Unfriend
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : isSending ? (
+                                  <div
+                                    ref={isMenuOpen ? friendMenuRef : null}
+                                    className="relative"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setOpenFriendMenuId(isMenuOpen ? null : item.id); }}
+                                      disabled={isBusy}
+                                      className="w-full cursor-pointer rounded-md bg-[#42b72a] py-2 text-[15px] font-semibold text-white transition hover:bg-[#36a420] disabled:opacity-50"
+                                    >
+                                      {isBusy ? "Processing..." : "Friend Request Sent"}
+                                    </button>
+                                    {isMenuOpen && (
+                                      <div
+                                        className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-[#ced0d4] bg-white shadow-lg"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCancelRequest(item)}
+                                          disabled={isBusy}
+                                          className="block w-full cursor-pointer px-4 py-2 text-left text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                        >
+                                          Cancel Friend Request
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddFriend(item)}
+                                    disabled={isBusy}
+                                    className="w-full cursor-pointer rounded-md bg-[#E4E6EB] py-2 text-[15px] font-semibold text-[#050505] transition hover:bg-[#D8DADF] disabled:opacity-50"
+                                  >
+                                    {isBusy ? "Processing..." : "Send Friend Request"}
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()
                         ) : activeTab === "recommendations" ? (
                           <>
                             {sentRequestIds[item.id] ? (

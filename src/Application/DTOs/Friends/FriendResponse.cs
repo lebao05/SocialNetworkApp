@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs.Friends;
+namespace Application.DTOs.Friends;
 
 public sealed record MutualFriendCard(
     string FullName,
@@ -10,4 +10,6 @@ public sealed record FriendResponse(
     string FullName,
     string? AvatarUrl,
     int MutualFriendsCount = 0,
-    List<MutualFriendCard>? TopMutualFriends = null);
+    List<MutualFriendCard>? TopMutualFriends = null,
+    bool IsFriend = false,
+    bool IsSendingFriendRequest = false);

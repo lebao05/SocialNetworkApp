@@ -21,6 +21,8 @@ namespace Application.Abstractions.Repositories
             int pageSize,
             CancellationToken cancellationToken);
         Task<List<User>> GetFolloweesAsync(Guid userId, CancellationToken cancellationToken);
+        Task<HashSet<Guid>> GetFriendIdsAsync(Guid userId, IEnumerable<Guid> otherUserIds, CancellationToken cancellationToken = default);
+        Task<HashSet<Guid>> GetFollowingIdsAsync(Guid viewerId, IEnumerable<Guid> candidateIds, CancellationToken cancellationToken = default);
         Task RemoveFriendshipAsync(Guid user1Id, Guid user2Id, CancellationToken cancellationToken);
     }
 }

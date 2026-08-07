@@ -31,15 +31,14 @@ namespace Application.Auth.Commands.ForgotPassword
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
 
-            // No enumeration: pretend we always succeeded. The user gets
-            // back the same response whether or not the address exists;
-            // only real users get an email.
             if (user is null)
             {
                 _logger.LogInformation(
-                    "ForgotPassword requested for unknown email {Email}; silently no-oping.",
+                    "ForgotPassword requested for unknown email {Email}.",
                     request.Email);
-                return Result.Success(true);
+                return Result.Failure<bool>(new Error(
+                    code: "Auth.UserNotFound",
+                    message: "User with email not exists"));
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);

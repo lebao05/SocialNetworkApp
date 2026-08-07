@@ -1,4 +1,4 @@
-﻿using Application.Auth.Commands.ForgotPassword;
+using Application.Auth.Commands.ForgotPassword;
 using Application.Auth.Commands.Login;
 using Application.Auth.Commands.Register;
 using Application.Auth.Commands.ResetPassword;
@@ -58,10 +58,7 @@ namespace Presentation.Controllers
         }
 
         /// <summary>
-        /// Starts the password-reset flow. Always returns 200 OK with the
-        /// same payload to avoid leaking which addresses are registered.
-        /// Errors that genuinely prevent the request (invalid email
-        /// shape, server mis-config) come back as ProblemDetails 400.
+        /// Starts the password-reset flow. Returns 400 if the email is not registered.
         /// </summary>
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(

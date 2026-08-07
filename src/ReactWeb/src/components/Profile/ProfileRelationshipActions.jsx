@@ -7,7 +7,7 @@ import {
     FaUserMinus,
     FaUserClock,
 } from "react-icons/fa";
-import { MessageCircle, ChevronDown, Plus, UserCheck } from "lucide-react";
+import { MessageCircle, Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFriendContext } from "../../contexts/friendContext";
 import { FaUserCheck } from "react-icons/fa6";
@@ -17,7 +17,7 @@ const THEME = {
         blueBtn: "bg-[#1877f2] hover:bg-[#166fe5] text-white",
         grayBtn: "bg-[#e4e6eb] hover:bg-[#d8dadf] text-[#050505]",
         redBtn: "bg-[#e4e6eb] hover:bg-[#ff4d4d] text-[#050505] hover:text-white",
-        greenBtn: "bg-[#42b72a] hover:bg-[#36a420] text-black",
+        greenBtn: "bg-[#42b72a] hover:bg-[#36a420] text-white",
         dangerBtn: "bg-[#e4e6eb] hover:bg-[#d8dadf] text-[#050505]",
         dropBg: "bg-white",
         dropBorder: "border-[#dddfe2]",
@@ -32,7 +32,7 @@ const THEME = {
         blueBtn: "bg-[#4599ff] hover:bg-[#3d8be6] text-white",
         grayBtn: "bg-[#3a3b3c] hover:bg-[#4e4f50] text-[#e4e6eb]",
         redBtn: "bg-[#3a3b3c] hover:bg-[#b91c1c] text-[#e4e6eb]",
-        greenBtn: "bg-[#42b72a] hover:bg-[#36a420] text-black",
+        greenBtn: "bg-[#36a420] hover:bg-[#2f8f1c] text-white",
         dangerBtn: "bg-[#3a3b3c] hover:bg-[#4e4f50] text-[#e4e6eb]",
         dropBg: "bg-[#242526]",
         dropBorder: "border-[#3e4042]",
@@ -105,17 +105,32 @@ function DropdownItem({ children, icon, subtext, onClick, disabled, danger }) {
     );
 }
 
-function ActionButton({ children, onClick, loading, disabled, className, icon, themeKey }) {
+function ActionButton({ children, onClick, loading, disabled, className, icon, themeKey, variant = "primary" }) {
     const t = THEME[themeKey];
+    const sizeClasses =
+        variant === "primary"
+            ? "px-5 py-2.5 text-sm"
+            : variant === "secondary"
+            ? "px-4 py-2 text-sm"
+            : "px-3 py-2 text-sm";
+    const widthClasses = variant === "primary" ? "flex-1 md:flex-initial" : "flex-1 md:flex-initial";
+    let colorClasses = t.blueBtn;
+    if (variant === "secondary") {
+        colorClasses = t.grayBtn;
+    } else if (variant === "danger") {
+        colorClasses = t.redBtn;
+    } else if (variant === "success") {
+        colorClasses = t.greenBtn;
+    }
     return (
         <button
             type="button"
             onClick={onClick}
             disabled={disabled || loading}
             className={`
-                flex-1 md:flex-initial font-semibold px-4 py-2 rounded-lg text-sm
+                ${widthClasses} ${sizeClasses} font-semibold rounded-lg
                 flex items-center justify-center gap-2 transition-all cursor-pointer
-                ${t.blueBtn}
+                ${colorClasses}
                 ${(disabled || loading) ? "opacity-60 cursor-not-allowed" : ""}
                 ${className || ""}
             `}
@@ -135,6 +150,7 @@ export default function ProfileRelationshipActions({
     isOwnProfile,
     isDarkMode = false,
     onUpdate,
+    onReport,
 }) {
     const themeKey = isDarkMode ? "dark" : "light";
     const t = THEME[themeKey];
@@ -239,7 +255,11 @@ export default function ProfileRelationshipActions({
 
     const handleMessage = () => {
         closeMenu();
-        navigate("/messenger");
+        if (userId) {
+            navigate(`/messenger/t/${userId}`);
+        } else {
+            navigate("/messenger");
+        }
     };
 
     const { isFriend, isFollowing, hasIncomingRequest, hasOutgoingRequest } = optimistic;
@@ -256,36 +276,31 @@ export default function ProfileRelationshipActions({
     renderDropdownBorder();
 
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {/* ===== CASE 1: Already Friends ===== */}
-            {isFriend && !hasIncomingRequest && !hasOutgoingRequest && (
-                <>
-                    {/* Friends button with dropdown */}
+        <div className="flex flex-col w-full">
+            {/* ===== Row 1: Friend actions + Message ===== */}
+            <div className="flex flex-wrap items-center gap-2">
+                {/* Friend primary action */}
+                {isFriend && !hasIncomingRequest && !hasOutgoingRequest && (
                     <div className="relative">
                         <ActionButton
                             onClick={() => setOpenMenu(openMenu === "friends" ? null : "friends")}
                             loading={isLoading("unfriend")}
                             icon={<FaUserFriends size={14} />}
                             themeKey={themeKey}
-                            className={t.blueBtn}
+                            variant="primary"
                         >
                             Friends
                         </ActionButton>
                         <DropdownMenu isOpen={openMenu === "friends"} onClose={closeMenu}>
                             <DropdownItem
-                                icon={
-                                    isFollowing ? (
-                                        <FaUserCheck size={15} className="text-green-500" />
-                                    ) : (
-                                        <FaUserPlus size={15} className="text-gray-400" />
-                                    )
-                                }
-                                onClick={() => wrap(isFollowing ? "unfollow" : "follow", isFollowing ? handleUnfollow : handleFollow)}
-                                disabled={isLoading("follow") || isLoading("unfollow")}
+                                icon={<FaUserFriends size={15} />}
+                                onClick={() => {
+                                    closeMenu();
+                                    navigate(`/profile/${userId}`);
+                                }}
                             >
-                                {isFollowing ? "Unfollow" : "Follow"}
+                                View Profile
                             </DropdownItem>
-                            <div className="border-t my-1" style={{ borderColor: t.divider }} />
                             <DropdownItem
                                 icon={<FaUserMinus size={15} className="text-red-500" />}
                                 onClick={() => wrap("unfriend", handleUnfriend)}
@@ -296,71 +311,52 @@ export default function ProfileRelationshipActions({
                             </DropdownItem>
                         </DropdownMenu>
                     </div>
+                )}
 
-                    {/* Message */}
-                    <ActionButton
-                        onClick={handleMessage}
-                        icon={<MessageCircle size={14} />}
-                        themeKey={themeKey}
-                        className={t.blueBtn}
-                    >
-                        Message
-                    </ActionButton>
-                </>
-            )}
+                {!isFriend && hasIncomingRequest && !hasOutgoingRequest && (
+                    <>
+                        <ActionButton
+                            onClick={handleAcceptRequest}
+                            loading={isLoading("accept")}
+                            icon={<FaCheck size={14} />}
+                            themeKey={themeKey}
+                            variant="primary"
+                        >
+                            Confirm Request
+                        </ActionButton>
+                        <ActionButton
+                            onClick={handleRejectRequest}
+                            loading={isLoading("reject")}
+                            icon={<FaTimes size={14} />}
+                            themeKey={themeKey}
+                            variant="secondary"
+                        >
+                            Delete
+                        </ActionButton>
+                    </>
+                )}
 
-            {/* ===== CASE 2: Incoming Friend Request ===== */}
-            {!isFriend && hasIncomingRequest && !hasOutgoingRequest && (
-                <>
-                    {/* Confirm */}
-                    <ActionButton
-                        onClick={handleAcceptRequest}
-                        loading={isLoading("accept")}
-                        icon={<FaCheck size={14} />}
-                        themeKey={themeKey}
-                        className={t.blueBtn}
-                    >
-                        Confirm
-                    </ActionButton>
-
-                    {/* Delete Request */}
-                    <ActionButton
-                        onClick={handleRejectRequest}
-                        loading={isLoading("reject")}
-                        icon={<FaTimes size={14} />}
-                        themeKey={themeKey}
-                        className={t.redBtn}
-                    >
-                        Delete Request
-                    </ActionButton>
-
-                    {/* Message */}
-                    <ActionButton
-                        onClick={handleMessage}
-                        icon={<MessageCircle size={14} />}
-                        themeKey={themeKey}
-                        className={t.blueBtn}
-                    >
-                        Message
-                    </ActionButton>
-                </>
-            )}
-
-            {/* ===== CASE 3: Outgoing Friend Request ===== */}
-            {!isFriend && !hasIncomingRequest && hasOutgoingRequest && (
-                <>
-                    {/* Request Sent with dropdown */}
+                {!isFriend && !hasIncomingRequest && hasOutgoingRequest && (
                     <div className="relative">
                         <ActionButton
                             onClick={() => setOpenMenu(openMenu === "sent" ? null : "sent")}
                             loading={isLoading("cancel")}
                             icon={<FaUserClock size={14} />}
                             themeKey={themeKey}
-                            className={t.grayBtn}
+                            variant="success"
                         >
                             Friend Request Sent
                         </ActionButton>
                         <DropdownMenu isOpen={openMenu === "sent"} onClose={closeMenu}>
+                            <DropdownItem
+                                icon={<FaUserFriends size={15} />}
+                                onClick={() => {
+                                    closeMenu();
+                                    navigate(`/profile/${userId}`);
+                                }}
+                            >
+                                View Profile
+                            </DropdownItem>
                             <DropdownItem
                                 icon={<FaTimes size={15} className="text-red-500" />}
                                 onClick={() => wrap("cancel", handleCancelRequest)}
@@ -371,126 +367,86 @@ export default function ProfileRelationshipActions({
                             </DropdownItem>
                         </DropdownMenu>
                     </div>
+                )}
 
-                    {/* Message */}
-                    <ActionButton
-                        onClick={handleMessage}
-                        icon={<MessageCircle size={14} />}
-                        themeKey={themeKey}
-                        className={t.blueBtn}
-                    >
-                        Message
-                    </ActionButton>
-                </>
-            )}
-
-            {/* ===== CASE 4: Not Friends, No Requests ===== */}
-            {!isFriend && !hasIncomingRequest && !hasOutgoingRequest && (
-                <>
-                    {/* Add Friend */}
+                {!isFriend && !hasIncomingRequest && !hasOutgoingRequest && (
                     <ActionButton
                         onClick={handleSendRequest}
                         loading={isLoading("send")}
                         icon={<FaUserPlus size={14} />}
                         themeKey={themeKey}
-                        className={t.blueBtn}
+                        variant="primary"
                     >
                         Add Friend
                     </ActionButton>
+                )}
 
-                    {/* Follow (only if not following) */}
-                    {!isFollowing && (
-                        <ActionButton
-                            onClick={handleFollow}
-                            loading={isLoading("follow")}
-                            icon={<Plus size={14} />}
-                            themeKey={themeKey}
-                            className={t.grayBtn}
-                        >
-                            Follow
-                        </ActionButton>
-                    )}
-
-                    {/* Following */}
-                    {isFollowing && (
-                        <div className="relative">
-                            <ActionButton
-                                onClick={() => setOpenMenu(openMenu === "following" ? null : "following")}
-                                loading={isLoading("unfollow")}
-                                icon={<UserCheck size={14} />}
-                                themeKey={themeKey}
-                                className={t.grayBtn}
-                            >
-                                Following
-                            </ActionButton>
-                            <DropdownMenu isOpen={openMenu === "following"} onClose={closeMenu}>
-                                <DropdownItem
-                                    icon={<FaUserMinus size={15} className="text-red-500" />}
-                                    onClick={() => wrap("unfollow", handleUnfollow)}
-                                    disabled={isLoading("unfollow")}
-                                    danger
-                                >
-                                    Unfollow
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </div>
-                    )}
-
-                    {/* Message */}
-                    <ActionButton
-                        onClick={handleMessage}
-                        icon={<MessageCircle size={14} />}
-                        themeKey={themeKey}
-                        className={t.blueBtn}
-                    >
-                        Message
-                    </ActionButton>
-                </>
-            )}
-
-            {/* ===== More Options (ChevronDown) - always visible for non-own profiles ===== */}
-            {!isOwnProfile && (
-                <button
-                    type="button"
-                    onClick={() => setOpenMenu(openMenu === "more" ? null : "more")}
-                    className={`
-                        w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer
-                        ${t.grayBtn}
-                        ${openMenu === "more" ? "ring-2 ring-[#1877f2]" : ""}
-                    `}
+                {/* Message — always secondary */}
+                <ActionButton
+                    onClick={handleMessage}
+                    icon={<MessageCircle size={14} />}
+                    themeKey={themeKey}
+                    variant="secondary"
                 >
-                    <ChevronDown size={18} />
-                    <DropdownMenu isOpen={openMenu === "more"} onClose={closeMenu}>
-                        {isFriend ? (
+                    Message
+                </ActionButton>
+
+                {/* Report — sits in the same row as Message, only on other users' profiles */}
+                {!isOwnProfile && onReport && (
+                    <button
+                        type="button"
+                        onClick={onReport}
+                        className={`flex-1 md:flex-initial px-4 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer
+                            ${isDarkMode
+                                ? "bg-[#3a3b3c] hover:bg-[#b91c1c] text-red-400 hover:text-white"
+                                : "bg-[#e4e6eb] hover:bg-[#ff4d4d] text-[#050505] hover:text-white"
+                            }`}
+                    >
+                        <Flag size={14} />
+                        Report
+                    </button>
+                )}
+            </div>
+
+            {/* ===== Divider between social-action groups ===== */}
+            <div className="my-2 border-t border-[#dddfe2] dark:border-[#3e4042]" />
+
+            {/* ===== Row 2: Follow / Following ===== */}
+            <div className="flex flex-wrap items-center gap-2">
+                {isFollowing ? (
+                    <div className="relative">
+                        <ActionButton
+                            onClick={() => setOpenMenu(openMenu === "following" ? null : "following")}
+                            loading={isLoading("unfollow")}
+                            icon={<FaUserCheck size={14} />}
+                            themeKey={themeKey}
+                            variant="success"
+                        >
+                            Following
+                        </ActionButton>
+                        <DropdownMenu isOpen={openMenu === "following"} onClose={closeMenu}>
                             <DropdownItem
-                                icon={<FaUserPlus size={15} className="text-gray-400" />}
-                                onClick={() => {
-                                    if (!isFollowing) {
-                                        wrap("follow", handleFollow);
-                                    }
-                                    closeMenu();
-                                }}
-                                disabled={isLoading("follow")}
+                                icon={<FaUserMinus size={15} className="text-red-500" />}
+                                onClick={() => wrap("unfollow", handleUnfollow)}
+                                disabled={isLoading("unfollow")}
+                                danger
                             >
-                                {isFollowing ? "Following" : "Follow"}
+                                Unfollow
                             </DropdownItem>
-                        ) : (
-                            <DropdownItem
-                                icon={<FaUserPlus size={15} className="text-gray-400" />}
-                                onClick={() => {
-                                    if (!isFollowing) {
-                                        wrap("follow", handleFollow);
-                                    }
-                                    closeMenu();
-                                }}
-                                disabled={isLoading("follow")}
-                            >
-                                {isFollowing ? "Following" : "Follow"} in common
-                            </DropdownItem>
-                        )}
-                    </DropdownMenu>
-                </button>
-            )}
+                        </DropdownMenu>
+                    </div>
+                ) : (
+                    <ActionButton
+                        onClick={handleFollow}
+                        loading={isLoading("follow")}
+                        icon={<FaUserPlus size={14} />}
+                        themeKey={themeKey}
+                        variant="secondary"
+                    >
+                        Follow
+                    </ActionButton>
+                )}
+            </div>
         </div>
     );
 }

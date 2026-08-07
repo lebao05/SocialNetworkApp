@@ -23,5 +23,5 @@ export function useFollowees(userId = null) {
         fetchFollowees();
     }, [fetchFollowees]);
 
-    return { followees, loading, error, fetchFollowees };
+    return { followees, loading, error, fetchFollowees, setFollowees };
 }

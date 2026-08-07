@@ -81,7 +81,7 @@ export default function SigninPage() {
             <div style={{ width: 36, height: 36, background: "#2563eb", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </div>
-            <span style={{ fontWeight: 800, fontSize: 20, color: "#1e293b", letterSpacing: "-0.5px" }}>Community</span>
+            <span style={{ fontWeight: 800, fontSize: 20, color: "#1e293b", letterSpacing: "-0.5px" }}>SocialNet</span>
           </div>
 
           <div style={{ marginBottom: "auto" }}>
@@ -94,7 +94,7 @@ export default function SigninPage() {
           </div>
 
           <footer style={{ marginTop: "auto", fontSize: "13px", color: "#94a3b8" }}>
-            © 2026 Community Connect. Secure & Encrypted.
+            © 2026 SocialNet Connect. Secure & Encrypted.
           </footer>
         </div>
       )}

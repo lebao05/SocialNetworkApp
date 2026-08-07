@@ -48,6 +48,24 @@ namespace Infrastructure.Persistence.Repositories
                     x.Status == FriendRequestStatus.Pending);
         }
 
+        public async Task<HashSet<Guid>> GetPendingRecipientIdsAsync(
+            Guid senderId,
+            IEnumerable<Guid> candidateReceiverIds,
+            CancellationToken cancellationToken = default)
+        {
+            var idList = candidateReceiverIds.ToList();
+
+            var pendingRecipientIds = await _context.FriendRequests
+                .Where(x =>
+                    x.SenderId == senderId &&
+                    x.Status == FriendRequestStatus.Pending &&
+                    idList.Contains(x.ReceiverId))
+                .Select(x => x.ReceiverId)
+                .ToListAsync(cancellationToken);
+
+            return pendingRecipientIds.ToHashSet();
+        }
+
         public async Task<PagedList<FriendRequest>> GetIncomingPendingAsync(
             Guid receiverId,
             int page,

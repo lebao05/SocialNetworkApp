@@ -13,6 +13,8 @@ namespace Application.Abstractions.Repositories
 
         Task<bool> ExistsPendingRequestAsync(Guid senderId, Guid receiverId);
 
+        Task<HashSet<Guid>> GetPendingRecipientIdsAsync(Guid senderId, IEnumerable<Guid> candidateReceiverIds, CancellationToken cancellationToken = default);
+
         Task<PagedList<FriendRequest>> GetIncomingPendingAsync(
             Guid receiverId,
             int page,

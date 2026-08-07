@@ -13,6 +13,8 @@ import {
   Edit,
   Maximize2,
   MoreHorizontal,
+  User,
+  LogOut,
 } from "lucide-react";
 import { GrGroup } from "react-icons/gr";
 import { useAuth } from "../../contexts/authContext";
@@ -24,6 +26,7 @@ import Logo from "../Logo";
 import { getSystemMessagePreview } from "../../utils/systemMessage";
 
 const DEFAULT_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
 
 // ── Messenger Dropdown Panel ───────────────────────────────────────────────────
 function MessengerDropdown({ onClose }) {
@@ -108,7 +111,7 @@ function MessengerDropdown({ onClose }) {
           >
             <div className="relative flex-shrink-0">
               <img
-                src={conv.imageUrl || DEFAULT_AVATAR}
+                src={conv.imageUrl || (conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER)}
                 className="w-14 h-14 rounded-full object-cover"
                 alt={conv.name}
               />
@@ -199,16 +202,18 @@ function ActionBtn({ children, badge, onClick, active }) {
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const { conversations } = useChat();
   const { unseenCount } = useNotificationContext();
   const { query, search } = useSearchEngineContext();
   const [showMessenger, setShowMessenger] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchInputValue, setSearchInputValue] = useState("");
   const messengerRef = useRef(null);
   const notificationRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
   const isMessengerPage = location.pathname.startsWith("/messenger");
   const isNotificationsPage = location.pathname.startsWith("/notifications");
@@ -222,10 +227,24 @@ export default function Navbar() {
       if (notificationRef.current && !notificationRef.current.contains(e.target)) {
         setShowNotifications(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleViewProfile = () => {
+    setShowProfileMenu(false);
+    navigate("/profile");
+  };
+
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    logout();
+    navigate("/signin");
+  };
 
   const navTabs = [
     { icon: Home, path: "/" },
@@ -304,14 +323,75 @@ export default function Navbar() {
           </div>
         )}
 
-        <Link to="/profile" className="flex items-center gap-0.5 cursor-pointer group">
-          <img
-            src={authUser?.avatarUrl || DEFAULT_AVATAR}
-            alt={authUser ? `${authUser.firstName} ${authUser.lastName}` : "avatar"}
-            className="w-10 h-10 rounded-full object-cover hover:ring-2 hover:ring-fb-blue transition-all"
-          />
-          <ChevronDown size={14} className="text-fb-subtext group-hover:text-fb-text transition-colors" />
-        </Link>
+        <div className="relative" ref={profileMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((v) => !v)}
+            className="flex items-center gap-0.5 cursor-pointer group"
+            aria-haspopup="menu"
+            aria-expanded={showProfileMenu}
+          >
+            <img
+              src={authUser?.avatarUrl || DEFAULT_AVATAR}
+              alt={authUser ? `${authUser.firstName} ${authUser.lastName}` : "avatar"}
+              className={`w-10 h-10 rounded-full object-cover transition-all
+                ${showProfileMenu ? "ring-2 ring-fb-blue" : "hover:ring-2 hover:ring-fb-blue"}`}
+            />
+            <ChevronDown
+              size={14}
+              className={`text-fb-subtext group-hover:text-fb-text transition-all
+                ${showProfileMenu ? "rotate-180 text-fb-text" : ""}`}
+            />
+          </button>
+
+          {showProfileMenu && (
+            <div
+              className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl overflow-hidden z-50"
+              style={{ boxShadow: "0 4px 32px rgba(0,0,0,0.18)" }}
+              role="menu"
+            >
+              {/* User header */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-fb-hover">
+                <img
+                  src={authUser?.avatarUrl || DEFAULT_AVATAR}
+                  alt={authUser ? `${authUser.firstName} ${authUser.lastName}` : "avatar"}
+                  className="w-11 h-11 rounded-full object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-fb-text truncate">
+                    {authUser ? `${authUser.firstName} ${authUser.lastName}` : "User"}
+                  </p>
+                  <p className="text-xs text-fb-subtext truncate">
+                    {authUser?.email || ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <button
+                type="button"
+                onClick={handleViewProfile}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-fb-hover transition-colors text-fb-text cursor-pointer"
+                role="menuitem"
+              >
+                <User size={16} className="text-fb-subtext" />
+                <span className="text-sm font-medium">View my profile</span>
+              </button>
+
+              <div className="border-t border-fb-hover" />
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-fb-hover transition-colors text-fb-text cursor-pointer"
+                role="menuitem"
+              >
+                <LogOut size={16} className="text-fb-subtext" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

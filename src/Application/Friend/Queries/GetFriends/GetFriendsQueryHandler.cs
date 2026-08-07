@@ -7,18 +7,22 @@ using Domain.Shared;
 namespace Application.Friend.Queries.GetFriends;
 
 internal sealed class GetFriendsQueryHandler
-    : IQueryHandler<GetFriendsQuery, PagedList<FriendResponse>>
+    : IQueryHandler<GetFriendsQuery, PagedList<GetFriendsResponseDto>>
 {
     private const int PageSize = 10;
 
     private readonly IFriendshipRepository _friendshipRepository;
+    private readonly IFriendRequestRepository _friendRequestRepository;
 
-    public GetFriendsQueryHandler(IFriendshipRepository friendshipRepository)
+    public GetFriendsQueryHandler(
+        IFriendshipRepository friendshipRepository,
+        IFriendRequestRepository friendRequestRepository)
     {
         _friendshipRepository = friendshipRepository;
+        _friendRequestRepository = friendRequestRepository;
     }
 
-    public async Task<Result<PagedList<FriendResponse>>> Handle(
+    public async Task<Result<PagedList<GetFriendsResponseDto>>> Handle(
         GetFriendsQuery request,
         CancellationToken cancellationToken)
     {
@@ -31,14 +35,33 @@ internal sealed class GetFriendsQueryHandler
             request.SearchTerm,
             cancellationToken);
 
-        var items = pagedFriends.Items.Select(friend => new FriendResponse(
+        var friendIds = pagedFriends.Items.Select(f => f.Id).ToList();
+
+        if (friendIds.Count == 0)
+        {
+            return Result.Success(new PagedList<GetFriendsResponseDto>(
+                [],
+                pagedFriends.PageNumber,
+                pagedFriends.PageSize,
+                pagedFriends.TotalCount));
+        }
+
+        var viewerFriendIds = await _friendshipRepository.GetFriendIdsAsync(
+            request.ViewerId, friendIds, cancellationToken);
+
+        var pendingRecipientIds = await _friendRequestRepository.GetPendingRecipientIdsAsync(
+            request.ViewerId, friendIds, cancellationToken);
+
+        var items = pagedFriends.Items.Select(friend => new GetFriendsResponseDto(
             friend.Id,
             friend.UserName ?? string.Empty,
             $"{friend.FirstName} {friend.LastName}".Trim(),
             friend.AvatarUrl,
-            0)).ToList();
+            0,
+            IsFriend: viewerFriendIds.Contains(friend.Id),
+            IsSendingFriendRequest: pendingRecipientIds.Contains(friend.Id))).ToList();
 
-        return Result.Success(new PagedList<FriendResponse>(
+        return Result.Success(new PagedList<GetFriendsResponseDto>(
             items,
             pagedFriends.PageNumber,
             pagedFriends.PageSize,

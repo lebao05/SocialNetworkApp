@@ -25,5 +25,5 @@ export function useProfileFriends(userId, searchTerm = "") {
         fetchFriends();
     }, [fetchFriends]);
 
-    return { friends, loading, error, fetchFriends };
+    return { friends, loading, error, fetchFriends, setFriends };
 }

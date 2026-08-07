@@ -199,6 +199,50 @@ namespace Infrastructure.Services
             });
         }
 
+        public async Task<Dictionary<Guid, int>> GetMutualFriendCountsAsync(Guid userId, IEnumerable<Guid> otherUserIds, CancellationToken cancellationToken = default)
+        {
+            var idList = otherUserIds.ToList();
+            if (idList.Count == 0)
+                return new Dictionary<Guid, int>();
+
+            const string query = @"
+                MATCH (u1:User {id: $userId})-[:FRIEND]-(mutual:User)-[:FRIEND]-(u2:User)
+                WHERE u2.id IN $otherIds
+                RETURN u2.id AS OtherId, count(DISTINCT mutual) AS Count";
+
+            var parameters = new Dictionary<string, object?>
+            {
+                { "userId", userId.ToString() },
+                { "otherIds", idList.Select(id => id.ToString()).ToList() }
+            };
+
+            return await ExecuteReadAsync(async tx =>
+            {
+                var result = await tx.RunAsync(query, parameters);
+                var dict = new Dictionary<Guid, int>();
+
+                while (await result.FetchAsync())
+                {
+                    var record = result.Current;
+                    var idStr = record["OtherId"].As<string>();
+                    var count = Convert.ToInt32(record["Count"].As<long>());
+
+                    if (Guid.TryParse(idStr, out var id))
+                    {
+                        dict[id] = count;
+                    }
+                }
+
+                // Ensure all requested IDs are present (defaults to 0 for those with no mutual friends)
+                foreach (var id in idList)
+                {
+                    dict.TryAdd(id, 0);
+                }
+
+                return dict;
+            });
+        }
+
         private async Task ExecuteWriteAsync(string cypher, object parameters)
         {
             var session = _driver.AsyncSession(o => o.WithDatabase(_database));

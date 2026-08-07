@@ -28,7 +28,7 @@ export function FriendProvider({ children }) {
     const [hasMoreRecommendations, setHasMoreRecommendations] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
+    console.log(friends);
     useEffect(() => {
         if (!user) return;
         fetchFriends(1, false);
@@ -175,7 +175,15 @@ export function FriendProvider({ children }) {
         try {
             setLoading(true);
             const data = await unfriendApi(friendUserId);
-            setFriends((prev) => prev.filter((f) => f.userId !== friendUserId && f.id !== friendUserId));
+            // Do NOT remove from the list. Just flip isFriend to false so the
+            // UI updates the button to "Send Friend Request" on that card.
+            setFriends((prev) =>
+                prev.map((f) =>
+                    f.id === friendUserId || f.userId === friendUserId
+                        ? { ...f, isFriend: false, isSendingFriendRequest: false }
+                        : f
+                )
+            );
             setError(null);
             return data;
         } catch (err) {

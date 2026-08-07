@@ -5,7 +5,6 @@ import {
     getFriendRecommendationsApi,
     sendFriendRequestApi,
     acceptFriendRequestApi,
-    getMutualFriendsApi,
     syncAllFriendsApi,
 } from "../apis/friendApi";
 
@@ -15,7 +14,6 @@ export function useFriend() {
     const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
     useEffect(() => {
         fetchFriends();
         fetchIncomingFriendRequests();
@@ -88,21 +86,6 @@ export function useFriend() {
         }
     };
 
-    const getMutualFriends = async (otherUserId) => {
-        try {
-            setLoading(true);
-            const data = await getMutualFriendsApi(otherUserId);
-            setError(null);
-            return data;
-        } catch (err) {
-            setError(err?.message || "Unable to fetch mutual friends");
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
     const syncAllFriends = async () => {
         try {
             setLoading(true);
@@ -128,7 +111,6 @@ export function useFriend() {
         fetchFriendRecommendations,
         sendFriendRequest,
         acceptFriendRequest,
-        getMutualFriends,
         syncAllFriends,
         setFriends,
         setIncomingRequests,
