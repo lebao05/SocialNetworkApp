@@ -150,10 +150,22 @@
                 <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reporter's Note</div>
                 <div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px 12px;font-size:.8375rem;color:#854d0e;margin-top:4px;" id="vmDetails"></div>
             </div>
+
+            <!-- Review history — only shown when status is Reviewed / Dismissed -->
+            <div id="vmHistoryWrap" style="margin-top:14px;display:none;">
+                <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Review History</div>
+                <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;font-size:.8375rem;color:#0f172a;margin-top:4px;line-height:1.5;">
+                    <div><strong>Reviewed by:</strong> <span id="vmReviewedBy">—</span></div>
+                    <div><strong>Reviewed at:</strong> <span id="vmReviewedAt">—</span></div>
+                    <div id="vmReviewNoteWrap" style="margin-top:6px;display:none;">
+                        <strong>Note:</strong> <span id="vmReviewNote"></span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close>Close</button>
-            <button class="btn btn-success" onclick="Admin.Moderation.openReviewFromView()"><i class="ri-checkbox-circle-line"></i> Review</button>
+            <button id="vmReviewBtn" class="btn btn-success" onclick="Admin.Moderation.openReviewFromView()"><i class="ri-checkbox-circle-line"></i> Review</button>
         </div>
     </div>
 </div>

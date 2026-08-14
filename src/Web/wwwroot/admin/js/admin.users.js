@@ -359,11 +359,14 @@
 
   function toggleLock(userId, isLocked, originBtn) {
     var url = '/admin/users/' + encodeURIComponent(userId) + (isLocked ? '/lock' : '/unlock');
-    if (originBtn) originBtn.disabled = true;
 
     return fetch(url, {
       method: 'POST',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'RequestVerificationToken': getCsrfToken()
+      },
       credentials: 'same-origin'
     })
       .then(function (r) {
@@ -371,27 +374,26 @@
         return r.json();
       })
       .then(function () {
-        // Update only the affected row — no full-list reload.
         applyMutationToRow(userId, { isLocked: isLocked });
       })
       .catch(function (err) {
-        alert(isLocked ? 'Failed to lock user: ' : 'Failed to unlock user: ' + err.message);
-        if (originBtn) originBtn.disabled = false;
+        alert((isLocked ? 'Failed to lock user: ' : 'Failed to unlock user: ') + err.message);
       });
   }
 
   function toggleRole(userId, makeAdmin, originBtn) {
     var url = '/admin/users/' + encodeURIComponent(userId) + (makeAdmin ? '/promote' : '/demote');
-    if (originBtn) originBtn.disabled = true;
 
     return fetch(url, {
       method: 'POST',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'RequestVerificationToken': getCsrfToken()
+      },
       credentials: 'same-origin'
     })
       .then(function (r) {
-        // 400 = self-role-change or validation; 404 = user gone. Both are
-        // hard failures for this row — surface the server message.
         if (!r.ok) {
           return r.json().then(function (body) {
             throw new Error((body && body.error) || ('HTTP ' + r.status));
@@ -404,8 +406,12 @@
       })
       .catch(function (err) {
         alert((makeAdmin ? 'Failed to promote user: ' : 'Failed to demote user: ') + err.message);
-        if (originBtn) originBtn.disabled = false;
       });
+  }
+
+  function getCsrfToken() {
+    var el = document.querySelector('input[name="__RequestVerificationToken"]');
+    return el ? el.value : '';
   }
 
   /* ── Filter form ────────────────────────────────────────────── */

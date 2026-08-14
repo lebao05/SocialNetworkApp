@@ -1,0 +1,646 @@
+@*
+    Admin — Resolve a single report (view content, lock/unlock, submit review)
+    Route: /admin/moderation/resolve/{type}/{id}
+    Data loaded via JS from /api/reports/{id}
+*@
+@{
+    Layout = "~/Views/Admin/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Resolve Report — Content Moderation";
+    var reportType = ViewData["ReportType"]?.ToString() ?? "";
+    var reportId = ViewData["ReportId"]?.ToString() ?? "";
+}
+
+<!-- Toast -->
+<div id="toast" class="alert hidden"
+     style="position:fixed;top:20px;right:20px;z-index:9999;min-width:260px;max-width:400px;display:flex;align-items:center;gap:10px;">
+</div>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Resolve Report <span id="reportIdBadge" class="text-muted"></span></h1>
+        <p class="page-subtitle" id="reportTypeLabel">Loading report details…</p>
+    </div>
+    <div style="display:flex;gap:10px;margin-left:auto;">
+        <a href="@Url.Action("Moderation", "Admin")" class="btn btn-secondary btn-sm">
+            <i class="ri-arrow-left-line"></i> Back to Moderation
+        </a>
+    </div>
+</div>
+
+<div id="resolveLoading" style="display:flex;align-items:center;justify-content:center;padding:60px;color:var(--c-text-muted);flex-direction:column;gap:12px;">
+    <i class="ri-loader-4-line" style="font-size:2rem;animation:spin 1s linear infinite;"></i>
+    <span>Loading report…</span>
+</div>
+
+<div id="resolveError" class="hidden" style="display:none;padding:40px;text-align:center;">
+    <i class="ri-error-warning-line" style="font-size:2.5rem;color:var(--c-danger);"></i>
+    <p id="resolveErrorMsg" style="margin-top:12px;color:var(--c-text-secondary);"></p>
+    <a href="@Url.Action("Moderation", "Admin")" class="btn btn-secondary btn-sm" style="margin-top:16px;">
+        <i class="ri-arrow-left-line"></i> Back to Moderation
+    </a>
+</div>
+
+<div id="resolveContent" class="hidden">
+
+    <!-- ── Two-column layout ─────────────────────────────── -->
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;">
+
+        <!-- LEFT — Content Info ─────────────────────────── -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+            <!-- Flagged Content Card -->
+            <div class="card" id="contentCard">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="ri-file-text-line" style="font-size:1.25rem;color:var(--c-primary);"></i>
+                        <span class="fw-600">Flagged Content</span>
+                    </div>
+                    <span id="contentTypeBadge" class="badge badge-danger"></span>
+                </div>
+                <div class="card-body" style="padding:20px;">
+
+                    <!-- Post / Reel content -->
+                    <div id="contentTextWrap" style="display:none;">
+                        <div id="contentText" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;font-size:.9rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:60px;margin-bottom:12px;"></div>
+                    </div>
+
+                    <!-- Reel video preview -->
+                    <div id="reelMediaWrap" class="hidden" style="display:none;margin-bottom:12px;">
+                        <div style="position:relative;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:16/9;max-width:400px;">
+                            <video id="reelVideo" controls style="width:100%;height:100%;object-fit:contain;" poster="">
+                                <source id="reelSource" src="" type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>
+
+                    <!-- Content meta grid -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Author</div>
+                            <div class="fw-600" id="contentAuthor">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Created</div>
+                            <div class="fw-600" id="contentDate">—</div>
+                        </div>
+                        <div id="visibilityWrap">
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Visibility</div>
+                            <div class="fw-600" id="contentVisibility">—</div>
+                        </div>
+                        <div id="groupWrap">
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Group</div>
+                            <div class="fw-600" id="contentGroup">—</div>
+                        </div>
+                        <div id="reactionsWrap">
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reactions</div>
+                            <div class="fw-600" id="contentReactions">—</div>
+                        </div>
+                        <div id="commentsWrap">
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Comments</div>
+                            <div class="fw-600" id="contentComments">—</div>
+                        </div>
+                        <div id="viewsWrap" class="hidden" style="display:none;">
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Views</div>
+                            <div class="fw-600" id="contentViews">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Card (only shown for User reports) -->
+            <div class="card hidden" id="userCard" style="display:none;">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:10px;">
+                    <i class="ri-user-line" style="font-size:1.25rem;color:var(--c-info);"></i>
+                    <span class="fw-600">Reported User</span>
+                </div>
+                <div class="card-body" style="padding:20px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Full Name</div>
+                            <div class="fw-600" id="userFullName">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Email</div>
+                            <div class="fw-600 font-mono" id="userEmail" style="font-size:.85rem;">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Gender</div>
+                            <div class="fw-600" id="userGender">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Joined</div>
+                            <div class="fw-600" id="userJoined">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Card (only shown for Group reports) -->
+            <div class="card hidden" id="groupCard" style="display:none;">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:10px;">
+                    <i class="ri-group-line" style="font-size:1.25rem;color:var(--c-warning);"></i>
+                    <span class="fw-600">Reported Group</span>
+                </div>
+                <div class="card-body" style="padding:20px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Group Name</div>
+                            <div class="fw-600" id="groupName">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Privacy</div>
+                            <div class="fw-600" id="groupPrivacy">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Owner</div>
+                            <div class="fw-600" id="groupOwner">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Members</div>
+                            <div class="fw-600" id="groupMembers">—</div>
+                        </div>
+                    </div>
+                    <div id="groupDescWrap">
+                        <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Description</div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;font-size:.875rem;line-height:1.5;margin-top:4px;" id="groupDesc">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Details Card -->
+            <div class="card">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:10px;">
+                    <i class="ri-flag-line" style="font-size:1.25rem;color:var(--c-danger);"></i>
+                    <span class="fw-600">Report Details</span>
+                </div>
+                <div class="card-body" style="padding:20px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reason</div>
+                            <div id="reportReason" class="fw-600">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reports</div>
+                            <div id="reportCount" class="fw-600">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reporter</div>
+                            <div id="reportReporter" class="fw-600">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Submitted</div>
+                            <div id="reportDate" class="fw-600">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Status</div>
+                            <div id="reportStatus">—</div>
+                        </div>
+                    </div>
+                    <div id="reportNoteWrap" style="display:none;">
+                        <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Reporter's Note</div>
+                        <div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px 12px;font-size:.8375rem;color:#854d0e;margin-top:4px;" id="reportNote"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /left -->
+
+        <!-- RIGHT — Actions + Review ───────────────────── -->
+        <div style="display:flex;flex-direction:column;gap:20px;position:sticky;top:24px;">
+
+            <!-- Lock / Unlock Action Card -->
+            <div class="card" id="lockCard">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:10px;">
+                    <i class="ri-shield-check-line" style="font-size:1.25rem;color:var(--c-text);"></i>
+                    <span class="fw-600">Content Action</span>
+                </div>
+                <div class="card-body" style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:8px;border:1px solid #e2e8f0;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i id="lockStatusIcon" class="ri-lock-unlock-line" style="font-size:1.3rem;"></i>
+                            <div>
+                                <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em;">Status</div>
+                                <div class="fw-600" id="lockStatusText">—</div>
+                            </div>
+                        </div>
+                        <span id="lockBadge" class="badge badge-pending">—</span>
+                    </div>
+
+                    <div id="lockActionButtons" style="display:flex;gap:10px;">
+                        <button class="btn btn-danger btn-sm" style="flex:1;" id="btnLock" onclick="ResolvePage.lockContent()">
+                            <i class="ri-lock-line"></i> Lock
+                        </button>
+                        <button class="btn btn-success btn-sm" style="flex:1;" id="btnUnlock" onclick="ResolvePage.unlockContent()">
+                            <i class="ri-lock-unlock-line"></i> Unlock
+                        </button>
+                    </div>
+
+                    <div id="lockFeedback" class="hidden alert" style="display:none;border-radius:8px;padding:10px 12px;font-size:.8375rem;line-height:1.4;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Form Card -->
+            <div class="card">
+                <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:10px;">
+                    <i class="ri-checkbox-circle-line" style="font-size:1.25rem;color:var(--c-success);"></i>
+                    <span class="fw-600">Submit Review</span>
+                </div>
+                <div class="card-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+
+                    <!-- Content action preview -->
+                    <div class="alert alert-info" style="border-radius:8px;padding:12px 14px;font-size:.8375rem;line-height:1.4;">
+                        <i class="ri-information-line"></i>
+                        <span>Lock/unlock above will take effect immediately. Submit the review form below to finalize the report decision.</span>
+                    </div>
+
+                    <!-- Dismiss toggle -->
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-check" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+                            <input type="checkbox" id="revDismiss" style="accent-color:var(--c-primary);margin-top:2px;" />
+                            <div>
+                                <div class="fw-600" style="font-size:.875rem;">Dismiss report</div>
+                                <div class="text-xs text-muted">No violation found — dismiss without action</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Admin note -->
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="revNote" style="font-size:.8375rem;font-weight:600;color:var(--c-text-secondary);">
+                            Admin Note <span style="font-weight:400;color:var(--c-text-muted);">(optional)</span>
+                        </label>
+                        <textarea id="revNote" class="form-control" rows="3"
+                                  placeholder="e.g. Content already removed, no further action needed…"
+                                  style="font-size:.875rem;"></textarea>
+                    </div>
+
+                    <!-- Submit -->
+                    <button class="btn btn-success" style="width:100%;" id="btnSubmitReview" onclick="ResolvePage.submitReview()">
+                        <i class="ri-checkbox-circle-line"></i> Submit Review
+                    </button>
+
+                    <div id="reviewFeedback" class="hidden alert" style="display:none;border-radius:8px;padding:10px 12px;font-size:.8375rem;line-height:1.4;">
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /right -->
+    </div><!-- /grid -->
+
+</div><!-- /resolveContent -->
+
+@section Scripts {
+    <script>
+        var ResolvePage = (function () {
+            'use strict';
+
+            var _report = null;
+            var _isProcessing = false;
+
+            document.addEventListener('DOMContentLoaded', function () {
+                loadReport();
+            });
+
+            function loadReport() {
+                var reportId = @reportId;
+                fetch('/api/reports/' + reportId, { credentials: 'include' })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            if (r.status === 404) throw new Error('Report not found.');
+                            throw new Error('Server error ' + r.status);
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        _report = data;
+                        document.getElementById('resolveLoading').style.display = 'none';
+                        document.getElementById('resolveContent').classList.remove('hidden');
+                        populatePage(data);
+                    })
+                    .catch(function (err) {
+                        document.getElementById('resolveLoading').style.display = 'none';
+                        var errDiv = document.getElementById('resolveError');
+                        errDiv.style.display = 'block';
+                        errDiv.classList.remove('hidden');
+                        document.getElementById('resolveErrorMsg').textContent = err.message;
+                    });
+            }
+
+            function populatePage(r) {
+                // Header
+                document.getElementById('reportIdBadge').textContent = '#' + r.id;
+                document.getElementById('reportTypeLabel').textContent = 'Reviewing ' + r.reportType + ' report — submitted ' + timeAgo(r.createdAt);
+
+                // Content type badge
+                var typeBadgeMap = { Post: 'badge-danger', Reel: 'badge-warning', User: 'badge-info', Group: 'badge-pending' };
+                document.getElementById('contentTypeBadge').textContent = r.reportType;
+                document.getElementById('contentTypeBadge').className = 'badge ' + (typeBadgeMap[r.reportType] || 'badge-inactive');
+
+                // ── POST ────────────────────────────────────
+                if (r.reportType === 'Post' && r.post) {
+                    var post = r.post;
+                    if (post.content) {
+                        document.getElementById('contentTextWrap').style.display = 'block';
+                        document.getElementById('contentText').textContent = post.content || '(empty)';
+                    }
+                    document.getElementById('contentAuthor').textContent = post.author ? post.author.name : '—';
+                    document.getElementById('contentDate').textContent = fmtDate(post.createdAt);
+                    document.getElementById('contentVisibility').textContent = post.visibility;
+                    document.getElementById('contentReactions').textContent = post.reactionCount || 0;
+                    document.getElementById('contentComments').textContent = post.commentCount || 0;
+                    if (post.groupName) {
+                        document.getElementById('groupWrap').style.display = '';
+                        document.getElementById('contentGroup').textContent = post.groupName;
+                    } else {
+                        document.getElementById('groupWrap').style.display = 'none';
+                    }
+                    updateLockStatus(post.isLocked, 'Post');
+                }
+
+                // ── REEL ──────────────────────────────────
+                else if (r.reportType === 'Reel' && r.reel) {
+                    var reel = r.reel;
+                    document.getElementById('contentTextWrap').style.display = 'block';
+                    document.getElementById('contentText').textContent = reel.caption || '(no caption)';
+                    if (reel.videoUrl) {
+                        var mediaWrap = document.getElementById('reelMediaWrap');
+                        mediaWrap.style.display = '';
+                        mediaWrap.classList.remove('hidden');
+                        document.getElementById('reelSource').src = reel.videoUrl;
+                        document.getElementById('reelVideo').poster = reel.thumbnailUrl || '';
+                        document.getElementById('reelVideo').load();
+                    }
+                    document.getElementById('contentAuthor').textContent = reel.author ? reel.author.name : '—';
+                    document.getElementById('contentDate').textContent = fmtDate(reel.createdAt);
+                    document.getElementById('contentVisibility').textContent = reel.visibility;
+                    document.getElementById('contentReactions').textContent = reel.likeCount || 0;
+                    document.getElementById('contentComments').textContent = reel.commentCount || 0;
+                    document.getElementById('viewsWrap').style.display = '';
+                    document.getElementById('viewsWrap').classList.remove('hidden');
+                    document.getElementById('contentViews').textContent = (reel.viewCount || 0).toLocaleString();
+                    updateLockStatus(reel.isLocked, 'Reel');
+                }
+
+                // ── USER ──────────────────────────────────
+                else if (r.reportType === 'User' && r.user) {
+                    var user = r.user;
+                    document.getElementById('contentCard').style.display = 'none';
+                    var userCard = document.getElementById('userCard');
+                    userCard.style.display = '';
+                    userCard.classList.remove('hidden');
+                    document.getElementById('userFullName').textContent = (user.firstName || '') + ' ' + (user.lastName || '');
+                    document.getElementById('userEmail').textContent = user.email || '—';
+                    document.getElementById('userGender').textContent = user.gender || '—';
+                    document.getElementById('userJoined').textContent = fmtDate(user.createdAt);
+                    document.getElementById('lockCard').style.display = 'none';
+                    // No lock/unlock for users — handled on Users page
+                    document.getElementById('lockActionButtons').style.display = 'none';
+                }
+
+                // ── GROUP ─────────────────────────────────
+                else if (r.reportType === 'Group' && r.group) {
+                    var group = r.group;
+                    document.getElementById('contentCard').style.display = 'none';
+                    var groupCard = document.getElementById('groupCard');
+                    groupCard.style.display = '';
+                    groupCard.classList.remove('hidden');
+                    document.getElementById('groupName').textContent = group.name || '—';
+                    document.getElementById('groupPrivacy').textContent = group.privacyType || '—';
+                    document.getElementById('groupOwner').textContent = group.owner ? group.owner.name : '—';
+                    document.getElementById('groupMembers').textContent = (group.memberCount || 0).toLocaleString();
+                    if (group.description) {
+                        document.getElementById('groupDescWrap').style.display = '';
+                        document.getElementById('groupDesc').textContent = group.description;
+                    } else {
+                        document.getElementById('groupDescWrap').style.display = 'none';
+                    }
+                    updateLockStatus(group.isLocked, 'Group');
+                }
+
+                // Report details
+                document.getElementById('reportReason').textContent = fmtReason(r.reason);
+                document.getElementById('reportCount').textContent = r.reportCount + (r.reportCount !== 1 ? ' reports' : ' report');
+                document.getElementById('reportReporter').textContent = r.reporter ? r.reporter.name : '—';
+                document.getElementById('reportDate').textContent = fmtDate(r.createdAt);
+                var statusMap = { Pending: 'badge-pending', Reviewed: 'badge-active', Dismissed: 'badge-inactive' };
+                document.getElementById('reportStatus').innerHTML =
+                    '<span class="badge ' + (statusMap[r.status] || 'badge-pending') + '">' + r.status + '</span>';
+                if (r.details) {
+                    document.getElementById('reportNoteWrap').style.display = '';
+                    document.getElementById('reportNoteWrap').classList.remove('hidden');
+                    document.getElementById('reportNote').textContent = r.details;
+                }
+            }
+
+            function updateLockStatus(isLocked, contentType) {
+                var icon = document.getElementById('lockStatusIcon');
+                var text = document.getElementById('lockStatusText');
+                var badge = document.getElementById('lockBadge');
+                var btnLock = document.getElementById('btnLock');
+                var btnUnlock = document.getElementById('btnUnlock');
+
+                if (isLocked) {
+                    icon.className = 'ri-lock-line';
+                    icon.style.color = 'var(--c-danger)';
+                    text.textContent = 'Locked';
+                    badge.textContent = 'Locked';
+                    badge.className = 'badge badge-danger';
+                    btnLock.style.display = 'none';
+                    btnUnlock.style.display = '';
+                } else {
+                    icon.className = 'ri-lock-unlock-line';
+                    icon.style.color = 'var(--c-success)';
+                    text.textContent = 'Open';
+                    badge.textContent = 'Open';
+                    badge.className = 'badge badge-active';
+                    btnLock.style.display = '';
+                    btnUnlock.style.display = 'none';
+                }
+            }
+
+            // ── Lock / Unlock ──────────────────────────────
+            function lockContent() {
+                if (!_report) return;
+                var ct = getContentType();
+                if (!ct) return;
+                var contentId = getContentId();
+                if (!contentId) return;
+
+                setProcessing(true, 'Locking…');
+                postLockUnlock(contentId, ct, 'lock')
+                    .then(function () {
+                        _report = updateNestedIsLocked(_report, ct, true);
+                        updateLockStatus(true, ct);
+                        showLockFeedback('success', ct + ' locked successfully.');
+                    })
+                    .catch(function (err) { showLockFeedback('danger', err.message); })
+                    .finally(function () { setProcessing(false); });
+            }
+
+            function unlockContent() {
+                if (!_report) return;
+                var ct = getContentType();
+                if (!ct) return;
+                var contentId = getContentId();
+                if (!contentId) return;
+
+                setProcessing(true, 'Unlocking…');
+                postLockUnlock(contentId, ct, 'unlock')
+                    .then(function () {
+                        _report = updateNestedIsLocked(_report, ct, false);
+                        updateLockStatus(false, ct);
+                        showLockFeedback('success', ct + ' unlocked successfully.');
+                    })
+                    .catch(function (err) { showLockFeedback('danger', err.message); })
+                    .finally(function () { setProcessing(false); });
+            }
+
+            function postLockUnlock(contentId, contentType, action) {
+                return fetch('/admin/moderation/' + contentType.toLowerCase() + 's/' + contentId + '/' + action, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'RequestVerificationToken': getCsrfToken() }
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('Server error ' + r.status);
+                    return r.json();
+                });
+            }
+
+            function getContentType() {
+                if (!_report) return null;
+                if (_report.reportType === 'User') return null; // no lock for users here
+                return _report.reportType;
+            }
+
+            function getContentId() {
+                if (!_report) return null;
+                if (_report.post) return _report.post.id;
+                if (_report.reel) return _report.reel.id;
+                if (_report.group) return _report.group.id;
+                return null;
+            }
+
+            function updateNestedIsLocked(report, contentType, isLocked) {
+                if (contentType === 'Post' && report.post) report.post.isLocked = isLocked;
+                if (contentType === 'Reel' && report.reel) report.reel.isLocked = isLocked;
+                if (contentType === 'Group' && report.group) report.group.isLocked = isLocked;
+                return report;
+            }
+
+            function showLockFeedback(type, msg) {
+                var el = document.getElementById('lockFeedback');
+                el.className = 'alert alert-' + type;
+                el.innerHTML = '<i class="ri-' + (type === 'success' ? 'checkbox-circle-line' : 'error-warning-line') + '"></i> ' + msg;
+                el.classList.remove('hidden');
+                el.style.display = '';
+                clearTimeout(el._timer);
+                el._timer = setTimeout(function () {
+                    el.classList.add('hidden');
+                    el.style.display = 'none';
+                }, 4000);
+            }
+
+            // ── Submit Review ──────────────────────────────
+            function submitReview() {
+                if (!_report) return;
+                if (_isProcessing) return;
+
+                var isDismiss = document.getElementById('revDismiss').checked;
+                var note = document.getElementById('revNote').value.trim();
+
+                setReviewProcessing(true);
+                fetch('/api/reports/' + _report.id + '/review', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        action: 0,
+                        isDismissed: isDismiss,
+                        reviewNote: note || null
+                    })
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('Server error ' + r.status);
+                    return r.json();
+                })
+                .then(function () {
+                    showReviewFeedback('success',
+                        (isDismiss ? 'Report dismissed.' : 'Report reviewed successfully.') +
+                        ' Redirecting…');
+                    setTimeout(function () {
+                        window.location.href = '@Url.Action("Moderation", "Admin")';
+                    }, 1200);
+                })
+                .catch(function (err) {
+                    showReviewFeedback('danger', 'Error: ' + err.message);
+                    setReviewProcessing(false);
+                });
+            }
+
+            function showReviewFeedback(type, msg) {
+                var el = document.getElementById('reviewFeedback');
+                el.className = 'alert alert-' + type;
+                el.innerHTML = '<i class="ri-' + (type === 'success' ? 'checkbox-circle-line' : 'error-warning-line') + '"></i> ' + msg;
+                el.classList.remove('hidden');
+                el.style.display = '';
+            }
+
+            // ── Helpers ───────────────────────────────────
+            function setProcessing(on, label) {
+                _isProcessing = on;
+                var btns = document.querySelectorAll('#lockActionButtons button');
+                btns.forEach(function (b) { b.disabled = on; });
+            }
+
+            function setReviewProcessing(on) {
+                document.getElementById('btnSubmitReview').disabled = on;
+                if (on) document.getElementById('btnSubmitReview').innerHTML =
+                    '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;"></i> Submitting…';
+                else document.getElementById('btnSubmitReview').innerHTML =
+                    '<i class="ri-checkbox-circle-line"></i> Submit Review';
+            }
+
+            function getCsrfToken() {
+                var el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : '';
+            }
+
+            function fmtDate(d) {
+                if (!d) return '—';
+                return new Date(d).toLocaleString();
+            }
+
+            function fmtReason(r) {
+                if (!r) return '—';
+                return r.replace(/([A-Z])/g, ' $1').replace(/^./, function (c) { return c.toUpperCase(); }).trim();
+            }
+
+            function timeAgo(dateStr) {
+                if (!dateStr) return '—';
+                var diff = Date.now() - new Date(dateStr).getTime();
+                var m = Math.floor(diff / 60000);
+                if (m < 1) return 'just now';
+                if (m < 60) return m + ' min ago';
+                var h = Math.floor(m / 60);
+                if (h < 24) return h + ' hr ago';
+                var d = Math.floor(h / 24);
+                if (d < 30) return d + ' day' + (d !== 1 ? 's' : '') + ' ago';
+                return new Date(dateStr).toLocaleDateString();
+            }
+
+            return {
+                lockContent: lockContent,
+                unlockContent: unlockContent,
+                submitReview: submitReview
+            };
+        })();
+    </script>
+}

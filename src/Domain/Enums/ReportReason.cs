@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Enums;
 
 /// <summary>
 /// The reason a user submitted a report. Shared across all content types.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ReportReason : byte
 {
     Spam                = 0,

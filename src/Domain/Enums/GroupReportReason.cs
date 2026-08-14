@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Enums
 {
     /// <summary>The reason a user reported a piece of group content.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum GroupReportReason : byte
     {
         Spam                = 0,

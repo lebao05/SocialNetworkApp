@@ -18,7 +18,8 @@
   var LINE_THEMES = {
     userGrowthChart:  { stroke: '#3b82f6', fill: 'rgba(59, 130, 246, .18)', label: 'Users'    },
     postsChart:       { stroke: '#10b981', fill: 'rgba(16, 185, 129, .18)', label: 'Posts'    },
-    commentsChart:    { stroke: '#f59e0b', fill: 'rgba(245, 158, 11, .18)', label: 'Comments' }
+    commentsChart:    { stroke: '#f59e0b', fill: 'rgba(245, 158, 11, .18)', label: 'Comments' },
+    reelsChart:       { stroke: '#ec4899', fill: 'rgba(236, 72, 153, .18)', label: 'Reels'    }
   };
 
   /* ── helpers ───────────────────────────────────────────────────────── */
@@ -327,7 +328,7 @@
         if (key === 'user-growth')  return loadLineChart('userGrowthChart',  'user-growth',    days);
         if (key === 'post-volume')  return loadLineChart('postsChart',       'post-volume',    days);
         if (key === 'comment-volume')return loadLineChart('commentsChart',    'comment-volume', days);
-        if (key === 'reel-volume')  return loadStackedChart('reelsChart',    'reel-volume',    days);
+        if (key === 'reel-volume')  return loadLineChart('reelsChart',       'reel-volume',    days);
       });
     });
   }
@@ -341,7 +342,7 @@
       loadLineChart('userGrowthChart', 'user-growth',    days),
       loadLineChart('postsChart',      'post-volume',    days),
       loadLineChart('commentsChart',   'comment-volume', days),
-      loadStackedChart('reelsChart',   'reel-volume',    days)
+      loadLineChart('reelsChart',      'reel-volume',    days)
     ];
     return Promise.all(tasks).catch(function (err) {
       console.error('[dashboard] refresh failed', err);

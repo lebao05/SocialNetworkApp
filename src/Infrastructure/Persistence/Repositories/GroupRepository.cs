@@ -233,57 +233,57 @@ namespace Infrastructure.Persistence.Repositories
             int pageSize,
             CancellationToken cancellationToken = default)
         {
-            // ── Base query ──────────────────────────────────────────────
-            var query = _context.Groups
-                .AsNoTracking()
-                .Select(g => new
-                {
-                    g.Id,
-                    g.Name,
-                    g.PrivacyType,
-                    g.CoverPhotoUrl,
-                    OwnerFirstName = g.Owner.FirstName,
-                    OwnerLastName  = g.Owner.LastName,
-                    g.IsLocked,
-                    g.CreatedAt,
-                    MemberCount = _context.GroupMembers.Count(m => m.GroupId == g.Id),
-                    PostCount   = _context.Posts.Count(p => p.GroupId == g.Id && p.DeletedAt == null)
-                });
+            // ── Base query — start from entity, NOT anonymous projection,
+            //    so EF can translate SearchVector and where-clauses correctly ──
+            IQueryable<Group> query = _context.Groups.AsNoTracking();
 
             // ── Free-text search via SearchVector ───────────────────────
             // Groups.SearchVector was added in migration 20260610160827.
+            // Applied BEFORE any projection so EF sees the real entity.
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
-                query = query.Where(group => EF.Property<NpgsqlTsVector>(group, "SearchVector").Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
-
+                query = query.Where(g => EF.Property<NpgsqlTsVector>(g, "SearchVector")
+                    .Matches(EF.Functions.PlainToTsQuery("english", searchQuery)));
             }
 
             // ── Privacy filter ──────────────────────────────────────────
-            if (string.Equals(privacy, "public",  StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(privacy, "public", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(g => g.PrivacyType == GroupPrivacyType.Public);
             else if (string.Equals(privacy, "private", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(g => g.PrivacyType == GroupPrivacyType.Private);
 
             // ── Status filter ───────────────────────────────────────────
-            if (string.Equals(status, "locked",   StringComparison.OrdinalIgnoreCase)) query = query.Where(g =>  g.IsLocked);
-            if (string.Equals(status, "unlocked", StringComparison.OrdinalIgnoreCase)) query = query.Where(g => !g.IsLocked);
+            if (string.Equals(status, "locked",   StringComparison.OrdinalIgnoreCase))
+                query = query.Where(g => g.IsLocked);
+            else if (string.Equals(status, "unlocked", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(g => !g.IsLocked);
 
-            // ── Page + project ───────────────────────────────────────────
-            var projected = query
+            // ── Paginate on the entity query first ─────────────────────
+            // EF must translate Count() / Skip() / Take() while still on the entity.
+            var pagedQuery = query
                 .OrderByDescending(g => g.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize);
+
+            // ── Project to DTO only after pagination ───────────────────
+            var projected = pagedQuery
                 .Select(g => new AdminGroupRowDto(
                     g.Id,
                     g.Name,
                     g.PrivacyType.ToString(),
                     g.CoverPhotoUrl,
-                    (g.OwnerFirstName + " " + g.OwnerLastName).Trim(),
-                    g.MemberCount,
-                    g.PostCount,
+                    (g.Owner.FirstName + " " + g.Owner.LastName).Trim(),
+                    g.Members.Count,
+                    g.Posts.Count(p => p.DeletedAt == null),
                     g.IsLocked,
                     g.CreatedAt));
 
-            return await PagedList<AdminGroupRowDto>.CreateAsync(
-                projected, page, pageSize, cancellationToken);
+            var items = await projected.ToListAsync(cancellationToken);
+
+            // ── Total count — re-query without pagination ─────────────
+            var totalCount = await query.LongCountAsync(cancellationToken);
+
+            return new PagedList<AdminGroupRowDto>(items, page, pageSize, (int)totalCount);
         }
 
         public async Task<bool> SetLockedAsync(

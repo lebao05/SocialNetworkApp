@@ -1,6 +1,7 @@
 using Application.DTOs.Admin;
 using Application.Report.Commands.CreateReport;
 using Application.Report.Commands.ReviewReport;
+using Application.Report.Queries.GetReportById;
 using Application.Report.Queries.GetReports;
 using Domain.Enums;
 using Domain.Shared;
@@ -54,7 +55,7 @@ public class ReportController : ApiController
     /// <summary>GET /api/reports?type=&amp;status=&amp;from=&amp;to=&amp;page=&amp;pageSize=</summary>
     /// <remarks>List all reports for admin moderation. Requires ADMIN role.</remarks>
     [HttpGet]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN", AuthenticationSchemes = "AdminCookie")]
     public async Task<IActionResult> GetReports(
         [FromQuery] string? type,
         [FromQuery] string? status,
@@ -92,10 +93,22 @@ public class ReportController : ApiController
         });
     }
 
+    /// <summary>GET /api/reports/{id}</summary>
+    /// <remarks>Get a single report with full content detail for the resolve page.</remarks>
+    [HttpGet("{id:long}")]
+    [Authorize(Roles = "ADMIN", AuthenticationSchemes = "AdminCookie")]
+    public async Task<IActionResult> GetReportById(long id, CancellationToken ct)
+    {
+        var result = await _sender.Send(new GetReportByIdQuery(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error.Message });
+        return Ok(result.Value);
+    }
+
     /// <summary>POST /api/reports/{id}/review</summary>
     /// <remarks>Review (approve/dismiss) a report. Requires ADMIN role.</remarks>
     [HttpPost("{id:long}/review")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN", AuthenticationSchemes = "AdminCookie")]
     public async Task<IActionResult> ReviewReport(
         long id,
         [FromBody] ReviewReportRequest body,

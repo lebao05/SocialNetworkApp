@@ -721,8 +721,12 @@ export default function PostCard({ post, onDelete, onUpdate }) {
                 </p>
               </div>
             </>
-          ) : (
-            <>
+          ) : authorId ? (
+            <Link
+              to={`/profile/${authorId}`}
+              className="flex items-center gap-2 no-underline text-inherit"
+              onClick={(e) => e.stopPropagation()}
+            >
               <img src={authorAvatar || DEFAULT_AVATAR} alt={authorName || "User"} className="w-10 h-10 rounded-full object-cover border" />
               <div>
                 <p className="text-[15px] font-semibold text-gray-800 leading-tight flex items-center flex-wrap gap-1">
@@ -742,8 +746,8 @@ export default function PostCard({ post, onDelete, onUpdate }) {
                   {displayTime} · {visIcon}
                 </p>
               </div>
-            </>
-          )}
+            </Link>
+          ) : (
         </div>
         <div className="flex items-center gap-1 relative" ref={dropdownRef}>
           <button

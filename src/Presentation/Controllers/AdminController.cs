@@ -141,6 +141,17 @@ namespace Presentation.Controllers
             return View();
         }
 
+        [HttpGet("moderation/resolve/{type}/{id:long}")]
+        [Authorize(Roles = AdminRole)]
+        public IActionResult ModerationResolve(string type, long id)
+        {
+            if (!IsAuthenticated()) return RedirectToAction(nameof(Login));
+            ViewData["CurrentPage"] = "Moderation";
+            ViewData["ReportType"] = type;
+            ViewData["ReportId"] = id;
+            return View();
+        }
+
         [HttpGet("auditlogs")]
         [Authorize(Roles = AdminRole)]
         public IActionResult AuditLogs()
@@ -492,6 +503,28 @@ namespace Presentation.Controllers
         public async Task<IActionResult> UnlockReel(long id, CancellationToken ct = default)
         {
             var result = await _sender.Send(new SetReelLockCommand(id, false), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/groups/{id}/lock</summary>
+        [HttpPost("moderation/groups/{id:long}/lock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> LockGroupFromModeration(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetGroupLockCommand(id, true), ct);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : NotFound(new { error = result.Error.Message });
+        }
+
+        /// <summary>POST /admin/moderation/groups/{id}/unlock</summary>
+        [HttpPost("moderation/groups/{id:long}/unlock")]
+        [Authorize(Roles = AdminRole)]
+        public async Task<IActionResult> UnlockGroupFromModeration(long id, CancellationToken ct = default)
+        {
+            var result = await _sender.Send(new SetGroupLockCommand(id, false), ct);
             return result.IsSuccess
                 ? Ok(result.Value)
                 : NotFound(new { error = result.Error.Message });

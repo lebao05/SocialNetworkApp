@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Enums
 {
     /// <summary>Lifecycle status of a content report inside a group.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum GroupReportStatus : byte
     {
         /// <summary>Awaiting moderator or admin review.</summary>

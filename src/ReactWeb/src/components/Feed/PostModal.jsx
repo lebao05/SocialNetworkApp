@@ -288,10 +288,30 @@ export default function PostModal({
         <div className="max-h-[80vh] overflow-y-auto">
           <div className="p-5">
             <div className="flex items-start gap-3">
-              <img src={authorAvatar} alt={authorName} className="w-12 h-12 rounded-full object-cover border" />
+              {post.authorId || post.AuthorId ? (
+                <Link
+                  to={`/profile/${post.authorId ?? post.AuthorId}`}
+                  className="no-underline text-inherit"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img src={authorAvatar} alt={authorName} className="w-12 h-12 rounded-full object-cover border cursor-pointer" />
+                </Link>
+              ) : (
+                <img src={authorAvatar} alt={authorName} className="w-12 h-12 rounded-full object-cover border" />
+              )}
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-gray-800">{authorName}</span>
+                  {post.authorId || post.AuthorId ? (
+                    <Link
+                      to={`/profile/${post.authorId ?? post.AuthorId}`}
+                      className="font-semibold text-gray-800 hover:underline no-underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {authorName}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold text-gray-800">{authorName}</span>
+                  )}
                   <span className="text-sm text-gray-500">{post.locationTag ? `${post.locationTag}` : ""}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">

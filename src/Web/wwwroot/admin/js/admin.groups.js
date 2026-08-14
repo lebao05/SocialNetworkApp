@@ -192,13 +192,16 @@
     });
   }
 
-  function toggleLock(groupId, isLocked, originBtn) {
-    var url = '/admin/groups/' + encodeURIComponent(groupId) + (isLocked ? '/lock' : '/unlock');
-    if (originBtn) originBtn.disabled = true;
+  function toggleLock(groupId, willLock, originBtn) {
+    var url = '/admin/groups/' + encodeURIComponent(groupId) + (willLock ? '/lock' : '/unlock');
 
     return fetch(url, {
       method: 'POST',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'RequestVerificationToken': getCsrfToken()
+      },
       credentials: 'same-origin'
     })
       .then(function (r) {
@@ -206,12 +209,37 @@
         return r.json();
       })
       .then(function () {
-        fetchAndRender();
+        updateRowLockState(groupId, willLock);
       })
       .catch(function (err) {
-        alert(isLocked ? 'Failed to lock group: ' : 'Failed to unlock group: ' + err.message);
-        if (originBtn) originBtn.disabled = false;
+        alert((willLock ? 'Failed to lock group: ' : 'Failed to unlock group: ') + err.message);
       });
+  }
+
+  /** Update only the lock badge and button for one row — no page reload. */
+  function updateRowLockState(groupId, isLocked) {
+    var row = document.querySelector('tr[data-group-id="' + groupId + '"]');
+    if (!row) return;
+
+    var statusBadge = row.querySelector('td:nth-child(8) .badge');
+    if (statusBadge) {
+      statusBadge.className = 'badge ' + (isLocked ? 'badge-banned' : 'badge-active');
+      statusBadge.innerHTML = '<span class="badge-dot"></span>' + (isLocked ? 'Locked' : 'Unlocked');
+    }
+
+    var actionTd = row.querySelector('td:last-child .cell-actions');
+    if (actionTd) {
+      actionTd.innerHTML = isLocked
+        ? '<button class="action-btn success" title="Unlock" aria-label="Unlock group" data-action="unlock" data-group-id="' + groupId + '">' +
+            '<i class="ri-lock-unlock-line"></i></button>'
+        : '<button class="action-btn danger" title="Lock" aria-label="Lock group" data-action="lock" data-group-id="' + groupId + '">' +
+            '<i class="ri-lock-line"></i></button>';
+    }
+  }
+
+  function getCsrfToken() {
+    var el = document.querySelector('input[name="__RequestVerificationToken"]');
+    return el ? el.value : '';
   }
 
   /* ── Filter form ────────────────────────────────────────────── */
