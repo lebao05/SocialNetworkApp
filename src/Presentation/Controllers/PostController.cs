@@ -463,7 +463,6 @@ namespace Presentation.Controllers
 
         [HttpGet("feed/posts")]
         public async Task<IActionResult> GetPosts(
-            [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             [FromQuery] bool isRefresh = false,
             CancellationToken cancellationToken = default)
@@ -473,7 +472,7 @@ namespace Presentation.Controllers
                 return Unauthorized();
             }
 
-            var query = new GetFeedPostsQuery(userId, page, pageSize, isRefresh);
+            var query = new GetFeedPostsQuery(userId, pageSize, isRefresh);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.IsSuccess ? Ok(result.Value) : HandleFailure(result);

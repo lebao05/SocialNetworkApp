@@ -1,78 +1,114 @@
 import { useCallback, useEffect, useState } from "react";
 import { getFeedPostsApi, generateFeedApi, markLatestAsSeenApi, createPostApi, getPostApi, deletePostApi, updatePostApi } from "../apis/postApi";
 
-export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
+/**
+ * Infinite-scroll feed hook.
+ *
+ * The backend no longer supports page-based pagination. Each call to
+ * `getFeedPostsApi(pageSize, isRefresh)` returns up to `pageSize` unseen feed
+ * items. We collect every batch into a flat list and expose `loadMore` for
+ * the UI to drain that list.
+ *
+ * When the user has consumed everything (empty response or all items are
+ * isSeen=true), `hasMore` flips to false. The next scroll automatically
+ * triggers `generateFeed()` to build a fresh batch.
+ *
+ * A single `isLoading` flag covers both API fetch and feed generation.
+ */
+export function useFeed({ pageSize = 10 } = {}) {
   const [posts, setPosts] = useState([]);
-  const [page, setPage] = useState(initialPage);
-  const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const normalizeResponse = (data) => {
-    // Accept either array or { items, totalCount }
-    if (!data) return { items: [], totalCount: 0 };
-    if (Array.isArray(data)) return { items: data, totalCount: data.length };
-    if (data.items) return { items: data.items, totalCount: data.totalCount ?? data.items.length };
-    return { items: [], totalCount: 0 };
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.items) return data.items;
+    return [];
   };
 
-  const loadPage = useCallback(async (p = 1, isRefresh = false) => {
+  const fetchBatch = useCallback(async (isRefresh = false) => {
+    const data = await getFeedPostsApi(pageSize, isRefresh);
+    return normalizeResponse(data);
+  }, [pageSize]);
+
+  // First entry into the page — isRefresh=true so the backend falls back to
+  // history when there is nothing unseen.
+  const loadInitial = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getFeedPostsApi(p, pageSize, isRefresh);
-      const { items } = normalizeResponse(data);
-
-      if (p === 1) {
-        setPosts(items);
-      } else {
-        setPosts((prev) => [...prev, ...items]);
-      }
-
-      if (items.length < pageSize || items.some((item) => item.isSeen)) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      setPage(p);
+      const items = await fetchBatch(true);
+      setPosts(items);
+      const allSeen = items.length > 0 && items.every((item) => item.isSeen);
+      setHasMore(!allSeen);
     } catch (err) {
       console.error("Failed to load feed:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [pageSize]);
+  }, [fetchBatch]);
 
-  useEffect(() => {
-    loadPage(1);
-  }, [loadPage]);
+  // Infinite scroll — only fetch fresh unseen items. Never use isRefresh here:
+  // refresh-mode would re-pull already-seen history, breaking the "newest
+  // unseen first" semantics.
+  const loadMore = useCallback(async () => {
+    if (isLoading || isRefreshing) return;
+    if (!hasMore) return;
 
-  const loadMore = () => {
-    if (!hasMore || isLoading) return;
-    loadPage(page + 1);
-  };
+    setIsLoading(true);
+    try {
+      const items = await fetchBatch(false);
 
-  const refresh = async () => {
+      // Empty response or all items already seen → nothing left to show.
+      if (items.length === 0 || items.every((item) => item.isSeen)) {
+        setHasMore(false);
+        return;
+      }
+
+      setPosts((prev) => {
+        const existingIds = new Set(prev.map((item) => item.feedId ?? item.id));
+        const fresh = items.filter((item) => !existingIds.has(item.feedId ?? item.id));
+        return [...prev, ...fresh];
+      });
+
+      if (items.length < pageSize) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error("Failed to load more feed:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchBatch, pageSize, isLoading, isRefreshing, hasMore]);
+
+  // Pull-to-refresh — first-entry semantics, just like loadInitial.
+  const refresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await loadPage(1, true);
+      const items = await fetchBatch(true);
+      setPosts(items);
+      const allSeen = items.length > 0 && items.every((item) => item.isSeen);
+      setHasMore(!allSeen);
+    } catch (err) {
+      console.error("Failed to refresh feed:", err);
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [fetchBatch]);
+
+  useEffect(() => {
+    loadInitial();
+  }, [loadInitial]);
 
   const createPost = async (postPayload) => {
     try {
-      // postPayload should match createPostApi signature
       const postId = await createPostApi(postPayload);
-
-      // Fetch the full post object from the server
       const newPost = await getPostApi(postId);
 
-      // Optimistically prepend to the feed
       setPosts((prev) => [
         {
-          id: newPost.id, // FeedItem's ID
+          id: newPost.id,
           score: 1.0,
           feedType: 0,
           isSeen: false,
@@ -130,7 +166,6 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
   const updatePost = async (postId, updatePayload) => {
     try {
       await updatePostApi(postId, updatePayload);
-      // Backend returns 204 NoContent → refetch single post to sync UI.
       const fresh = await getPostApi(postId);
       setPosts((prev) =>
         prev.map((item) =>
@@ -146,33 +181,29 @@ export function useFeed({ initialPage = 1, pageSize = 10 } = {}) {
     }
   };
 
+  // Auto pre-generation: when hasMore is false and the user scrolls again,
+  // ask the backend to build a fresh batch, then re-run the first-entry fetch
+  // (isRefresh=true) so the next `loadMore` has fresh unseen items to drain.
   useEffect(() => {
+    if (hasMore || isLoading || isRefreshing) return;
 
-    if (hasMore === false && !isGenerating && !isLoading) {
-      const timer = setTimeout(async () => {
-        setIsGenerating(true);
-        try {
-          await generateFeed();
-          setHasMore(true);
-          setPage(1);
-          await loadPage(1);
-        } catch (err) {
-          console.error("Auto pre-generation of feed failed:", err);
-        } finally {
-          setIsGenerating(false);
-        }
-      }, 2000); // delay in ms
+    const timer = setTimeout(async () => {
+      try {
+        await generateFeed();
+        await loadInitial();
+      } catch (err) {
+        console.error("Auto pre-generation of feed failed:", err);
+      }
+    }, 2000);
 
-      return () => clearTimeout(timer);
-    }
-  }, [posts, isGenerating, isLoading]);
+    return () => clearTimeout(timer);
+  }, [hasMore, isLoading, isRefreshing, loadInitial]);
 
   return {
     posts,
     isLoading,
     isRefreshing,
     hasMore,
-    page,
     loadMore,
     refresh,
     createPost,

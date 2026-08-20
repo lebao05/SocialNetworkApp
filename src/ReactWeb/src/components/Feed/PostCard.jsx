@@ -747,7 +747,33 @@ export default function PostCard({ post, onDelete, onUpdate }) {
                 </p>
               </div>
             </Link>
+          ) : authorId ? (
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-[18px] font-bold border border-gray-300">
+                ?
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-gray-500 leading-tight flex items-center flex-wrap gap-1">
+                  <span className="font-bold">Unknown User</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {displayTime}
+                </p>
+              </div>
+            </div>
           ) : (
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-[18px] font-bold border border-gray-300">
+                ?
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-gray-500 leading-tight">Unknown</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {displayTime}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 relative" ref={dropdownRef}>
           <button

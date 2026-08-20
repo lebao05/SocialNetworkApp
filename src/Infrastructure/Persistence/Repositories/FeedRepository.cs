@@ -3,7 +3,6 @@ using Application.Abstractions.Repositories;
 using Application.DTOs.Feeds;
 using Application.DTOs.Groups;
 using Application.DTOs.Posts;
-using Application.Shared;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
@@ -20,9 +19,8 @@ namespace Infrastructure.Persistence.Repositories
             _context = context;
         }
 
-        public async Task<PagedList<FeedPostDto>> GetPostsAsync(
+        public async Task<List<FeedPostDto>> GetPostsAsync(
             Guid userId,
-            int page,
             int pageSize,
             bool isRefresh = false,
             CancellationToken cancellationToken = default)
@@ -31,7 +29,7 @@ namespace Infrastructure.Persistence.Repositories
             var baseQuery = _context.UserFeeds
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(f => f.SourceUserId == userId)
+                .Where(f => f.UserId == userId)
                 .Where(f => !f.Post.IsHiddenFromGroup && f.Post.ApprovalStatus == PostApprovalStatus.Approved)
                 // ====== VISIBILITY SECURITY ======
                 .Where(f =>
@@ -54,23 +52,19 @@ namespace Infrastructure.Persistence.Repositories
             var unseenQuery = baseQuery.Where(f => !f.IsSeen);
             var projectedUnseenQuery = ApplySelect(unseenQuery, userId);
 
-            var feeds = await PagedList<FeedPostDto>.CreateAsync(
-                projectedUnseenQuery,
-                page,
-                pageSize,
-                cancellationToken);
+            var feeds = await projectedUnseenQuery
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
 
             // 3. Fallback logic: If refreshing or nothing unseen is found, get the historical feed ordered by date
-            if (feeds.Items.Count == 0 && isRefresh)
+            if (feeds.Count == 0 && isRefresh)
             {
                 var fallbackQuery = baseQuery.OrderByDescending(f => f.CreatedAt);
                 var projectedFallbackQuery = ApplySelect(fallbackQuery, userId);
 
-                feeds = await PagedList<FeedPostDto>.CreateAsync(
-                    projectedFallbackQuery,
-                    page,
-                    pageSize,
-                    cancellationToken);
+                feeds = await projectedFallbackQuery
+                    .Take(pageSize)
+                    .ToListAsync(cancellationToken);
             }
 
             // 4. Tags are projected directly from the DB via EF Include — no

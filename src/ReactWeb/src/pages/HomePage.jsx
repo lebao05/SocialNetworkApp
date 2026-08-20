@@ -20,6 +20,8 @@ export default function HomePage() {
   const {
     posts,
     isLoading,
+    hasMore,
+    loadMore,
     createPost,
     markLatestAsSeen,
     deletePost: deleteFeedPost,
@@ -49,6 +51,9 @@ export default function HomePage() {
 
       if (isAtPageEnd) {
         markUnseenFeedItems();
+        if (hasMore && !isLoading) {
+          loadMore();
+        }
       }
     };
 
@@ -56,7 +61,7 @@ export default function HomePage() {
     handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [markUnseenFeedItems]);
+  }, [markUnseenFeedItems, hasMore, isLoading, loadMore]);
 
   const displayUser = {
     name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "You",
@@ -99,14 +104,33 @@ export default function HomePage() {
             <HomeReelsRail />
 
             {posts.length > 0 ? (
-              posts.map((feedItem) => (
-                <PostCard
-                  key={feedItem.feedId || feedItem.id || feedItem.post?.id}
-                  post={feedItem.post}
-                  onDelete={deleteFeedPost}
-                  onUpdate={updateFeedPost}
-                />
-              ))
+              <>
+                {posts.map((feedItem) => (
+                  <PostCard
+                    key={feedItem.feedId || feedItem.id || feedItem.post?.id}
+                    post={feedItem.post}
+                    onDelete={deleteFeedPost}
+                    onUpdate={updateFeedPost}
+                  />
+                ))}
+                {isLoading && hasMore && (
+                  <div className="bg-white rounded-xl shadow p-4 animate-pulse flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200" />
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="w-24 h-4 bg-gray-200 rounded" />
+                        <div className="w-16 h-3 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                    <div className="w-full h-24 bg-gray-200 rounded" />
+                  </div>
+                )}
+                {!hasMore && !isLoading && (
+                  <div className="text-center text-sm text-gray-500 py-4">
+                    You're all caught up.
+                  </div>
+                )}
+              </>
             ) : isLoading ? (
               <div className="flex flex-col gap-4">
                 {[1, 2, 3].map((n) => (

@@ -268,11 +268,14 @@ export async function generateFeedApi() {
 }
 
 /**
- * Get paginated feed posts: GET /api/posts/feed/posts?page=..&pageSize=..
+ * Get feed posts for the current user: GET /api/posts/feed/posts?pageSize=&isRefresh=
+ * Returns an array of FeedPostDto (one batch of unseen items per call).
+ * The backend does not support page-based pagination anymore — callers should
+ * call this repeatedly with `isRefresh=true` to fetch the next unseen batch.
  */
-export async function getFeedPostsApi(page = 1, pageSize = 20, isRefresh = false) {
+export async function getFeedPostsApi(pageSize = 20, isRefresh = false) {
   const response = await axios.get("/posts/feed/posts", {
-    params: { page, pageSize, isRefresh },
+    params: { pageSize, isRefresh },
   });
 
   return response.data;

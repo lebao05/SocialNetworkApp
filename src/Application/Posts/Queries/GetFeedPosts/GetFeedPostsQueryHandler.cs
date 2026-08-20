@@ -2,12 +2,11 @@ using Application.Abstractions.Messaging;
 using Application.Abstractions.Repositories;
 using Application.DTOs.Feeds;
 using Application.DTOs.Posts;
-using Application.Shared;
 using Domain.Shared;
 
 namespace Application.Posts.Queries.GetFeedPosts
 {
-    internal sealed class GetFeedPostsQueryHandler : IQueryHandler<GetFeedPostsQuery, PagedList<FeedPostDto>>
+    internal sealed class GetFeedPostsQueryHandler : IQueryHandler<GetFeedPostsQuery, List<FeedPostDto>>
     {
         private readonly IFeedRepository _feedRepository;
 
@@ -16,14 +15,11 @@ namespace Application.Posts.Queries.GetFeedPosts
             _feedRepository = feedRepository;
         }
 
-        public async Task<Result<PagedList<FeedPostDto>>> Handle(GetFeedPostsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<List<FeedPostDto>>> Handle(GetFeedPostsQuery request, CancellationToken cancellationToken)
         {
-            var page = Math.Max(1, request.Page);
             var pageSize = Math.Clamp(request.PageSize, 1, 20);
 
-            // Tags are projected directly from the DB via EF Include — no
-            // post-processing round-trip required.
-            var posts = await _feedRepository.GetPostsAsync(request.UserId, page, pageSize, request.IsRefresh, cancellationToken);
+            var posts = await _feedRepository.GetPostsAsync(request.UserId, pageSize, request.IsRefresh, cancellationToken);
 
             return Result.Success(posts);
         }

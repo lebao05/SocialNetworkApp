@@ -3,6 +3,7 @@ using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services
 {
@@ -20,10 +21,12 @@ namespace Infrastructure.Services
         private const int OtherPostCandidateLimit = 30;
         private const int OwnCandidateLimit = 5;
         private readonly AppDbContext _context;
+        private readonly ILogger<FeedGenerator> _logger;
         private const int FeedItemLimit = 100;
-        public FeedGenerator(AppDbContext context)
+        public FeedGenerator(AppDbContext context, ILogger<FeedGenerator> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<int> GenerateAsync(
@@ -55,12 +58,20 @@ namespace Infrastructure.Services
                 .Take(FriendPostCandidateLimit)
                 .ToListAsync(cancellationToken);
 
+            _logger.LogInformation(
+                "[FeedGenerator] friendPosts query -> {Count} candidates (limit={Limit}). UserId={UserId}, FriendIds={FriendIds}",
+                friendPosts.Count, FriendPostCandidateLimit, userId, string.Join(",", friendIds));
+
             var followingPosts = await _context.Posts
                 .AsNoTracking()
                 .Where(post => followingIds.Contains(post.AuthorId))
                 .OrderByDescending(post => post.CreatedAt)
                 .Take(FollowingPostCandidateLimit)
                 .ToListAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "[FeedGenerator] followingPosts query -> {Count} candidates (limit={Limit}). UserId={UserId}, FollowingIds={FollowingIds}",
+                followingPosts.Count, FollowingPostCandidateLimit, userId, string.Join(",", followingIds));
 
             var groupPosts = await _context.Posts
                 .AsNoTracking()
@@ -69,6 +80,10 @@ namespace Infrastructure.Services
                 .Take(GroupPostCandidateLimit)
                 .ToListAsync(cancellationToken);
 
+            _logger.LogInformation(
+                "[FeedGenerator] groupPosts query -> {Count} candidates (limit={Limit}). UserId={UserId}, GroupIds={GroupIds}",
+                groupPosts.Count, GroupPostCandidateLimit, userId, string.Join(",", groupIds));
+
             var otherPosts = await _context.Posts
                 .AsNoTracking()
                 .Where(post =>
@@ -76,10 +91,14 @@ namespace Infrastructure.Services
                     && !friendIds.Contains(post.AuthorId)
                     && !followingIds.Contains(post.AuthorId)
                     && post.Visibility == PostVisibility.Public
-                    && (!post.GroupId.HasValue || !groupIds.Contains(post.GroupId.Value)))
+                    && (!post.GroupId.HasValue ))
                 .OrderByDescending(post => post.CreatedAt)
                 .Take(OtherPostCandidateLimit)
                 .ToListAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "[FeedGenerator] otherPosts query -> {Count} candidates (limit={Limit}). UserId={UserId}, FriendCount={FriendCount}, FollowingCount={FollowingCount}, GroupCount={GroupCount}",
+                otherPosts.Count, OtherPostCandidateLimit, userId, friendIds.Count, followingIds.Count, groupIds.Count);
 
             var ownPosts = await _context.Posts
                 .AsNoTracking()
@@ -97,7 +116,32 @@ namespace Infrastructure.Services
                 .Select(group => group.First())
                 .ToList();
 
+            _logger.LogInformation(
+                "[FeedGenerator] candidates IDs -> [{Ids}]",
+                string.Join(",", candidates.Select(post => post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] friendPosts IDs -> [{Ids}]",
+                string.Join(",", friendPosts.Select(post => post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] followingPosts IDs -> [{Ids}]",
+                string.Join(",", followingPosts.Select(post => post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] groupPosts IDs -> [{Ids}]",
+                string.Join(",", groupPosts.Select(post => post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] otherPosts IDs -> [{Ids}]",
+                string.Join(",", otherPosts.Select(post => post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] ownPosts IDs -> [{Ids}]",
+                string.Join(",", ownPosts.Select(post => post.Id)));
+
             var candidatePostIds = candidates.Select(post => post.Id).ToHashSet();
+
+            _logger.LogInformation(
+                "[FeedGenerator] Candidates aggregation -> Total: {Total}, FriendPosts: {Fp}, FollowingPosts: {Fwp}, GroupPosts: {Gp}, OtherPosts: {Op}, OwnPosts: {Op2}, RecentFeedWindow: {RecentCount}, RecentPostIds: {RecentIds}. UserId={UserId}",
+                candidates.Count, friendPosts.Count, followingPosts.Count, groupPosts.Count, otherPosts.Count, ownPosts.Count,
+                recentPostIds.Count, recentPostIds.Count > 0 ? string.Join(",", recentPostIds) : "(none)", userId);
+
             var reactionCounts = await _context.PostReactions
                 .Where(reaction => candidatePostIds.Contains(reaction.PostId))
                 .GroupBy(reaction => reaction.PostId)
@@ -136,10 +180,24 @@ namespace Infrastructure.Services
                 .OrderByDescending(candidate => candidate.Score)
                 .ToList();
 
+            _logger.LogInformation(
+                "[FeedGenerator] After recentPostIds filter -> {Before} candidates filtered to {After} (excluded: {ExcludedCount}). UserId={UserId}",
+                candidates.Count, scoredCandidates.Count, candidates.Count - scoredCandidates.Count, userId);
+
             var arranged = scoredCandidates
                 .DistinctBy(c => c.Post.Id)
                 .Take(FeedItemLimit)
                 .ToList();
+
+            _logger.LogInformation(
+                "[FeedGenerator] Scoring summary -> Candidates after filter: {CandidatesCount}, After distinct/take: {ArrangedCount}, FeedItemLimit: {Limit}. UserId={UserId}",
+                scoredCandidates.Count, arranged.Count, FeedItemLimit, userId);
+            _logger.LogInformation(
+                "[FeedGenerator] scoredCandidates IDs -> [{Ids}]",
+                string.Join(",", scoredCandidates.Select(c => c.Post.Id)));
+            _logger.LogInformation(
+                "[FeedGenerator] arranged IDs -> [{Ids}]",
+                string.Join(",", arranged.Select(c => c.Post.Id)));
 
             foreach (var candidate in arranged)
             {
