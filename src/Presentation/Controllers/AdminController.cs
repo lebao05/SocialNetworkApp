@@ -326,6 +326,257 @@ namespace Presentation.Controllers
             return Json(new { results });
         }
 
+        /// <summary>
+        /// DEV-ONLY: seeds 100 users with friendships, groups, group members, and group rules.
+        /// Focus user: lgbaowork05@gmail.com
+        ///
+        /// GET /admin/seed-bulk
+        /// DELETE /admin/seed-bulk — clears bulk data
+        /// </summary>
+        [HttpGet("seed-bulk")]
+        [HttpDelete("seed-bulk")]
+        public async Task<IActionResult> SeedBulk()
+        {
+            if (HttpContext.Request.Method == "DELETE")
+            {
+                await BulkSeeder.ClearBulkDataAsync(HttpContext.RequestServices);
+                return Json(new { message = "Bulk data cleared." });
+            }
+
+            await BulkSeeder.SeedAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var userCount = await db.Users.CountAsync(u => u.Email != RoleSeeder.AdminEmail);
+            var friendshipCount = await db.Friendships.CountAsync();
+            var groupCount = await db.Groups.CountAsync();
+            var groupMemberCount = await db.GroupMembers.CountAsync();
+            var groupRuleCount = await db.GroupRules.CountAsync();
+
+            var focusUser = await db.Users.FirstOrDefaultAsync(u => u.Email == "lgbaowork05@gmail.com");
+
+            return Json(new
+            {
+                message = "Bulk data seeded.",
+                focusUser = focusUser != null ? new
+                {
+                    email = focusUser.Email,
+                    id = focusUser.Id,
+                    firstName = focusUser.FirstName,
+                    lastName = focusUser.LastName
+                } : null,
+                counts = new
+                {
+                    users = userCount,
+                    friendships = friendshipCount,
+                    groups = groupCount,
+                    groupMembers = groupMemberCount,
+                    groupRules = groupRuleCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Seeds only groups and group members (no users/friendships).
+        /// GET /admin/seed-groups
+        /// </summary>
+        [HttpGet("seed-groups")]
+        public async Task<IActionResult> SeedGroups()
+        {
+            var focusUserEmail = "lgbaowork05@gmail.com";
+
+            await BulkSeeder.SeedGroupsOnlyAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var focusUser = await db.Users.FirstOrDefaultAsync(u => u.Email == focusUserEmail);
+            var groupCount = await db.Groups.CountAsync();
+            var groupMemberCount = await db.GroupMembers.CountAsync();
+            var groupRuleCount = await db.GroupRules.CountAsync();
+
+            return Json(new
+            {
+                message = "Groups seeded.",
+                focusUser = focusUser != null ? new
+                {
+                    email = focusUser.Email,
+                    id = focusUser.Id,
+                    firstName = focusUser.FirstName,
+                    lastName = focusUser.LastName
+                } : null,
+                counts = new
+                {
+                    groups = groupCount,
+                    groupMembers = groupMemberCount,
+                    groupRules = groupRuleCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Seeds posts with comments and reactions for all users.
+        /// GET /admin/seed-posts
+        /// </summary>
+        [HttpGet("seed-posts")]
+        public async Task<IActionResult> SeedPosts()
+        {
+            var focusUserEmail = "lgbaowork05@gmail.com";
+
+            await BulkSeeder.SeedPostsOnlyAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var focusUser = await db.Users.FirstOrDefaultAsync(u => u.Email == focusUserEmail);
+            var postCount = await db.Posts.CountAsync<Post>();
+            var commentCount = await db.PostComments.CountAsync<PostComment>();
+            var reactionCount = await db.PostReactions.CountAsync<PostReaction>();
+
+            return Json(new
+            {
+                message = "Posts seeded.",
+                focusUser = focusUser != null ? new
+                {
+                    email = focusUser.Email,
+                    id = focusUser.Id,
+                    firstName = focusUser.FirstName,
+                    lastName = focusUser.LastName
+                } : null,
+                counts = new
+                {
+                    posts = postCount,
+                    comments = commentCount,
+                    reactions = reactionCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Seeds reels with comments and reactions for all users.
+        /// GET /admin/seed-reels
+        /// </summary>
+        [HttpGet("seed-reels")]
+        public async Task<IActionResult> SeedReels()
+        {
+            var focusUserEmail = "lgbaowork05@gmail.com";
+
+            await BulkSeeder.SeedReelsOnlyAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var focusUser = await db.Users.FirstOrDefaultAsync(u => u.Email == focusUserEmail);
+            var reelCount = await db.Reels.CountAsync<Reel>();
+            var commentCount = await db.ReelComments.CountAsync<ReelComment>();
+            var reactionCount = await db.ReelReactions.CountAsync<ReelReaction>();
+
+            return Json(new
+            {
+                message = "Reels seeded.",
+                focusUser = focusUser != null ? new
+                {
+                    email = focusUser.Email,
+                    id = focusUser.Id,
+                    firstName = focusUser.FirstName,
+                    lastName = focusUser.LastName
+                } : null,
+                counts = new
+                {
+                    reels = reelCount,
+                    comments = commentCount,
+                    reactions = reactionCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Removes all reels with their comments and reactions.
+        /// GET /admin/clear-reels
+        /// </summary>
+        [HttpGet("clear-reels")]
+        public async Task<IActionResult> ClearReels()
+        {
+            await using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelReactions""");
+            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelComments""");
+            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""Reels""");
+
+            var reelCount = await db.Reels.CountAsync<Reel>();
+
+            return Json(new
+            {
+                message = "All reels cleared.",
+                counts = new
+                {
+                    reels = reelCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Seeds 3 posts per group with comments and reactions.
+        /// GET /admin/seed-group-posts
+        /// </summary>
+        [HttpGet("seed-group-posts")]
+        public async Task<IActionResult> SeedGroupPosts()
+        {
+            await BulkSeeder.SeedGroupPostsAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var groupPostCount = await db.Posts.CountAsync<Post>(p => p.GroupId != null);
+            var commentCount = await db.PostComments
+                .Where(c => db.Posts.Any(p => p.Id == c.PostId && p.GroupId != null))
+                .CountAsync();
+            var reactionCount = await db.PostReactions
+                .Where(r => db.Posts.Any(p => p.Id == r.PostId && p.GroupId != null))
+                .CountAsync();
+
+            return Json(new
+            {
+                message = "Group posts seeded.",
+                counts = new
+                {
+                    groupPosts = groupPostCount,
+                    comments = commentCount,
+                    reactions = reactionCount
+                }
+            });
+        }
+
+        /// <summary>
+        /// Assigns random avatar and cover photos to users and groups.
+        /// GET /admin/seed-user-group-images
+        /// </summary>
+        [HttpGet("seed-user-group-images")]
+        public async Task<IActionResult> SeedUserGroupImages()
+        {
+            await BulkSeeder.SeedUserAndGroupImagesAsync(HttpContext.RequestServices);
+
+            using var scope = HttpContext.RequestServices.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var usersWithAvatar = await db.Users.CountAsync(u => u.AvatarUrl != null);
+            var usersWithCover = await db.Users.CountAsync(u => u.CoverPhotoUrl != null);
+            var groupsWithCover = await db.Groups.CountAsync(g => g.CoverPhotoUrl != null);
+
+            return Json(new
+            {
+                message = "User and group images seeded.",
+                counts = new
+                {
+                    usersWithAvatar,
+                    usersWithCover,
+                    groupsWithCover
+                }
+            });
+        }
+
         [HttpPost("logout")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()

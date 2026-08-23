@@ -37,9 +37,7 @@ import { useAuth } from "../contexts/authContext";
 import { useGroup } from "../hooks/useGroup";
 import { GROUP_REPORT_REASONS } from "../apis/reportApi";
 import {
-  groupAvatarSeeds,
   groupInfo,
-  groupMediaImages,
   groupTabs,
 } from "../data/groupMockData";
 
@@ -69,21 +67,6 @@ function hasAdminRole(user) {
 function getPrivacyLabel(groupDetail) {
   const privacy = String(groupDetail?.privacyType ?? groupDetail?.PrivacyType ?? "").toLowerCase();
   return privacy.includes("private") || privacy === "1" ? "Private" : "Public";
-}
-
-function AvatarStack({ count = 12, size = "h-8 w-8" }) {
-  return (
-    <div className="flex items-center">
-      {groupAvatarSeeds.slice(0, count).map((seed, index) => (
-        <img
-          key={seed}
-          src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}`}
-          alt=""
-          className={`${size} rounded-full border-2 border-white bg-[#e4e6eb] object-cover ${index > 0 ? "-ml-2" : ""}`}
-        />
-      ))}
-    </div>
-  );
 }
 
 function HeaderButton({ children, primary = false, onClick, disabled = false }) {
@@ -527,7 +510,11 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
   const memberCount = groupDetail?.memberCount ?? groupDetail?.MemberCount ?? 0;
   const groupName = groupDetail?.name ?? groupDetail?.Name ?? groupInfo.name;
   const description = groupDetail?.description ?? groupDetail?.Description ?? "No description available for this group.";
-  const coverPhotoUrl = groupDetail?.coverPhotoUrl ?? groupDetail?.CoverPhotoUrl ?? groupInfo.cover ?? import.meta.env.VITE_DEFAULT_GROUP_COVER;
+  const coverPhotoUrl =
+    groupDetail?.coverPhotoUrl ??
+    groupDetail?.CoverPhotoUrl ??
+    import.meta.env.VITE_DEFAULT_GROUP_COVER ??
+    groupInfo.cover;
 
   useEffect(() => {
     if (activeTab === "About" && fetchRules) {
@@ -753,7 +740,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
             )}
 
 
-            <div className="flex items-center justify-between px-1 text-[14px] font-semibold text-[#006d8f]">
+            {/* <div className="flex items-center justify-between px-1 text-[14px] font-semibold text-[#006d8f]">
               <button
                 type="button"
                 onClick={() => setIsMineFilter((v) => !v)}
@@ -770,7 +757,7 @@ function GroupHome({ activeTab, setActiveTab, contentOffsetClass, displayUser, g
                 />
 
               </div>
-            </div>
+            </div> */}
 
             {postsLoading && posts.length === 0 ? (
               <div className="rounded-lg border border-[#dddfe2] bg-white p-8 text-center text-[15px] text-[#65676b] shadow-sm">

@@ -53,7 +53,7 @@ const iconMap = {
   Users,
 };
 
-const DEFAULT_GROUP_AVATAR = import.meta.env.VITE_DEFAULT_AVATAR;
+const DEFAULT_GROUP_AVATAR = import.meta.env.VITE_DEFAULT_GROUP_AVATAR;
 
 const formatPrivacy = (groupDetail) => {
   if (!groupDetail) return groupInfo.adminPrivacy;
@@ -72,10 +72,13 @@ const formatMemberCount = (groupDetail) => {
 };
 
 const resolveGroupName = (groupDetail) =>
-  groupDetail?.name ?? groupDetail?.Name ?? groupInfo.shortName;
+  groupDetail?.name ?? groupDetail?.Name ?? groupInfo.name;
 
 const resolveGroupAvatar = (groupDetail) =>
-  groupDetail?.coverPhotoUrl ?? groupDetail?.CoverPhotoUrl ?? groupInfo.avatar ?? DEFAULT_GROUP_AVATAR;
+  groupDetail?.CoverPhotoUrl ??
+  import.meta.env.VITE_DEFAULT_GROUP_COVER ??
+  groupInfo.cover ??
+  DEFAULT_GROUP_AVATAR;
 
 export default function GroupAdminSidebar({ activeView, onViewChange, groupDetail = null, userRole = null }) {
   const displayName = resolveGroupName(groupDetail);

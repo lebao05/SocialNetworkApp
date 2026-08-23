@@ -441,7 +441,7 @@ function ChatContextInner({ children }) {
             } else if (detail.isOneToOne && detail.otherUserId) {
                 // For virtual conversations, fetch user profile to get avatar
                 try {
-                    const profileRes = await axios.get(`/auth/user/${detail.otherUserId}`);
+                    const profileRes = await axios.get(`/user/${detail.otherUserId}/personal-info`);
                     enriched = { ...detail, otherUserAvatarUrl: profileRes.data?.avatarUrl ?? null };
                 } catch {
                     enriched = { ...detail, otherUserAvatarUrl: null };
