@@ -80,6 +80,9 @@ namespace Infrastructure
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
+            // Register Neo4j synchronization service
+            services.AddHostedService<Services.Neo4jSyncService>();
+
             return services;
         }
     }

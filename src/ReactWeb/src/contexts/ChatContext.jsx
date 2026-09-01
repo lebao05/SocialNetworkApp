@@ -422,29 +422,17 @@ function ChatContextInner({ children }) {
             const detail = byUserId
                 ? await getConversationByUserIdApi(idOrUserId)
                 : await getConversationDetailApi(idOrUserId);
-
             let enriched = detail;
             if (detail.id && !detail.isVirtual) {
                 try {
                     const membersData = await getConversationMembersApi(detail.id, 1, 1);
-                    const otherMember = membersData.results?.find(
-                        (m) => m.userId !== user?.id
-                    );
                     enriched = {
                         ...detail,
                         memberCount: membersData.totalCount ?? 0,
-                        otherUserAvatarUrl: otherMember?.avatarUrl ?? null,
+                        otherUserAvatarUrl: detail.otherUserAvatarUrl,
                     };
                 } catch {
                     enriched = { ...detail, memberCount: 0 };
-                }
-            } else if (detail.isOneToOne && detail.otherUserId) {
-                // For virtual conversations, fetch user profile to get avatar
-                try {
-                    const profileRes = await axios.get(`/user/${detail.otherUserId}/personal-info`);
-                    enriched = { ...detail, otherUserAvatarUrl: profileRes.data?.avatarUrl ?? null };
-                } catch {
-                    enriched = { ...detail, otherUserAvatarUrl: null };
                 }
             }
 

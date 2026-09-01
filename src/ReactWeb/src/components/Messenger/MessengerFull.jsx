@@ -647,7 +647,7 @@ function ChatWindow({ conv, isOnline, onBack, onToggleInfo, showInfoButton }) {
   const { user } = useAuth();
   const { messages, messagesLoading, messagesLoadingDirection, hasMoreUp, hasMoreDown, pendingNewMessageCount, atBottom, highlightedMessageId, setAtBottomState, loadMessages, loadOlderMessages, loadNewerMessages, jumpToLatest, jumpToMessage, sendMessage, markAsSeen, reactToMessage, typingUsers, conversationMembers, togglePin, revokeMessage, updateMessage } = useChat();
   const { initiateCall } = useCall();
-
+  console.log(conv);
   const theme = getChatTheme(conv?.theme);
   const isMidnight = conv?.theme === "midnight";
   const bottomRef = useRef(null);
@@ -1946,7 +1946,7 @@ export default function MessengerFull() {
   const { convId } = useParams();
   const navigate = useNavigate();
   const { selectedConversation, selectConversation, isOnline } = useChat();
-
+  console.log(selectedConversation);
   // Mobile view state: "list" | "chat" | "info"
   const [mobileView, setMobileView] = useState("list");
   const [showInfo, setShowInfo] = useState(true);

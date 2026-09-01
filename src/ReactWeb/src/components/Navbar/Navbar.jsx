@@ -32,7 +32,6 @@ const DEFAULT_CHAT_GROUP_COVER = import.meta.env.VITE_DEFAULT_CHAT_GROUP_COVER;
 function MessengerDropdown({ onClose }) {
   const navigate = useNavigate();
   const { conversations, isOnline, conversationFilter, setConversationFilter } = useChat();
-
   const handleOpenAll = () => {
     navigate("/messenger");
     onClose();
@@ -111,7 +110,7 @@ function MessengerDropdown({ onClose }) {
           >
             <div className="relative flex-shrink-0">
               <img
-                src={conv.imageUrl || (conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER)}
+                src={conv.imageUrl || conv.otherUserAvatarUrl || (conv.isOneToOne ? DEFAULT_AVATAR : DEFAULT_CHAT_GROUP_COVER)}
                 className="w-14 h-14 rounded-full object-cover"
                 alt={conv.name}
               />

@@ -35,7 +35,6 @@ namespace Application.DTOs.Conversations
             string displayName = conversation.Name ?? string.Empty;
             Guid? otherUserId = null;
             string? otherUserAvatarUrl = null;
-
             if (conversation.IsOneToOne)
             {
                 var other = conversation.Members
@@ -48,6 +47,7 @@ namespace Application.DTOs.Conversations
                 otherUserId = other?.UserId;
                 otherUserAvatarUrl = other?.User.AvatarUrl;
             }
+            //Console.WriteLine(otherUserAvatarUrl);
 
             var lastMessage = conversation.Messages
                 .OrderByDescending(m => m.Id)
