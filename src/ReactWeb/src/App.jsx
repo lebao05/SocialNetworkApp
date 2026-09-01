@@ -7,8 +7,8 @@ import {
 
 import HomePage from "./pages/HomePage";
 import MessengerPage from "./pages/MessengerPage";
-import SignupPage from "./pages/SignUpPage";
 import SigninPage from "./pages/SigninPage";
+import SignupPage from "./pages/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupPage from "./pages/GroupPage";
