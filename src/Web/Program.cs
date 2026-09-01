@@ -270,5 +270,9 @@ app.MapStaticAssets(); // if you have static assets
 app.MapHub<ChatHub>("hubs/chat");
 app.MapHub<CallHub>("hubs/call");
 app.MapHub<NotificationHub>("hubs/notifications");
+
+// Health check endpoint for Render
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
 app.MapControllers();   // map API controllers
 app.Run();
