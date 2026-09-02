@@ -41,7 +41,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowLocalhost", policy =>
     {
         policy.WithOrigins(
-                "https://localhost:765",   // Backend or Swagger UI
+                "https://localhost:7065",   // Backend or Swagger UI
                  ClientUrl!    // Vite frontend
             )
             .AllowAnyHeader()
