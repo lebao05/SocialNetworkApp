@@ -100,4 +100,18 @@ public class ChatHubNotifier : IChatHubNotifier
             .Group(groupName)
             .SendAsync("ReceiveMessage", systemMessage, cancellationToken);
     }
+
+    public async Task NotifyMessagesSentAsync(
+        long conversationId,
+        List<MessageDto> messages,
+        CancellationToken cancellationToken = default)
+    {
+        var groupName = conversationId.ToString();
+        foreach (var message in messages)
+        {
+            await _hubContext.Clients
+                .Group(groupName)
+                .SendAsync("ReceiveMessage", message, cancellationToken);
+        }
+    }
 }

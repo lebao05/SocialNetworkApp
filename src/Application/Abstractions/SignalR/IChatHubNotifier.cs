@@ -11,4 +11,5 @@ public interface IChatHubNotifier
     Task NotifyMemberRemovedAsync(long conversationId, Guid removedUserId, IReadOnlyList<Guid> recipientUserIds, CancellationToken cancellationToken = default);
     Task NotifyConversationUpdatedAsync(long conversationId, ConversationDetailDto conversation, CancellationToken cancellationToken = default);
     Task NotifySystemMessageSentAsync(long conversationId, MessageDto systemMessage, CancellationToken cancellationToken = default);
+    Task NotifyMessagesSentAsync(long conversationId, List<MessageDto> messages, CancellationToken cancellationToken = default);
 }

@@ -50,7 +50,7 @@ namespace Infrastructure.Persistence.Repositories
                 .Where(reel => reel.CreatedAt >= since);
             query = ApplyReelVisibility(query, userId);
             return await query
-                .OrderByDescending(reel => reel.CreatedAt)
+                .OrderBy(reel => EF.Functions.Random())
                 .ToListAsync(cancellationToken);
         }
 

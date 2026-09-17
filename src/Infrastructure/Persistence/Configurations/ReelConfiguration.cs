@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Configurations
@@ -16,7 +17,9 @@ namespace Infrastructure.Persistence.Configurations
             // SearchVector (shadow property — DB-generated GIN-indexed column)
   
             builder.Property(r => r.Id)
-                .HasColumnName("ReelId");
+                .HasColumnName("ReelId")
+                .ValueGeneratedOnAdd()
+                .UseIdentityByDefaultColumn();
 
             builder.Property(r => r.AuthorId)
                 .IsRequired();

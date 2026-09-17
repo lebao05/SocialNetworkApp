@@ -199,7 +199,69 @@ public static class BulkSeeder
         // ── 7. Seed GROUP RULES ───────────────────────────────────────────────
         await SeedGroupRulesAsync(db, logger, groupIds);
 
+        // ── 8. Sync all identity sequences ────────────────────────────────────
+        await SyncIdentitySequencesAsync(db, logger);
+
         logger.LogInformation("BulkSeeder finished successfully!");
+    }
+
+    /// <summary>
+    /// Resets all identity sequences to match the current MAX(Id) in their respective tables.
+    /// Call this after manually inserting rows with explicit IDs to prevent duplicate key violations.
+    /// </summary>
+    private static async Task SyncIdentitySequencesAsync(AppDbContext db, ILogger logger)
+    {
+        try
+        {
+            logger.LogInformation("Syncing identity sequences...");
+
+            // Posts sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Posts""', '""PostId""'),
+                    COALESCE((SELECT MAX(""PostId"") FROM ""Posts""), 1),
+                    true
+                )");
+
+            // Reels sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Reels""', '""ReelId""'),
+                    COALESCE((SELECT MAX(""ReelId"") FROM ""Reels""), 1),
+                    true
+                )");
+
+            // PostComments sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""PostComments""', '""CommentId""'),
+                    COALESCE((SELECT MAX(""CommentId"") FROM ""PostComments""), 1),
+                    true
+                )");
+
+            // Groups sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Groups""', '""GroupId""'),
+                    COALESCE((SELECT MAX(""GroupId"") FROM ""Groups""), 1),
+                    true
+                )");
+
+            // Friendships sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Friendships""', '""FriendshipId""'),
+                    COALESCE((SELECT MAX(""FriendshipId"") FROM ""Friendships""), 1),
+                    true
+                )");
+
+            logger.LogInformation("Successfully synchronized all identity sequences with current MAX(Id) values.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to sync identity sequences. Manual intervention may be required.");
+            throw;
+        }
     }
 
     private static async Task SeedFriendshipsAsync(AppDbContext db, ILogger logger, List<Guid> allUserIds, DateTime now, Random random)

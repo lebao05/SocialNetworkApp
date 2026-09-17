@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using NpgsqlTypes;
 
 namespace Infrastructure.Persistence.Configurations
@@ -15,7 +16,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(p => p.Id);
             
             builder.Property(p => p.Id)
-                .HasColumnName("PostId");
+                .HasColumnName("PostId")
+                .ValueGeneratedOnAdd()
+                .UseIdentityByDefaultColumn();
 
             // Post -> Group (many-to-one)
             builder.HasOne(p => p.Group)

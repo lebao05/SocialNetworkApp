@@ -22,23 +22,11 @@ namespace Application.Reels.Queries.GetRecommendedReels
         {
             var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
-            var query = (await _reelRepository.GetRecentReelsAsync(request.UserId, DateTime.UtcNow - TimeSpan.FromDays(100), cancellationToken))
-                .Where(r => r.DeletedAt is null && r.Visibility != ReelVisibility.Private)
-                .OrderByDescending(r => r.CreatedAt)
-                .ThenByDescending(r => r.Id);
+            // Get random reels from the database (already ordered randomly)
+            var reels = (await _reelRepository.GetRecentReelsAsync(request.UserId, DateTime.UtcNow - TimeSpan.FromDays(100), cancellationToken)).ToList();
 
-            // Keyset pagination: skip past the cursor so we never return duplicate reels.
-            if (request.LastReelId is { } lastId)
-            {
-                var cursor = query.FirstOrDefault(r => r.Id == lastId);
-                if (cursor is not null)
-                {
-                    var cursorCreatedAt = cursor.CreatedAt;
-                    query = (IOrderedEnumerable<Reel>)query.Where(r => r.Id != lastId);
-                }
-            }
-
-            var items = query.Take(pageSize).Select(r => Map(r, request.UserId)).ToList();
+            // Take the requested page size
+            var items = reels.Take(pageSize).Select(r => Map(r, request.UserId)).ToList();
 
             return Result.Success(new PagedList<ReelDto>(items, 1, pageSize, items.Count));
         }

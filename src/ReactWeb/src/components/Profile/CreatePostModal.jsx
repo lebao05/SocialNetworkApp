@@ -275,7 +275,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
               )}
 
               {/* URL image block handler */}
-              {newPostContent.trim() && (
+              {/* {newPostContent.trim() && (
                 <div className="flex flex-col gap-1 mt-2">
                   <label className="text-xs font-bold text-gray-500">Image Link (optional)</label>
                   <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
@@ -293,7 +293,7 @@ export default function CreatePostModal({ isOpen, onClose, displayUser = { name:
                     )}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Local File attachments handler */}
               <div className="flex flex-col gap-1 border-t border-gray-100 pt-3">

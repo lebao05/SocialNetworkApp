@@ -68,9 +68,7 @@ export default function RightSidebar() {
   };
 
   return (
-    <aside className="hidden xl:flex fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white z-10 flex-col">
-
-
+    <aside className="hidden lg:flex fixed top-14 right-0 w-[280px] h-[calc(100vh-56px)] overflow-y-auto p-4 bg-white border-l border-[#ced0d4] z-10 flex-col">
 
       {/* Contacts header */}
       <div className="flex items-center justify-between mb-2">

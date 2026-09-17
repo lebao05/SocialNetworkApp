@@ -160,7 +160,32 @@ public static class TestDataSeeder
             "Happiness is a warm cup of tea.",
         };
 
-        long postId = 1;
+        // Real image URLs from Unsplash (free to use)
+        var realImageUrls = new[]
+        {
+            "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?w=800",
+            "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800",
+            "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800",
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800",
+            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800",
+            "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=800",
+            "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800",
+            "https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?w=800",
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
+            "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800",
+            "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=800",
+            "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
+            "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800",
+            "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800",
+            "https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=800",
+        };
+
+        // Get the current max Post ID to avoid conflicts
+        var maxPostId = await db.Posts.AnyAsync()
+            ? await db.Posts.MaxAsync(p => p.Id)
+            : 0;
+        
+        long postId = maxPostId + 1;
         var createdAt = now.AddDays(-60);
         var postIdMap = new List<long>(); // track post IDs
 
@@ -171,12 +196,24 @@ public static class TestDataSeeder
                 var visibility = (PostVisibility)(random.Next(0, 4));
                 var content = postContents[random.Next(postContents.Length)];
                 var ts = createdAt.AddDays(random.NextDouble() * 60);
+                
+                // Some posts have images, some don't (60% chance of having an image)
+                var hasImage = random.NextDouble() < 0.6;
+                var imageUrl = hasImage ? realImageUrls[random.Next(realImageUrls.Length)] : null;
 
                 await db.Database.ExecuteSqlInterpolatedAsync(
                     $@"INSERT INTO ""Posts"" (""Id"", ""AuthorId"", ""Content"", ""Visibility"", ""ApprovalStatus"",
                         ""IsHiddenFromGroup"", ""IsAnonymous"", ""CreatedAt"", ""UpdatedAt"", ""DeletedAt"")
                      VALUES ({postId}, {userIds[u]}, {content}, {(byte)visibility}, {(byte)PostApprovalStatus.Approved},
                              false, false, {ts.ToUniversalTime()}, NULL, NULL)");
+
+                // If post has image, insert into PostImages table
+                if (hasImage && imageUrl != null)
+                {
+                    await db.Database.ExecuteSqlInterpolatedAsync(
+                        $@"INSERT INTO ""PostImages"" (""PostId"", ""ImageUrl"", ""Caption"")
+                         VALUES ({postId}, {imageUrl}, NULL)");
+                }
 
                 postIdMap.Add(postId);
                 postId++;
@@ -231,7 +268,37 @@ public static class TestDataSeeder
             "Unboxing time! 🎁",
         };
 
-        long reelId = 1;
+        // Real video URLs and thumbnails (sample short videos from the internet)
+        var reelVideos = new[]
+        {
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg"),
+            (Video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+             Thumb: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg"),
+        };
+
+        // Get the current max Reel ID to avoid conflicts
+        var maxReelId = await db.Reels.AnyAsync()
+            ? await db.Reels.MaxAsync(r => r.Id)
+            : 0;
+        
+        long reelId = maxReelId + 1;
         var reelIds = new List<long>();
         var reelCreatedAt = now.AddDays(-30);
 
@@ -242,14 +309,16 @@ public static class TestDataSeeder
                 var visibility = (ReelVisibility)(random.Next(0, 2));
                 var caption = reelCaptions[random.Next(reelCaptions.Length)];
                 var ts = reelCreatedAt.AddDays(random.NextDouble() * 30).AddHours(random.NextDouble() * 24);
+                var videoData = reelVideos[random.Next(reelVideos.Length)];
+                var duration = $"{random.Next(15, 90)}s";
 
                 await db.Database.ExecuteSqlInterpolatedAsync(
                     $@"INSERT INTO ""Reels"" (""Id"", ""AuthorId"", ""VideoUrl"", ""ThumbnailUrl"", ""Caption"",
                         ""AudioTitle"", ""Duration"", ""Visibility"", ""ViewCount"", ""CreatedAt"", ""UpdatedAt"", ""DeletedAt"")
                      VALUES ({reelId}, {userIds[u]},
-                             {'/' + $"placeholder-reel-{reelId}.mp4"},
-                             {'/' + $"placeholder-reel-{reelId}-thumb.jpg"},
-                             {caption}, {'/' + "sample-audio.mp3"}, {'/' + $"{random.Next(15, 90)}s"},
+                             {videoData.Video},
+                             {videoData.Thumb},
+                             {caption}, {$"Audio {reelId}"}, {duration},
                              {(byte)visibility}, {random.Next(10, 500)}, {ts.ToUniversalTime()}, NULL, NULL)");
 
                 reelIds.Add(reelId);
@@ -257,7 +326,7 @@ public static class TestDataSeeder
             }
         }
 
-        logger.LogInformation("Seeded {Count} reels.", reelIds.Count);
+        logger.LogInformation("Seeded {Count} reels with real videos and thumbnails.", reelIds.Count);
 
         // ── Groups (5 groups) ─────────────────────────────────────────────
         var groupData = new[]
@@ -410,6 +479,58 @@ public static class TestDataSeeder
         }
 
         logger.LogInformation("Seeded reports for posts, users, groups, and reels.");
+
+        // ── Sync all identity sequences to prevent duplicate key violations ───
+        await SyncIdentitySequencesAsync(db, logger);
+    }
+
+    /// <summary>
+    /// Resets all identity sequences to match the current MAX(Id) in their respective tables.
+    /// Call this after manually inserting rows with explicit IDs to prevent duplicate key violations.
+    /// </summary>
+    private static async Task SyncIdentitySequencesAsync(AppDbContext db, ILogger logger)
+    {
+        try
+        {
+            // Posts sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Posts""', '""PostId""'),
+                    COALESCE((SELECT MAX(""PostId"") FROM ""Posts""), 1),
+                    true
+                )");
+
+            // Reels sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Reels""', '""ReelId""'),
+                    COALESCE((SELECT MAX(""ReelId"") FROM ""Reels""), 1),
+                    true
+                )");
+
+            // PostComments sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""PostComments""', '""CommentId""'),
+                    COALESCE((SELECT MAX(""CommentId"") FROM ""PostComments""), 1),
+                    true
+                )");
+
+            // Groups sequence
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(
+                    pg_get_serial_sequence('""Groups""', '""GroupId""'),
+                    COALESCE((SELECT MAX(""GroupId"") FROM ""Groups""), 1),
+                    true
+                )");
+
+            logger.LogInformation("Successfully synchronized all identity sequences with current MAX(Id) values.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to sync identity sequences. Manual intervention may be required.");
+            throw;
+        }
     }
 
     /// <summary>Removes all test data seeded by this seeder. Call this before re-seeding.</summary>
@@ -470,6 +591,12 @@ public static class TestDataSeeder
 
         await db.Database.ExecuteSqlRawAsync(
             @"DELETE FROM ""AspNetUsers"" WHERE ""Email"" NOT IN ({0})", RoleSeeder.AdminEmail);
+
+        // Reset sequences to avoid ID conflicts
+        await db.Database.ExecuteSqlRawAsync(
+            @"SELECT setval(pg_get_serial_sequence('""Posts""', 'Id'), COALESCE(MAX(""Id""), 1), false) FROM ""Posts""");
+        await db.Database.ExecuteSqlRawAsync(
+            @"SELECT setval(pg_get_serial_sequence('""Reels""', 'Id'), COALESCE(MAX(""Id""), 1), false) FROM ""Reels""");
 
         logger.LogInformation("Cleared all test data.");
     }

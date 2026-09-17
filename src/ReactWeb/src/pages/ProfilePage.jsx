@@ -727,7 +727,7 @@ export default function ProfilePage() {
                 )}
 
                 {/* Featured section */}
-                <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
+                {/* <div className={`mt-5 pt-4 border-t ${theme.sidebarHr}`}>
                   <h3 className={`text-sm font-semibold mb-3 ${theme.text}`}>Featured Stories</h3>
                   <button
                     onClick={() => navigate("/stories/create")}
@@ -735,7 +735,7 @@ export default function ProfilePage() {
                   >
                     Add Featured Story
                   </button>
-                </div>
+                </div> */}
               </div>
               {/* Photos Gallery Box */}
               {

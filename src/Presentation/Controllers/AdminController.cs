@@ -494,25 +494,42 @@ namespace Presentation.Controllers
         /// <summary>
         /// Removes all reels with their comments and reactions.
         /// GET /admin/clear-reels
+        /// DELETE /admin/clear-reels
         /// </summary>
         [HttpGet("clear-reels")]
+        [HttpDelete("clear-reels")]
         public async Task<IActionResult> ClearReels()
         {
             await using var scope = HttpContext.RequestServices.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelReactions""");
-            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelComments""");
-            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""Reels""");
+            // Count before deletion
+            var reelCountBefore = await db.Reels.CountAsync<Reel>();
+            var reelReactionsCountBefore = await db.ReelReactions.CountAsync<ReelReaction>();
+            var reelCommentsCountBefore = await db.ReelComments.CountAsync<ReelComment>();
 
-            var reelCount = await db.Reels.CountAsync<Reel>();
+            // Also delete related records from Reports table
+            var reelReportsDeleted = await db.Database.ExecuteSqlRawAsync(
+                @"DELETE FROM ""Reports"" WHERE ""ReelId"" IS NOT NULL");
+
+            // Delete reel reactions, comments, and reels
+            var reactionsDeleted = await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelReactions""");
+            var commentsDeleted = await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""ReelComments""");
+            var reelsDeleted = await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""Reels""");
+
+            // Reset the Reels ID sequence to avoid conflicts
+            await db.Database.ExecuteSqlRawAsync(
+                @"SELECT setval(pg_get_serial_sequence('""Reels""', 'Id'), 1, false)");
 
             return Json(new
             {
-                message = "All reels cleared.",
-                counts = new
+                message = "All reels cleared successfully.",
+                deleted = new
                 {
-                    reels = reelCount
+                    reels = reelCountBefore,
+                    comments = reelCommentsCountBefore,
+                    reactions = reelReactionsCountBefore,
+                    reports = reelReportsDeleted
                 }
             });
         }

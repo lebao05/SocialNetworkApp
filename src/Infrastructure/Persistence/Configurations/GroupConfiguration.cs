@@ -15,8 +15,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(g => g.Id);
             
             builder.Property(g => g.Id)
-                .HasColumnName("GroupId");
-
+                .HasColumnName("GroupId")
+                .ValueGeneratedOnAdd()
+                .UseIdentityByDefaultColumn();
             // Group Name column config
             builder.Property(g => g.Name)
                 .IsRequired()
