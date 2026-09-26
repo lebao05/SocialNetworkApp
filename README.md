@@ -38,7 +38,17 @@ A full-stack social networking platform built with **ASP.NET Core 10.0** backend
 - 🎂 **Birthdays** - Birthday reminders and notifications
 - 💾 **Saved Posts** - Bookmark posts for later viewing
 - 🚨 **Reporting System** - Report inappropriate content
-
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+![alt text](image-3.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
+![alt text](image-6.png)
+![alt text](image-7.png)
+![alt text](image-8.png)
+![alt text](image-9.png)
+![alt text](image-10.png)
 ### Technical Features
 - Real-time communication via SignalR WebSocket hubs
 - Graph database (Neo4j) for friend relationships and recommendations
